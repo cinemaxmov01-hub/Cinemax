@@ -145,8 +145,6 @@ export interface DbSiteSettings {
     groq: string;
   };
   contentPages: Record<string, { enabled: boolean; label: string }>;
-  premiumFeatureEnabled: boolean;
-  premiumOnlyMovieIds: number[];
 }
 
 export interface DbAiChatHistoryItem {
@@ -234,19 +232,6 @@ export interface DbGensAccessItem {
   access_count: number;
 }
 
-// Admin-granted Premium overrides — independent of (and layered on top of)
-// a user's own `subscription` tier, so an admin can comp temporary or
-// permanent Premium access to any account without changing their plan.
-export interface DbPremiumAccessItem {
-  user_id: string;
-  user_name: string;
-  user_email: string;
-  granted_at: string;
-  granted_by: string;
-  expires_at: string | null; // null = never expires
-  note: string;
-}
-
 interface DbSchema {
   users: DbUser[];
   watchlist: DbWatchlistItem[];
@@ -266,7 +251,6 @@ interface DbSchema {
   custom_content_seq: number;
   support_inquiries: DbSupportInquiry[];
   gens_access: DbGensAccessItem[];
-  premium_access: DbPremiumAccessItem[];
   ai_chat_history: DbAiChatHistoryItem[];
   ai_memory: DbAiMemoryItem[];
 }
@@ -308,8 +292,6 @@ function defaultSiteSettings(): DbSiteSettings {
       favorites: { enabled: true, label: "Favorites" },
       downloads: { enabled: true, label: "Downloads" },
     },
-    premiumFeatureEnabled: true,
-    premiumOnlyMovieIds: [],
   };
 }
 
@@ -333,7 +315,6 @@ function emptySchema(): DbSchema {
     custom_content_seq: 0,
     support_inquiries: [],
     gens_access: [],
-    premium_access: [],
     ai_chat_history: [],
     ai_memory: [],
   };
@@ -344,7 +325,6 @@ function mergeSchema(parsed: any): DbSchema {
   merged.site_settings = { ...defaultSiteSettings(), ...(parsed?.site_settings || {}) };
   if (!merged.support_inquiries) merged.support_inquiries = [];
   if (!merged.gens_access) merged.gens_access = [];
-  if (!merged.premium_access) merged.premium_access = [];
   if (!merged.ai_chat_history) merged.ai_chat_history = [];
   if (!merged.ai_memory) merged.ai_memory = [];
   if (!merged.my_list) merged.my_list = [];

@@ -103,36 +103,34 @@ authRouter.post("/api/auth/signup/request", rateLimit({ name: "signup-request", 
     return;
   }
 
-  // If email delivery isn't configured, skip the OTP step and create the
-  // account immediately so signup still works end-to-end.
-  if (!isMailerConfigured()) {
-    const displayName = (name && String(name).trim()) || email.split("@")[0];
-    const user = createUser(email, password, displayName);
-    const token = signToken(user.id);
-    setSessionCookie(res, token);
-    db.data.notifications.push({
-      id: crypto.randomUUID(),
-      user_id: user.id,
-      type: "account",
-      title: "Welcome to Cinemax",
-      message: "Your account is ready. Explore trending titles and build your lists.",
-      read: 0,
-      created_at: new Date().toISOString(),
-    });
-    db.save();
-    res.status(201).json({ ok: true, autoVerified: true, user: userWithExtras(user), token });
-    return;
+  const displayName = (name && String(name).trim()) || email.split("@")[0];
+  const user = createUser(email, password, displayName);
+  const token = signToken(user.id);
+  setSessionCookie(res, token);
+  db.data.notifications.push({
+    id: crypto.randomUUID(),
+    user_id: user.id,
+    type: "account",
+    title: "Welcome to Cinemax",
+    message: "Your account is ready. Complete your preferences to personalize your experience.",
+    read: 0,
+    created_at: new Date().toISOString(),
+  });
+  db.save();
+
+  // Keep the verification email as a helpful follow-up, but do not block the
+  // onboarding experience. The frontend can immediately open the preference
+  // card once it receives the signed-in user payload below.
+  if (isMailerConfigured()) {
+    const otp = issueSignupVerification(email, displayName, password);
+    try {
+      await sendSignupVerificationEmail(email.toLowerCase().trim(), otp);
+    } catch (err) {
+      console.error("[auth] Failed to send signup verification:", err);
+    }
   }
 
-  const otp = issueSignupVerification(email, name || email.split("@")[0], password);
-  try {
-    await sendSignupVerificationEmail(email.toLowerCase().trim(), otp);
-  } catch (err) {
-    console.error("[auth] Failed to send signup verification:", err);
-    res.status(502).json({ error: "Couldn't send verification email. Please try again." });
-    return;
-  }
-  res.json({ ok: true, message: "Verification code sent to your email." });
+  res.status(201).json({ ok: true, autoVerified: true, user: userWithExtras(user), token });
 });
 
 authRouter.post("/api/auth/signup/verify", rateLimit({ name: "signup-verify", max: 8, windowMs: 15 * 60 * 1000 }), (req, res) => {
@@ -164,15 +162,18 @@ authRouter.post("/api/auth/signup/verify", rateLimit({ name: "signup-verify", ma
     return;
   }
 
-  if (getUserByEmail(email)) {
-    res.status(409).json({ error: "An account with this email already exists." });
+  const existing = getUserByEmail(email);
+  if (existing) {
+    const token = signToken(existing.id);
+    setSessionCookie(res, token);
+    res.status(201).json({ ok: true, user: userWithExtras(existing), token });
     return;
   }
 
   const user = createUser(email, "", result.name, result.passwordHash);
   const token = signToken(user.id);
   setSessionCookie(res, token);
-  res.status(201).json({ user: userWithExtras(user) });
+  res.status(201).json({ ok: true, user: userWithExtras(user), token });
 
   db.data.notifications.push({
     id: crypto.randomUUID(),
@@ -1020,8 +1021,6 @@ authRouter.get("/api/config/public", (_req, res) => {
     hiddenMovieIds: settings.hiddenMovieIds || [],
     homepageSections: settings.homepageSections || [],
     contentPages: settings.contentPages || {},
-    premiumFeatureEnabled: settings.premiumFeatureEnabled !== false,
-    premiumOnlyMovieIds: settings.premiumOnlyMovieIds || [],
     mailerEnabled: getMailerStatus().configured,
     googleAuthEnabled:
       Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_REDIRECT_URI),
@@ -1123,7 +1122,7 @@ function extractMediaCandidates(text: string, baseUrl: URL): string[] {
 
 async function resolveEmbedMediaUrl(url: string) {
   const baseUrl = new URL(url);
-  const allowedEmbedHosts = ["vidsrc.xyz", "embed.su", "vidlink.pro", "vidsrc.to", "vidsrc.pm", "vidsrc.me", "vidsrc.pw", "vidfast.pro"];
+  const allowedEmbedHosts = ["vidsrc.xyz", "embed.su", "vidlink.pro", "vidsrc.to", "vidsrc.pm", "vidsrc.me", "vidsrc.pw", "vidfast.pro", "vidsrc.lol", "vidsrc.wtf"];
   if (!allowedEmbedHosts.some((h) => baseUrl.hostname.endsWith(h))) {
     throw new Error("Host not permitted for resolving.");
   }
@@ -1171,7 +1170,7 @@ authRouter.post("/api/stream/resolve", async (req, res) => {
   if (!url || typeof url !== "string") return res.status(400).json({ error: "url is required" });
   try {
     const u = new URL(url);
-    const allowedEmbedHosts = ["vidsrc.xyz", "embed.su", "vidlink.pro", "vidsrc.to", "vidsrc.pm", "vidsrc.me", "vidsrc.pw", "vidfast.pro"];
+    const allowedEmbedHosts = ["vidsrc.xyz", "embed.su", "vidlink.pro", "vidsrc.to", "vidsrc.pm", "vidsrc.me", "vidsrc.pw", "vidfast.pro", "vidsrc.lol", "vidsrc.wtf"];
     if (!allowedEmbedHosts.some((h) => u.hostname.endsWith(h))) {
       return res.status(403).json({ error: "Host not permitted for resolving." });
     }

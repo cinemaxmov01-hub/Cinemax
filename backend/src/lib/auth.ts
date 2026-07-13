@@ -37,14 +37,6 @@ export function publicUser(u: DbUser) {
   } catch {
     // fall back to defaults on any malformed JSON
   }
-  // Premium status is authoritative on the server and combines three
-  // admin-controlled levers: the user's own subscription tier, a
-  // time-boxed (or permanent) admin override that's independent of that
-  // tier, and the admin role itself. The website must never compute this
-  // client-side — it always trusts what's returned here.
-  const override = db.data.premium_access.find((p) => p.user_id === u.id);
-  const overrideActive = Boolean(override) && (!override!.expires_at || new Date(override!.expires_at).getTime() > Date.now());
-  const premium = u.subscription === "Premium" || overrideActive || u.role === "admin";
   return {
     id: u.id,
     email: u.email,
@@ -52,9 +44,6 @@ export function publicUser(u: DbUser) {
     avatar: u.avatar,
     banner: u.banner,
     subscription: u.subscription,
-    premium,
-    premiumSource: overrideActive ? "admin_override" : u.role === "admin" ? "admin_role" : u.subscription === "Premium" ? "subscription" : "none",
-    premiumExpiresAt: overrideActive ? override!.expires_at || null : null,
     role: u.role,
     status: u.status,
     preferences,
