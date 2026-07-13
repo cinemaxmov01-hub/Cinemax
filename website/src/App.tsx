@@ -795,22 +795,23 @@ const CinemaxDashboard: React.FC = () => {
       <div id="main-content-panel" className="lg:pl-64 flex flex-col min-h-screen">
         
         {/* Top Header Navbar with frosted blur */}
-        <header id="top-navbar" className="h-20 glass-navbar sticky top-0 z-40 px-4 lg:px-8 flex items-center justify-between gap-4">
+        <header id="top-navbar" className="h-20 glass-navbar sticky top-0 z-40 px-4 lg:px-8 flex items-center justify-between gap-2 sm:gap-4">
           
           {/* Mobile Hamburguer & Search bar */}
-          <div className="flex items-center gap-2 sm:gap-4 flex-1 max-w-lg">
+          <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0 sm:max-w-lg">
             <button
               id="mobile-menu-trigger"
               aria-label="Open navigation menu"
               onClick={() => setSidebarOpen(true)}
-              className="p-2 rounded-xl border border-white/5 text-neutral-400 hover:bg-white/5 hover:text-white lg:hidden cursor-pointer"
+              className="p-2 rounded-xl border border-white/5 text-neutral-400 hover:bg-white/5 hover:text-white lg:hidden cursor-pointer flex-shrink-0"
             >
               <Menu className="h-5 w-5" />
             </button>
 
-            {/* Instant Search input */}
-            <div className="relative w-full">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500" aria-hidden="true" />
+            {/* Instant Search input — collapsed to a compact pill on mobile,
+               expanding smoothly when focused; always full-width from sm up. */}
+            <div className="relative flex-1 min-w-0 sm:w-full sm:flex-none">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500 pointer-events-none" aria-hidden="true" />
               <input
                 id="header-search-input"
                 type="text"
@@ -818,7 +819,7 @@ const CinemaxDashboard: React.FC = () => {
                 placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl pl-11 pr-12 py-2.5 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-[#39FF14]/50 transition-colors"
+                className="header-search-input-mobile w-full bg-white/5 border border-white/10 rounded-2xl pl-11 pr-12 py-2.5 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-[#39FF14]/50 transition-colors"
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-0.5 bg-[#050505] border border-white/10 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold text-neutral-500 select-none">
                 Ctrl K
@@ -826,8 +827,10 @@ const CinemaxDashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Center Navigation: Movies / TV Shows / Gens / All Categories - Now visible on all screen sizes */}
-          <nav className="flex items-center gap-1 flex-shrink-0 overflow-x-auto scrollbar-thin scrollbar-thumb-neutral-800 scrollbar-track-transparent">
+          {/* Center Navigation: Movies / TV Shows / Gens / All Categories —
+             hidden on mobile (the hamburger drawer already covers every one
+             of these links); shown from sm up once there's room for it. */}
+          <nav className="hidden sm:flex items-center gap-1 flex-shrink-0 overflow-x-auto scrollbar-thin scrollbar-thumb-neutral-800 scrollbar-track-transparent">
             <button
               id="nav-movies-btn"
               onClick={() => { setActiveGenre(null); setActiveGenreName(null); setCurrentView("movies"); }}
@@ -928,7 +931,7 @@ const CinemaxDashboard: React.FC = () => {
           </nav>
 
           {/* Right Header Navigation widgets */}
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
             {/* Notification bell — locked for guests */}
             <div className="relative">
               <button

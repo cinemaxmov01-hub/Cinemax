@@ -120,6 +120,27 @@ body {
   border-bottom: 1px solid var(--border);
 }
 
+/* Mobile-only animated header search: collapses to a compact pill by
+   default and smoothly expands when the person taps/focuses it. Scoped to
+   a max-width media query so desktop and tablet layouts (which already
+   show the search bar at full width) are completely unaffected. */
+@media (max-width: 639px) {
+  .header-search-input-mobile {
+    max-width: 42px;
+    padding-left: 42px;
+    padding-right: 12px;
+    cursor: pointer;
+    transition: max-width 0.35s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.25s ease, border-color 0.25s ease;
+  }
+
+  .header-search-input-mobile:focus,
+  .header-search-input-mobile:not(:placeholder-shown) {
+    max-width: 100%;
+    padding-right: 3rem;
+    cursor: text;
+  }
+}
+
 .surface-panel {
   background: var(--bg-surface);
   border: 1px solid var(--border);

@@ -119,6 +119,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const otpInputRef = useRef<HTMLInputElement>(null);
+  // Tracks whether the account was already created (and the session already
+  // established) during the sign-up form step, so the onboarding step never
+  // tries to create the account a second time.
+  const signupAccountCreatedRef = useRef(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -133,6 +137,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setOtp("");
     setError(authModalError || "");
     setInfo("");
+    signupAccountCreatedRef.current = false;
     if (initialEmail) {
       setEmail(initialEmail);
       // Skip straight past the "enter your email" step — whether that lands
@@ -259,7 +264,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const handleSignUpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (!email || !name) {
+    if (!email || !name || !password) {
       setError("Please fill out all required fields.");
       return;
     }
@@ -267,16 +272,36 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       setError("Please enter a valid email address.");
       return;
     }
-    // Send OTP verification code to email
-    setSubmitting(true);
-    console.log("Requesting signup verification for:", email);
-    const result = await requestSignupVerification(email, "", name);
-    setSubmitting(false);
-    console.log("Signup verification request result:", result);
-    if (!result.ok) {
-      setError(result.error || "Couldn't send verification code. Please try again.");
+    // Validate the password that was actually typed into the form — this
+    // used to be skipped here and an empty string was sent to the server
+    // instead, which made the server reject every sign-up with a "must
+    // contain uppercase/lowercase/number" error regardless of what the
+    // person entered.
+    if (!isStrongPassword(password)) {
+      setError("Password must be 8+ characters with uppercase, lowercase, and a number.");
       return;
     }
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+    setSubmitting(true);
+    const result = await requestSignupVerification(email, password, name);
+    setSubmitting(false);
+    if (!result.ok) {
+      setError(result.error || "Couldn't create your account. Please try again.");
+      return;
+    }
+    if (result.autoVerified) {
+      // Account created and the person is already signed in — go straight
+      // to the age/genre onboarding step for both email and Google sign-up.
+      signupAccountCreatedRef.current = true;
+      setInfo("");
+      setSignupStep("onboarding");
+      return;
+    }
+    // Fallback path for a server configuration that still requires an
+    // emailed verification code before the account is created.
     setInfo(`We've sent a 6-digit code to ${email}. Enter it below to verify your email.`);
     setSignupStep("verify");
     setOtp("");
@@ -324,37 +349,31 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const handleOnboardingComplete = async (preferences: UserOnboardingData) => {
     setSubmitting(true);
     setError("");
-    
-    // First create the account with the preferences
-    const result = await signUp(email, password, name);
-    if (!result.ok) {
-      setSubmitting(false);
-      setError(result.error || "Sign up failed.");
-      return;
-    }
 
-    // If auto-verified, complete onboarding immediately
-    if (result.autoVerified) {
-      const onboardingResult = await completeOnboarding(preferences);
-      if (!onboardingResult.ok) {
+    // Normally the account was already created (and the session already
+    // established) back in handleSignUpSubmit, so this just attaches the
+    // chosen preferences to it. The signUp fallback only runs for the rare
+    // legacy path where the server still required a separate verify+password
+    // step and the account genuinely doesn't exist yet.
+    if (!signupAccountCreatedRef.current) {
+      const result = await signUp(email, password, name);
+      if (!result.ok) {
         setSubmitting(false);
-        setError(onboardingResult.error || "Failed to save preferences.");
+        setError(result.error || "Sign up failed.");
         return;
       }
     }
 
-    // Immediate redirect to sign-in
+    const onboardingResult = await completeOnboarding(preferences);
     setSubmitting(false);
-    setInfo("Account created! Redirecting to sign in...");
-    setSignupStep("redirect");
-    
-    // Rapid redirect to sign-in view
-    setTimeout(() => {
-      goToSignIn();
-      setEmail(email); // Pre-fill the email for convenience
-      setPassword(""); // Clear password for security
-      setInfo("");
-    }, 800);
+    if (!onboardingResult.ok) {
+      setError(onboardingResult.error || "Failed to save preferences.");
+      return;
+    }
+
+    // Already signed in with preferences saved — close straight into the app.
+    setInfo("");
+    onClose();
   };
 
   /** Step 1 of forgot flow — an existing account gets an emailed OTP; an
@@ -604,7 +623,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           )}
 
           {((authView === "signup" && signupStep === "form") ||
-            (authView === "signup" && signupStep === "password") ||
             (authView === "signin" && signInStep === "password") ||
             (authView === "forgot" && forgotStep === "reset")) && (
             <div className="space-y-1">
@@ -619,13 +637,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   className={inputClass}
                   required
                   minLength={8}
-                  autoFocus
+                  autoFocus={authView !== "signup"}
                 />
               </div>
             </div>
           )}
 
-          {(authView === "signup" && signupStep === "password") && (
+          {authView === "signup" && signupStep === "form" && (
             <div className="space-y-1">
               <label className={labelClass}>Confirm Password</label>
               <div className="relative">
