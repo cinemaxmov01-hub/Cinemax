@@ -24,8 +24,6 @@ export interface PublicSiteConfig {
   tmdbApiKey?: string;
   mailerEnabled: boolean;
   googleAuthEnabled: boolean;
-  premiumFeatureEnabled: boolean;
-  premiumOnlyMovieIds: number[];
 }
 
 export interface PublicAd {
@@ -56,8 +54,6 @@ export const DEFAULT_PUBLIC_CONFIG: PublicSiteConfig = {
   contentPages: {},
   mailerEnabled: false,
   googleAuthEnabled: false,
-  premiumFeatureEnabled: true,
-  premiumOnlyMovieIds: [],
 };
 
 let cachedConfig: PublicSiteConfig | null = null;
@@ -82,8 +78,6 @@ export async function fetchPublicSiteConfig(force = false): Promise<PublicSiteCo
       tmdbApiKey: data.tmdbApiKey,
       mailerEnabled: Boolean(data.mailerEnabled),
       googleAuthEnabled: Boolean(data.googleAuthEnabled),
-      premiumFeatureEnabled: data.premiumFeatureEnabled !== false,
-      premiumOnlyMovieIds: Array.isArray(data.premiumOnlyMovieIds) ? data.premiumOnlyMovieIds : [],
     };
     return cachedConfig;
   } catch {

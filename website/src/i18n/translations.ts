@@ -18,7 +18,6 @@ export type AppLang = (typeof APP_LANGUAGES)[number];
 const en: Record<string, string> = {
   home: "Home",
   movies: "Movies",
-  genres: "Genres",
   tvShows: "TV Shows",
   shorts: "Shorts",
   myList: "My List",
@@ -45,7 +44,7 @@ const en: Record<string, string> = {
   language: "Language",
   theme: "Theme",
   darkMode: "Dark Mode",
-  lightMode: "Light Grey",
+  lightMode: "Light Mode",
   storageUsed: "Storage Used",
   downloadStorage: "Download Storage",
   forgotPassword: "Forgot Password",
@@ -91,7 +90,7 @@ const fr: Record<string, string> = {
   saveForLater: "Enregistré", playAllEpisodes: "Tout regarder", shuffleUpNext: "Mélanger",
   upNext: "À suivre", liveChat: "Chat en direct", popular: "Populaire", inbox: "Boîte de réception",
   clearCache: "Vider le cache", language: "Langue", theme: "Thème", darkMode: "Mode sombre",
-  lightMode: "Gris clair", storageUsed: "Stockage utilisé", downloadStorage: "Stockage téléchargements",
+  lightMode: "Mode clair", storageUsed: "Stockage utilisé", downloadStorage: "Stockage téléchargements",
   forgotPassword: "Mot de passe oublié ?", verifyEmail: "Vérifier l'e-mail", accountSettings: "Paramètres du compte",
   security: "Sécurité", preferences: "Préférences", dangerZone: "Zone dangereuse", notifications: "Notifications",
   autoplayNext: "Lecture auto épisode suivant", autoplayTrailers: "Bandes-annonces auto",
@@ -107,13 +106,13 @@ const fr: Record<string, string> = {
 };
 
 const rw: Record<string, string> = {
-  home: "Ahabanza", movies: "Filime", genres: "Ubwoko", tvShows: "Televiziyo", shorts: "Shorts", myList: "Urutonde rwanjye",
+  home: "Ahabanza", movies: "Filime", tvShows: "Televiziyo", shorts: "Shorts", myList: "Urutonde rwanjye",
   watchlist: "Urutonde rwo kureba", history: "Amateka", favorites: "Ibikunzwe", downloads: "Gukurura",
   profile: "Umwirondoro", settings: "Igenamiterere", helpDesk: "Ubufasha", signIn: "Injira", signUp: "Iyandikishe",
   signOut: "Sohoka", backToDiscovery: "Subira", continueWatching: "Komeza kureba", saveForLater: "Bika",
   playAllEpisodes: "Reba ibice byose", shuffleUpNext: "Hindura ibikurikira", upNext: "Ibikurikira",
   liveChat: "Ikiganiro", popular: "Gikomeye", inbox: "Ubutumwa", clearCache: "Siba cache", language: "Ururimi",
-  theme: "Insanganyamatsiko", darkMode: "Umuhondo", lightMode: "Ikizigira gicye", storageUsed: "Ububiko",
+  theme: "Insanganyamatsiko", darkMode: "Umuhondo", lightMode: "Urumuri", storageUsed: "Ububiko",
   downloadStorage: "Ububiko bwo gukurura", forgotPassword: "Wibagiwe ijambo ry'ibanga?", verifyEmail: "Emeza imeli",
   accountSettings: "Igenamiterere", security: "Umutekano", preferences: "Ibyifuzo", dangerZone: "Akaga",
   notifications: "Amakuru", autoplayNext: "Kinyura ibice", autoplayTrailers: "Trailer auto",
@@ -129,13 +128,13 @@ const rw: Record<string, string> = {
 
 const es: Record<string, string> = {
   ...en, home: "Inicio", movies: "Películas", tvShows: "Series", signIn: "Iniciar sesión", signUp: "Registrarse",
-  settings: "Ajustes", language: "Idioma", theme: "Tema", lightMode: "Gris claro", darkMode: "Modo oscuro",
+  settings: "Ajustes", language: "Idioma", theme: "Tema", lightMode: "Modo claro", darkMode: "Modo oscuro",
   welcomeBack: "Bienvenido de nuevo", playNow: "Reproducir", searchPlaceholder: "Buscar películas…",
 };
 
 const de: Record<string, string> = {
   ...en, home: "Start", movies: "Filme", tvShows: "Serien", signIn: "Anmelden", signUp: "Registrieren",
-  settings: "Einstellungen", language: "Sprache", theme: "Design", lightMode: "Hellgrau", darkMode: "Dunkel",
+  settings: "Einstellungen", language: "Sprache", theme: "Design", lightMode: "Hell", darkMode: "Dunkel",
   welcomeBack: "Willkommen zurück", playNow: "Abspielen", searchPlaceholder: "Filme suchen…",
 };
 

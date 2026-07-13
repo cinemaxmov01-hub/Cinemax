@@ -296,7 +296,7 @@ export const ProfilePage: React.FC = () => {
               disabled={portalBusy}
               className="neon-btn inline-flex items-center justify-center gap-2 font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wide cursor-pointer disabled:opacity-60 whitespace-nowrap"
             >
-              {portalBusy ? <Loader2 className="h-4 w-4 animate-spin text-[#39FF14]" /> : <ExternalLink className="h-4 w-4" />}
+              {portalBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
               Admin Panel
             </button>
           </div>
@@ -355,7 +355,7 @@ export const ProfilePage: React.FC = () => {
                     onClick={() => photoInputRef.current?.click()}
                     className="btn-secondary inline-flex items-center gap-2 font-bold px-5 py-3 rounded-xl text-xs uppercase tracking-wide cursor-pointer disabled:opacity-60"
                   >
-                    {uploadBusy ? <Loader2 className="h-4 w-4 animate-spin text-[#39FF14]" /> : <Upload className="h-4 w-4" />}
+                    {uploadBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                     {t("uploadPhoto")}
                   </button>
                 </div>
@@ -539,7 +539,7 @@ export const ProfilePage: React.FC = () => {
 
           {tab === "preferences" && (
             <div className="space-y-8">
-              <SettingsSection title={t("theme")} description="Switch between dark and Light Grey theme." icon={theme === "light" ? Sun : Moon}>
+              <SettingsSection title={t("theme")} description="Switch between dark and light mode." icon={theme === "light" ? Sun : Moon}>
                 <SettingsRow title={theme === "light" ? t("lightMode") : t("darkMode")} description="Applies instantly across the entire site.">
                   <Toggle checked={theme === "light"} onChange={() => toggleTheme()} />
                 </SettingsRow>

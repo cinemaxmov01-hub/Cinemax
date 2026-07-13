@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { AppProvider, useApp } from "./context/AppContext";
-import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Sidebar } from "./components/Sidebar";
 import { MovieCard } from "./components/MovieCard";
 import { WatchChoiceModal } from "./components/WatchChoiceModal";
-import { PremiumUpsellModal } from "./components/PremiumUpsellModal";
 import { PlayerPage } from "./components/PlayerPage";
 import { ProfilePage } from "./components/ProfilePage";
 import { DownloadsPage } from "./components/DownloadsPage";
@@ -24,7 +22,6 @@ import { InstallAppButton } from "./components/InstallAppButton";
 import { TVShowsPage } from "./components/TVShowsPage";
 import { ShortsPage } from "./components/ShortsPage";
 import { GensPage } from "./components/GensPage";
-import { PremiumPage } from "./components/PremiumPage";
 import { HomeAIAssistant } from "./components/HomeAIAssistant";
 import { MovieDetailsModal } from "./components/MovieDetailsModal";
 import { Footer } from "./components/Footer";
@@ -55,9 +52,7 @@ import {
   ChevronRight,
   ListPlus,
   Lock,
-  Tag,
-  Sparkles,
-  Crown
+  Tag
 } from "lucide-react";
 
 // Pre-configured "Supergirl" Featured Hero Movie matching references
@@ -96,15 +91,15 @@ const ONBOARDING_GENRE_ID_MAP: Record<string, number> = {
 };
 
 const CinemaxDashboard: React.FC = () => {
-  const {
-    currentView,
-    setCurrentView,
-    selectedMovie,
-    setSelectedMovie,
-    playerMode,
+  const { 
+    currentView, 
+    setCurrentView, 
+    selectedMovie, 
+    setSelectedMovie, 
+    playerMode, 
     setPlayerMode,
-    searchQuery,
-    setSearchQuery,
+    searchQuery, 
+    setSearchQuery, 
     user,
     activeGenre,
     setActiveGenre,
@@ -131,13 +126,11 @@ const CinemaxDashboard: React.FC = () => {
     goToAdminPanel,
     dismissAdminToWebsite,
     siteConfig,
-    reportErrorToAdmin,
   } = useApp();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
-  const [genresMenuOpen, setGenresMenuOpen] = useState(false);
   const [allGenres, setAllGenres] = useState<Array<{ id: number; name: string }>>([]);
   const [choiceModalOpen, setChoiceModalOpen] = useState(false);
   const [modalTargetMovie, setModalTargetMovie] = useState<Movie | null>(null);
@@ -493,21 +486,7 @@ const CinemaxDashboard: React.FC = () => {
     }
   }, [activeGenre, trendingMovies, popularMovies, topRated, upcoming, nowPlaying, trendingTV]);
 
-  // Admin-controlled Premium gate (see site_settings.premiumFeatureEnabled /
-  // premiumOnlyMovieIds, managed from the admin Premium Access panel).
-  const [premiumUpsellMovie, setPremiumUpsellMovie] = useState<Movie | null>(null);
-  const isPremiumLocked = (movie: Movie) => {
-    if (isGuest || !currentUser) return false; // sign-in prompt already covers guests
-    if (!siteConfig.premiumFeatureEnabled) return false;
-    if (!(siteConfig.premiumOnlyMovieIds || []).includes(movie.id)) return false;
-    return !currentUser.premium;
-  };
-
   const handleMovieClick = async (movie: Movie) => {
-    if (isPremiumLocked(movie)) {
-      setPremiumUpsellMovie(movie);
-      return;
-    }
     const playKey = `${movie.media_type || (isTvShow(movie) ? "tv" : "movie")}:${movie.id}`;
     setPreparingPlayKey(playKey);
     try {
@@ -543,7 +522,7 @@ const CinemaxDashboard: React.FC = () => {
       setChoiceModalOpen(false);
       setCurrentView("player");
     } catch (err) {
-      console.error("Failed to prepare full movie:", err);
+      console.error("Failed to prepare full movie stream:", err);
       setSelectedMovie({
         ...movie,
         media_type: movie.media_type ?? (isTvShow(movie) ? "tv" : "movie"),
@@ -804,11 +783,10 @@ const CinemaxDashboard: React.FC = () => {
   }
 
   return (
-    <ErrorBoundary reportErrorToAdmin={reportErrorToAdmin}>
-      <div id="dashboard-wrapper" className="min-h-screen bg-[#050505] text-neutral-200 relative overflow-hidden">
-
-        {/* Background Radial Glow Gradient from theme */}
-        <div className="bg-gradient-radial-overlay" />
+    <div id="dashboard-wrapper" className="min-h-screen bg-[#050505] text-neutral-200 relative overflow-hidden">
+      
+      {/* Background Radial Glow Gradient from theme */}
+      <div className="bg-gradient-radial-overlay" />
 
       {/* Left Sidebar Menu */}
       <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
@@ -848,21 +826,17 @@ const CinemaxDashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Center Navigation: Movies / TV Shows / All Categories
-              Guests are restricted to Home, TV Show, Categories, About,
-              Help, and Language — the Movies tab is hidden for them. */}
+          {/* Center Navigation: Movies / TV Shows / Gens / All Categories */}
           <nav className="hidden xl:flex items-center gap-1 flex-shrink-0">
-            {!isGuest && (
-              <button
-                id="nav-movies-btn"
-                onClick={() => { setActiveGenre(null); setActiveGenreName(null); setCurrentView("movies"); }}
-                className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  currentView === "movies" ? "bg-[#39FF14]/10 text-[#39FF14]" : "text-neutral-400 hover:text-white hover:bg-white/5"
-                }`}
-              >
-                {t("movies")}
-              </button>
-            )}
+            <button
+              id="nav-movies-btn"
+              onClick={() => { setActiveGenre(null); setActiveGenreName(null); setCurrentView("movies"); }}
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                currentView === "movies" ? "bg-[#39FF14]/10 text-[#39FF14]" : "text-neutral-400 hover:text-white hover:bg-white/5"
+              }`}
+            >
+              {t("movies")}
+            </button>
             <button
               id="nav-tv-btn"
               onClick={() => setCurrentView("tv")}
@@ -871,6 +845,15 @@ const CinemaxDashboard: React.FC = () => {
               }`}
             >
               {t("tvShows")}
+            </button>
+            <button
+              id="nav-gens-btn"
+              onClick={() => setCurrentView("gens")}
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                currentView === "gens" ? "bg-[#39FF14]/10 text-[#39FF14]" : "text-neutral-400 hover:text-white hover:bg-white/5"
+              }`}
+            >
+              gens
             </button>
             <div className="relative">
               <button
@@ -942,93 +925,10 @@ const CinemaxDashboard: React.FC = () => {
                 </>
               )}
             </div>
-
-            <button
-              id="nav-premium-btn"
-              onClick={() => setCurrentView("premium")}
-              className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                currentView === "premium" || currentView === "gens"
-                  ? "bg-gradient-to-r from-amber-400/15 to-orange-500/15 text-amber-400"
-                  : "text-neutral-400 hover:text-white hover:bg-white/5"
-              }`}
-            >
-              <Crown className="h-3.5 w-3.5" fill="currentColor" />
-              Premium
-            </button>
-
-            {/* Personalized "Genres" quick-nav — powered by the genres the
-                user picked during Sign Up onboarding. Hidden for guests and
-                for users who haven't set preferences yet. */}
-            {!isGuest && currentUser?.onboarding?.favoriteGenres && currentUser.onboarding.favoriteGenres.length > 0 && (
-              <div className="relative">
-                <button
-                  id="nav-genres-btn"
-                  onClick={() => setGenresMenuOpen((v) => !v)}
-                  className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    genresMenuOpen ? "bg-[#39FF14]/10 text-[#39FF14]" : "text-neutral-400 hover:text-white hover:bg-white/5"
-                  }`}
-                >
-                  <Sparkles className="h-3.5 w-3.5" />
-                  {t("genres")}
-                  <ChevronRight className={`h-3.5 w-3.5 transition-transform duration-300 ${genresMenuOpen ? "rotate-90" : ""}`} />
-                </button>
-                {genresMenuOpen && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setGenresMenuOpen(false)} />
-                    <div id="nav-genres-dropdown" className="absolute left-0 top-full mt-3 z-50 w-72 animate-dropdown-pop">
-                      <div className="absolute -top-1.5 left-6 h-3 w-3 rotate-45 bg-[#0c0c0c] border-l border-t border-[#39FF14]/20" />
-                      <div className="relative rounded-2xl border border-neutral-800 surface-panel overflow-hidden">
-                        <div className="flex items-center gap-2 px-4 py-3.5 border-b border-white/10 bg-gradient-to-r from-[#39FF14]/10 to-transparent">
-                          <div className="h-7 w-7 rounded-lg bg-[#39FF14]/15 border border-[#39FF14]/30 flex items-center justify-center text-[#39FF14]">
-                            <Sparkles className="h-3.5 w-3.5" />
-                          </div>
-                          <span className="text-xs font-black text-white uppercase tracking-wider">Your Genres</span>
-                        </div>
-                        <div className="max-h-80 overflow-y-auto p-2 grid grid-cols-2 gap-1.5 scrollbar-thin scrollbar-thumb-neutral-800 scrollbar-track-transparent">
-                          {currentUser.onboarding.favoriteGenres.map((genreId) => {
-                            const tmdbId = ONBOARDING_GENRE_ID_MAP[genreId];
-                            const label = genreId.charAt(0).toUpperCase() + genreId.slice(1).replace(/-/g, " ");
-                            const isActive = tmdbId !== undefined && activeGenre === tmdbId;
-                            return (
-                              <button
-                                key={genreId}
-                                onClick={() => {
-                                  if (tmdbId !== undefined) {
-                                    setActiveGenre(tmdbId);
-                                    setActiveGenreName(label);
-                                  }
-                                  setCurrentView("movies");
-                                  setGenresMenuOpen(false);
-                                }}
-                                className={`group relative flex items-center gap-2 text-left px-3 py-2.5 rounded-xl text-[11px] font-semibold transition-all duration-200 cursor-pointer overflow-hidden ${
-                                  isActive ? "accent-chip" : "text-neutral-300 hover:bg-neutral-800 hover:text-white"
-                                }`}
-                              >
-                                <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 transition-all duration-200 ${
-                                  isActive ? "bg-[#39FF14]" : "bg-neutral-700 group-hover:bg-neutral-600"
-                                }`} />
-                                <span className="truncate">{label}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
           </nav>
 
           {/* Right Header Navigation widgets */}
           <div className="flex items-center gap-4">
-            {/* Install APK — triggers the same native install flow as the
-                sidebar button. There is no static .apk binary to download;
-                both buttons drive the browser's install prompt.
-                Hidden for guests, who are limited to Home, TV Show,
-                Categories, About, Help, and Language. */}
-            {!isGuest && <InstallAppButton variant="header" label="Install APK" />}
-
             {/* Notification bell — locked for guests */}
             <div className="relative">
               <button
@@ -1225,7 +1125,7 @@ const CinemaxDashboard: React.FC = () => {
                       <div className="flex items-center gap-4 pt-2">
                         <button
                           id="hero-play-btn"
-                          onClick={() => handlePlayFullMovie(heroMovie)}
+                          onClick={() => handleMovieClick(heroMovie)}
                           className="flex items-center gap-2 neon-btn font-extrabold px-6 py-3 rounded-2xl transition-all cursor-pointer"
                         >
                           <Play className="h-5 w-5 fill-black" />
@@ -1306,24 +1206,9 @@ const CinemaxDashboard: React.FC = () => {
                       </div>
                     </section>
 
-                    {!isGuest && (
-                      <section id="home-live-chat" className="max-w-3xl">
-                        <LiveChat variant="home" />
-                      </section>
-                    )}
-                    {isGuest && (
-                      <section id="home-live-chat-locked" className="max-w-3xl">
-                        <button
-                          onClick={requireSignInPrompt}
-                          className="w-full flex items-center gap-3 rounded-2xl border border-dashed border-white/10 bg-white/5 px-5 py-4 text-left hover:bg-white/8 transition-colors cursor-pointer"
-                        >
-                          <Lock className="h-4 w-4 text-neutral-500 flex-shrink-0" />
-                          <span className="text-xs font-semibold text-neutral-400">
-                            Live Chat is only available to signed-in members. Sign in to join the conversation.
-                          </span>
-                        </button>
-                      </section>
-                    )}
+                    <section id="home-live-chat" className="max-w-3xl">
+                      <LiveChat variant="home" />
+                    </section>
                   </div>
                 </div>
               )}
@@ -1441,7 +1326,7 @@ const CinemaxDashboard: React.FC = () => {
                                 </span>
                               </div>
                               <p className="text-[10px] text-neutral-600 font-mono mt-1">
-                                Last Watched: {new Date(hist.watchedAt).toLocaleDateString()}
+                                Last Streamed: {new Date(hist.watchedAt).toLocaleDateString()}
                               </p>
                             </div>
 
@@ -1462,7 +1347,7 @@ const CinemaxDashboard: React.FC = () => {
                     <div className="text-center py-24 text-neutral-500 space-y-3">
                       <HistoryIcon className="h-12 w-12 text-neutral-700 mx-auto" />
                       <h3 className="font-sans font-bold text-lg text-neutral-400">No History Saved</h3>
-                      <p className="text-xs max-w-sm mx-auto">Start watching your favorite titles, and we will track your progress right here!</p>
+                      <p className="text-xs max-w-sm mx-auto">Start streaming your favorite titles, and we will track your progress right here!</p>
                     </div>
                   )}
                 </div>
@@ -1491,7 +1376,7 @@ const CinemaxDashboard: React.FC = () => {
                     <div className="text-center py-24 text-neutral-500 space-y-3">
                       <Heart className="h-12 w-12 text-neutral-700 mx-auto" />
                       <h3 className="font-sans font-bold text-lg text-neutral-400">Favorites empty</h3>
-                      <p className="text-xs max-w-sm mx-auto">Add items to your favorites within the player details tab!</p>
+                      <p className="text-xs max-w-sm mx-auto">Add items to your favorites within the streaming player details tab!</p>
                     </div>
                   )}
                 </div>
@@ -1501,13 +1386,7 @@ const CinemaxDashboard: React.FC = () => {
               {currentView === "downloads" && <DownloadsPage />}
 
               {/* VIEW: GENS - Age-restricted romance/mature content */}
-              {(currentView === "premium" || currentView === "gens") && (
-                <PremiumPage
-                  initialTab={currentView === "gens" ? "gens" : "overview"}
-                  onNavigateTab={(tab) => setCurrentView(tab === "gens" ? "gens" : "premium")}
-                  onMovieClick={handleMovieClick}
-                />
-              )}
+              {currentView === "gens" && <GensPage onMovieClick={handleMovieClick} />}
 
               {/* VIEW: SHORTS — vertical autoplay trailer feed */}
               {currentView === "shorts" && (
@@ -1542,13 +1421,6 @@ const CinemaxDashboard: React.FC = () => {
         onChoose={handleChoiceSelected}
       />
 
-      {/* PREMIUM-EXCLUSIVE CONTENT UPSELL — admin-controlled gate */}
-      <PremiumUpsellModal
-        movie={premiumUpsellMovie}
-        isOpen={Boolean(premiumUpsellMovie)}
-        onClose={() => setPremiumUpsellMovie(null)}
-      />
-
       {/* REGISTRATION / LOGIN AUTH DIALOG */}
       <AuthModal
         isOpen={authModalOpen}
@@ -1558,13 +1430,13 @@ const CinemaxDashboard: React.FC = () => {
         initialEmail={authModalPrefillEmail}
       />
 
-      {/* FLOATING PICTURE IN PICTURE PLAYER */}
+      {/* FLOATING PICTURE IN PICTURE STREAMING CONTAINER */}
       <PipPlayer />
 
       {/* AI ASSISTANT — available on every page, not just Home. Only ever
           appears via its own floating "Ask AI" launcher button; it stays
           fully closed/hidden otherwise. */}
-      <HomeAIAssistant onSelectMovie={handlePlayFullMovie} />
+      <HomeAIAssistant onSelectMovie={handleMovieClick} />
 
       {/* MOVIE DETAILS MODAL — powers the Hero's "More Info" button with a
           full detail view, distinct from "Play Now" which jumps straight
@@ -1586,18 +1458,18 @@ const CinemaxDashboard: React.FC = () => {
       />
 
     </div>
-    </ErrorBoundary>
   );
 };
 
 const OnboardingGate: React.FC = () => {
-  const { needsOnboarding, completeOnboarding } = useApp();
+  const { needsOnboarding, completeOnboarding, dismissOnboarding } = useApp();
   return (
     <OnboardingPreferences
       isOpen={needsOnboarding}
       onComplete={async (preferences) => {
         await completeOnboarding(preferences);
       }}
+      onSkip={dismissOnboarding}
     />
   );
 };

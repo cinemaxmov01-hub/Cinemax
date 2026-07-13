@@ -1,7 +1,7 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import { useApp } from "../context/AppContext";
 import { AppNotification } from "../types";
-import { Bell, Film, Bookmark, Sparkles, UserCog, Info, CheckCheck, Trash2, Megaphone, X } from "lucide-react";
+import { Bell, Film, Bookmark, Sparkles, UserCog, Info, CheckCheck, Trash2, Megaphone } from "lucide-react";
 
 const ICONS: Record<string, React.ElementType> = {
   new_release: Film,
@@ -34,7 +34,6 @@ function timeAgo(iso: string): string {
 export const NotificationCenter: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
   const { notifications, unreadCount, markNotificationRead, markAllNotificationsRead, clearNotifications } = useApp();
   const ref = useRef<HTMLDivElement>(null);
-  const [expandedNotification, setExpandedNotification] = useState<AppNotification | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -46,43 +45,6 @@ export const NotificationCenter: React.FC<{ isOpen: boolean; onClose: () => void
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
-
-  if (expandedNotification) {
-    const type = expandedNotification.type in ICONS ? expandedNotification.type : "system";
-    const Icon = ICONS[type];
-    return (
-      <div
-        ref={ref}
-        id="notification-detail-panel"
-        className="absolute right-0 top-14 w-[28rem] max-w-[90vw] rounded-2xl overflow-hidden z-50 animate-dropdown-pop surface-panel"
-      >
-        <div className="flex items-center justify-between px-4 py-3.5 border-b border-neutral-800 bg-neutral-900">
-          <button
-            onClick={() => setExpandedNotification(null)}
-            className="text-neutral-400 hover:text-white transition-colors cursor-pointer p-1.5 rounded-lg hover:bg-neutral-800"
-          >
-            <X className="h-4 w-4" />
-          </button>
-          <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Notification Details</span>
-          <div className="w-8" />
-        </div>
-        <div className="p-6 bg-neutral-950">
-          <div className={`flex items-center gap-3 mb-4`}>
-            <div className={`flex-shrink-0 h-12 w-12 rounded-xl border flex items-center justify-center ${ACCENTS[type]}`}>
-              <Icon className="h-6 w-6" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-white leading-tight">{expandedNotification.title}</h3>
-              <p className="text-[10px] text-neutral-500 mt-1 font-medium">{timeAgo(expandedNotification.timestamp)}</p>
-            </div>
-          </div>
-          <div className="bg-neutral-900 rounded-xl p-4 border border-neutral-800">
-            <p className="text-sm text-neutral-300 leading-relaxed whitespace-pre-wrap">{expandedNotification.message}</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div
@@ -127,10 +89,7 @@ export const NotificationCenter: React.FC<{ isOpen: boolean; onClose: () => void
             return (
               <button
                 key={n.id}
-                onClick={() => {
-                  markNotificationRead(n.id);
-                  setExpandedNotification(n);
-                }}
+                onClick={() => markNotificationRead(n.id)}
                 className={`w-full flex gap-3 px-4 py-3.5 text-left border-b border-neutral-800/80 last:border-0 hover:bg-neutral-900 transition-colors cursor-pointer ${
                   n.read ? "opacity-55" : "bg-neutral-900/40"
                 }`}

@@ -95,23 +95,89 @@ export function triggerBrowserDownload(blob: Blob, filename: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
+export async function pickDirectoryForDownloads(): Promise<any | null> {
+  if (typeof window === "undefined") return null;
+  const win = window as Window & typeof globalThis & { showDirectoryPicker?: (options?: any) => Promise<any> };
+  if (typeof win.showDirectoryPicker !== "function") return null;
+
+  try {
+    return await win.showDirectoryPicker({ mode: "readwrite" });
+  } catch (err: any) {
+    if (err?.name !== "AbortError") {
+      console.warn("Directory picker is not available; using browser download fallback.", err);
+    }
+    return null;
+  }
+}
+
+export async function saveBlobToDevice(blob: Blob, filename: string, targetDirectory?: any): Promise<void> {
+  if (typeof window === "undefined") {
+    triggerBrowserDownload(blob, filename);
+    return;
+  }
+
+  const win = window as Window & typeof globalThis & { showSaveFilePicker?: (options?: any) => Promise<any> };
+  const safeName = filename || "download.bin";
+  const extension = safeName.includes(".") ? safeName.slice(safeName.lastIndexOf(".")) : ".bin";
+
+  try {
+    if (targetDirectory?.getFileHandle) {
+      const handle = await targetDirectory.getFileHandle(safeName, { create: true });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return;
+    }
+
+    if (typeof win.showSaveFilePicker === "function") {
+      const handle = await win.showSaveFilePicker({
+        suggestedName: safeName,
+        types: [{
+          description: "Download file",
+          accept: {
+            [blob.type || "application/octet-stream"]: [extension],
+          },
+        }],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return;
+    }
+  } catch (err: any) {
+    if (err?.name !== "AbortError") {
+      console.warn("File picker failed; falling back to browser download.", err);
+    }
+  }
+
+  triggerBrowserDownload(blob, filename);
+}
+
 /**
  * Download a remote file URL robustly and save it with `filename`.
- * Attempts a progressive fetch to provide progress via `onProgress` if present.
+ * Attempts a streamed fetch to provide progress via `onProgress` if present.
  * Throws when the browser cannot fetch the file, so callers do not report a
  * completed video download when only a remote tab opened or failed.
  */
-export async function downloadRemoteFile(url: string, filename: string, onProgress?: (loaded: number, total?: number) => void): Promise<void> {
+export async function downloadRemoteFile(
+  url: string,
+  filename: string,
+  onProgress?: (loaded: number, total?: number) => void,
+  options?: { saveToDevice?: boolean; targetDirectory?: any }
+): Promise<Blob> {
   try {
     const res = await fetch(url, { mode: "cors" });
     if (!res.ok) throw new Error(`Request failed: ${res.status}`);
     const contentLength = res.headers.get("Content-Length");
     const total = contentLength ? Number(contentLength) : undefined;
     if (!res.body) {
-      // No progressive download support - fall back to blob
       const blob = await res.blob();
-      triggerBrowserDownload(blob, filename);
-      return;
+      if (options?.saveToDevice) {
+        await saveBlobToDevice(blob, filename, options.targetDirectory);
+      } else {
+        triggerBrowserDownload(blob, filename);
+      }
+      return blob;
     }
 
     const reader = res.body.getReader();
@@ -126,8 +192,13 @@ export async function downloadRemoteFile(url: string, filename: string, onProgre
         if (onProgress) onProgress(received, total);
       }
     }
-    const blob = new Blob(chunks, { type: res.headers.get("Content-Type") || "application/octet-binary" });
-    triggerBrowserDownload(blob, filename);
+    const blob = new Blob(chunks, { type: res.headers.get("Content-Type") || "application/octet-stream" });
+    if (options?.saveToDevice) {
+      await saveBlobToDevice(blob, filename, options.targetDirectory);
+    } else {
+      triggerBrowserDownload(blob, filename);
+    }
+    return blob;
   } catch (err: any) {
     const a = document.createElement("a");
     a.href = url;

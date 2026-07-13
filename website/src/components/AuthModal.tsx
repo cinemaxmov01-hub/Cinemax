@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useApp } from "../context/AppContext";
 import { X, Mail, Lock, User, ArrowRight, Loader2, KeyRound, ArrowLeft } from "lucide-react";
-import { AgeInputModal } from "./AgeInputModal";
-import { CategorySelectionModal } from "./CategorySelectionModal";
+import { OnboardingPreferences, UserOnboardingData } from "./OnboardingPreferences";
 
 /**
  * Kicks off the backend-hosted Google OAuth flow. The Express server exposes
@@ -17,6 +16,18 @@ const startGoogleOAuth = () => {
     : "";
   const returnTo = typeof window !== "undefined" ? window.location.origin : "";
   const qs = returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : "";
+  
+  console.log("Starting Google OAuth...");
+  console.log("API Base URL:", base);
+  console.log("Return URL:", returnTo);
+  console.log("Full OAuth URL:", `${base}/api/auth/google${qs}`);
+  
+  if (!base) {
+    console.error("API Base URL is not configured. Google OAuth cannot work.");
+    alert("Google OAuth is not configured. Please contact support.");
+    return;
+  }
+  
   window.location.href = `${base}/api/auth/google${qs}`;
 };
 
@@ -63,7 +74,7 @@ interface AuthModalProps {
 type AuthView = "signin" | "signup" | "forgot";
 type SignInStep = "email" | "password" | "otp";
 type ForgotStep = "email" | "reset";
-type SignupStep = "form" | "verify";
+type SignupStep = "form" | "verify" | "password" | "onboarding" | "redirect";
 
 const inputClass =
   "w-full surface-input rounded-xl pl-11 pr-4 py-3 text-sm placeholder:text-neutral-500 transition-colors focus:outline-none";
@@ -80,6 +91,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     signIn,
     signUp,
     verifySignup,
+    requestSignupVerification,
     checkEmailForReset,
     requestPasswordReset,
     resetPassword,
@@ -87,20 +99,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     requestOtp,
     verifyOtp,
     completeOnboarding,
+    enterAsGuest,
     authModalError,
     siteConfig,
-    enterAsGuest,
   } = useApp();
 
   const [authView, setAuthView] = useState<AuthView>("signin");
   const [signInStep, setSignInStep] = useState<SignInStep>("email");
   const [signupStep, setSignupStep] = useState<SignupStep>("form");
   const [forgotStep, setForgotStep] = useState<ForgotStep>("email");
-
-  const [showAgeModal, setShowAgeModal] = useState(false);
-  const [showCategoryModal, setShowCategoryModal] = useState(false);
-  const [userAge, setUserAge] = useState<number | null>(null);
-  const [userCategories, setUserCategories] = useState<string[]>([]);
 
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
@@ -227,6 +234,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       setError(result.error || "Invalid email or password.");
       return;
     }
+    // Check if user needs onboarding (first-time login)
+    // This will be handled by the context's needsOnboarding state
     onClose();
   };
 
@@ -250,7 +259,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const handleSignUpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (!email || !password || !name) {
+    if (!email || !name) {
       setError("Please fill out all required fields.");
       return;
     }
@@ -258,25 +267,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       setError("Please enter a valid email address.");
       return;
     }
-    if (!isStrongPassword(password)) {
-      setError("Password must be 8+ characters with uppercase, lowercase, and a number.");
-      return;
-    }
+    // Send OTP verification code to email
     setSubmitting(true);
-    const result = await signUp(email, password, name);
+    console.log("Requesting signup verification for:", email);
+    const result = await requestSignupVerification(email, "", name);
     setSubmitting(false);
+    console.log("Signup verification request result:", result);
     if (!result.ok) {
-      setError(result.error || "Sign up failed.");
+      setError(result.error || "Couldn't send verification code. Please try again.");
       return;
     }
-    if (result.autoVerified) {
-      // No email verification step needed — go straight into the
-      // age + favorite-categories onboarding right after signup.
-      setShowAgeModal(true);
-      return;
-    }
-    setInfo(`We sent a verification code to ${email}.`);
+    setInfo(`We've sent a 6-digit code to ${email}. Enter it below to verify your email.`);
     setSignupStep("verify");
+    setOtp("");
   };
 
   const handleSignupVerifySubmit = async (e: React.FormEvent) => {
@@ -287,31 +290,71 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       return;
     }
     setSubmitting(true);
+    console.log("Verifying signup OTP for:", email);
     const result = await verifySignup(email, otp);
     setSubmitting(false);
+    console.log("Signup verification result:", result);
     if (!result.ok) {
       setError(result.error || "Verification failed.");
       return;
     }
-    // Show age input modal after successful signup verification
-    setShowAgeModal(true);
+    // Show password entry after successful verification
+    setInfo("Email verified! Please create a password to complete your profile.");
+    setSignupStep("password");
+    setPassword("");
+    setConfirmPassword("");
   };
 
-  const handleAgeComplete = (age: number) => {
-    setUserAge(age);
-    setShowAgeModal(false);
-    // Show category selection modal after age is entered
-    setShowCategoryModal(true);
-  };
-
-  const handleCategoryComplete = (categories: string[]) => {
-    setUserCategories(categories);
-    setShowCategoryModal(false);
-    // Complete the onboarding process with age and categories
-    if (userAge) {
-      completeOnboarding({ favoriteGenres: categories, age: userAge });
+  const handleSignupPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (!isStrongPassword(password)) {
+      setError("Password must be 8+ characters with uppercase, lowercase, and a number.");
+      return;
     }
-    onClose();
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+    // Show onboarding (age and categories) after password is set
+    setInfo("Password set! Please tell us about your preferences.");
+    setSignupStep("onboarding");
+  };
+
+  const handleOnboardingComplete = async (preferences: UserOnboardingData) => {
+    setSubmitting(true);
+    setError("");
+    
+    // First create the account with the preferences
+    const result = await signUp(email, password, name);
+    if (!result.ok) {
+      setSubmitting(false);
+      setError(result.error || "Sign up failed.");
+      return;
+    }
+
+    // If auto-verified, complete onboarding immediately
+    if (result.autoVerified) {
+      const onboardingResult = await completeOnboarding(preferences);
+      if (!onboardingResult.ok) {
+        setSubmitting(false);
+        setError(onboardingResult.error || "Failed to save preferences.");
+        return;
+      }
+    }
+
+    // Immediate redirect to sign-in
+    setSubmitting(false);
+    setInfo("Account created! Redirecting to sign in...");
+    setSignupStep("redirect");
+    
+    // Rapid redirect to sign-in view
+    setTimeout(() => {
+      goToSignIn();
+      setEmail(email); // Pre-fill the email for convenience
+      setPassword(""); // Clear password for security
+      setInfo("");
+    }, 800);
   };
 
   /** Step 1 of forgot flow — an existing account gets an emailed OTP; an
@@ -323,32 +366,32 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     e.preventDefault();
     setError("");
     setInfo("");
-    if (!siteConfig.mailerEnabled) {
-      setError("Password reset is temporarily unavailable. Please contact support.");
-      return;
-    }
     if (!email || !isValidEmail(email)) {
       setError("Please enter the email address you used to register.");
       return;
     }
     setSubmitting(true);
+    console.log("Checking email for password reset:", email);
     const check = await checkEmailForReset(email);
+    setSubmitting(false);
+    console.log("Email check result:", check);
     if (!check.ok) {
-      setSubmitting(false);
-      setError(check.error || "Something went wrong.");
+      setError(check.error || "Something went wrong. Please try again.");
       return;
     }
     if (!check.found) {
-      setSubmitting(false);
       setAuthView("signup");
       setSignupStep("form");
       setInfo("We couldn't find an account with that email — let's get you signed up.");
       return;
     }
+    setSubmitting(true);
+    console.log("Requesting password reset for:", email);
     const reset = await requestPasswordReset(email);
     setSubmitting(false);
+    console.log("Password reset request result:", reset);
     if (!reset.ok) {
-      setError(reset.error || "Couldn't send reset instructions.");
+      setError(reset.error || "Couldn't send reset instructions. Please try again.");
       return;
     }
     setInfo(`We've sent a 6-digit code to ${email}. Enter it below along with your new password.`);
@@ -376,21 +419,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       return;
     }
     setSubmitting(true);
+    console.log("Submitting password reset for:", email, "with OTP:", otp.trim());
     const result = await resetPassword(email, otp.trim(), password);
     setSubmitting(false);
+    console.log("Password reset result:", result);
     if (!result.ok) {
-      setError(result.error || "Password reset failed.");
+      setError(result.error || "Password reset failed. Please check the code and try again.");
       return;
     }
-    setInfo("Password updated successfully. You can sign in now.");
+    setInfo("Password updated successfully! Redirecting to sign in...");
     setPassword("");
     setConfirmPassword("");
     setOtp("");
     setTimeout(() => {
       goToSignIn();
       setSignInStep("password");
+      setEmail(email); // Pre-fill email for convenience
       setInfo("");
-    }, 1500);
+    }, 2000);
   };
 
   const handleResend = async () => {
@@ -426,7 +472,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         ? "Enter the email address you used to register"
         : "Enter the code from your email and choose a new password"
       : authView === "signup"
-      ? "Sign up to save your watchlist and preferences"
+      ? signupStep === "verify"
+        ? "Enter the 6-digit code sent to your email"
+        : signupStep === "password"
+        ? "Create a secure password for your account"
+        : signupStep === "onboarding"
+ ? "Tell us about your preferences"
+        : "Sign up to save your watchlist and preferences"
       : signInStep === "otp"
       ? "Check your inbox for a 6-digit code"
       : signInStep === "password"
@@ -441,6 +493,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       : authView === "signup"
       ? signupStep === "verify"
         ? handleSignupVerifySubmit
+        : signupStep === "password"
+        ? handleSignupPasswordSubmit
         : handleSignUpSubmit
       : signInStep === "email"
       ? handleContinue
@@ -455,7 +509,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         : "Save New Password"
       : authView === "signup"
       ? signupStep === "verify"
-        ? "Verify & Create Account"
+        ? "Verify Email"
+        : signupStep === "password"
+        ? "Set Password"
         : "Create Account"
       : signInStep === "email"
       ? "Continue"
@@ -464,9 +520,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       : "Sign In";
 
   return (
-    <>
-      <div id="auth-modal-backdrop" className="fixed inset-0 z-60 flex items-center justify-center modal-backdrop p-4 animate-fade-in">
-        <div id="auth-modal" className="relative w-full max-w-md rounded-2xl border surface-panel p-6 md:p-8">
+    <div id="auth-modal-backdrop" className="fixed inset-0 z-60 flex items-center justify-center modal-backdrop p-4 animate-fade-in">
+      <div id="auth-modal" className="relative w-full max-w-md rounded-2xl border surface-panel p-6 md:p-8">
 
         <button
           id="close-auth-btn"
@@ -549,6 +604,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           )}
 
           {((authView === "signup" && signupStep === "form") ||
+            (authView === "signup" && signupStep === "password") ||
             (authView === "signin" && signInStep === "password") ||
             (authView === "forgot" && forgotStep === "reset")) && (
             <div className="space-y-1">
@@ -564,6 +620,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   required
                   minLength={8}
                   autoFocus
+                />
+              </div>
+            </div>
+          )}
+
+          {(authView === "signup" && signupStep === "password") && (
+            <div className="space-y-1">
+              <label className={labelClass}>Confirm Password</label>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500" />
+                <input
+                  type="password"
+                  placeholder="Re-enter your password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className={inputClass}
+                  required
+                  minLength={8}
                 />
               </div>
             </div>
@@ -589,7 +663,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
           {((authView === "signup" && signupStep === "verify") ||
             (authView === "signin" && signInStep === "otp") ||
-            (authView === "forgot" && forgotStep === "reset" && !otp)) && (
+            (authView === "forgot" && forgotStep === "reset")) && (
             <div className="space-y-1">
               <label className={labelClass}>
                 {authView === "forgot" ? "Reset Code" : "6-Digit Code"}
@@ -635,7 +709,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             disabled={submitting}
             className="w-full neon-btn flex items-center justify-center gap-2 font-extrabold py-2.5 sm:py-3.5 rounded-xl text-[11px] sm:text-xs cursor-pointer mt-2 disabled:opacity-60"
           >
-            {submitting ? <Loader2 className="h-4 w-4 animate-spin text-[#39FF14]" /> : (
+            {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : (
               <>
                 <span>{submitLabel}</span>
                 <ArrowRight className="h-4 w-4 stroke-[3px]" />
@@ -646,9 +720,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         </form>
 
         {/* Google OAuth — offered on Sign In (email step) and Sign Up (form step). */}
-        {siteConfig.googleAuthEnabled &&
-          ((authView === "signin" && signInStep === "email") ||
-            (authView === "signup" && signupStep === "form")) && (
+        {((authView === "signin" && signInStep === "email") ||
+          (authView === "signup" && signupStep === "form")) && (
             <>
               <AuthDivider />
               <GoogleContinueButton
@@ -659,27 +732,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
         {authView === "signin" && signInStep === "email" && (
           <>
-            {siteConfig.mailerEnabled ? (
-              <button
-                id="auth-forgot-password-btn"
-                type="button"
-                onClick={goToForgot}
-                className="w-full btn-forgot mt-3 py-2.5 sm:py-3 rounded-xl text-[11px] sm:text-xs uppercase tracking-wide cursor-pointer"
-              >
-                Forgot Password
-              </button>
-            ) : (
-              <div className="w-full rounded-xl border border-neutral-800 bg-black/40 px-4 py-3 text-center text-[11px] text-neutral-400 mt-3">
-                Password reset is currently unavailable.
-              </div>
-            )}
             <button
-              id="auth-guest-btn"
+              id="auth-forgot-password-btn"
               type="button"
-              onClick={() => { enterAsGuest(); onClose(); }}
-              className="w-full mt-2 py-2.5 sm:py-3 rounded-xl border border-dashed border-white/15 text-[11px] sm:text-xs font-bold uppercase tracking-wide text-neutral-400 hover:border-[#39FF14]/40 hover:text-[#39FF14] transition-colors cursor-pointer"
+              onClick={goToForgot}
+              className="w-full btn-forgot mt-3 py-2.5 sm:py-3 rounded-xl text-[11px] sm:text-xs uppercase tracking-wide cursor-pointer"
             >
-              Login as Guest
+              Forgot Password
             </button>
             <div className="text-center mt-5 border-t border-neutral-800 pt-4 text-xs">
               <span className="text-neutral-500">New to Cinemax?</span>
@@ -695,15 +754,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         )}
 
         {authView === "signup" && (
-          <div className="text-center mt-5 border-t border-neutral-800 pt-4 text-xs">
-            <span className="text-neutral-500">Already have an account?</span>
+          <div className="flex items-center justify-between mt-5 border-t border-neutral-800 pt-4 text-xs">
             <button
               type="button"
-              onClick={goToSignIn}
-              className="ml-1.5 text-[#39FF14] hover:underline font-bold cursor-pointer"
+              onClick={() => { enterAsGuest(); onClose(); }}
+              className="text-neutral-400 hover:text-white font-semibold cursor-pointer transition-colors"
             >
-              Sign In
+              Login as Guest
             </button>
+            <div className="text-neutral-500">
+              <span>Already have an account?</span>
+              <button
+                type="button"
+                onClick={goToSignIn}
+                className="ml-1.5 text-[#39FF14] hover:underline font-bold cursor-pointer"
+              >
+                Sign In
+              </button>
+            </div>
           </div>
         )}
 
@@ -716,10 +784,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </div>
         )}
       </div>
+
+      {/* Onboarding Preferences Modal */}
+      <OnboardingPreferences
+        isOpen={authView === "signup" && signupStep === "onboarding"}
+        onComplete={handleOnboardingComplete}
+        onSkip={() => onClose()}
+      />
     </div>
-    
-    <AgeInputModal isOpen={showAgeModal} onComplete={handleAgeComplete} />
-    <CategorySelectionModal isOpen={showCategoryModal} onComplete={handleCategoryComplete} />
-    </>
   );
 };

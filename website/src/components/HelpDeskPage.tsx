@@ -604,7 +604,7 @@ export const HelpDeskPage: React.FC = () => {
                   disabled={contactBusy}
                   className="neon-btn w-full flex items-center justify-center gap-2 font-extrabold py-3.5 rounded-xl text-xs uppercase tracking-wide transition-all cursor-pointer disabled:opacity-60"
                 >
-                  {contactBusy ? <Loader2 className="h-4 w-4 animate-spin text-[#39FF14]" /> : <Send className="h-4 w-4" />}
+                  {contactBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                   {contactBusy ? "Sending..." : "Send Message"}
                 </button>
                 {contactError && <p className="text-xs text-rose-400 font-semibold">{contactError}</p>}

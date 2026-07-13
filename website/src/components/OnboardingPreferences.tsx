@@ -27,6 +27,7 @@ import {
 interface OnboardingPreferencesProps {
   isOpen: boolean;
   onComplete: (preferences: UserOnboardingData) => Promise<void>;
+  onSkip?: () => void;
 }
 
 export interface UserOnboardingData {
@@ -75,6 +76,7 @@ const AGE_RANGES = [
 export const OnboardingPreferences: React.FC<OnboardingPreferencesProps> = ({
   isOpen,
   onComplete,
+  onSkip,
 }) => {
   const [age, setAge] = useState("");
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
@@ -102,9 +104,21 @@ export const OnboardingPreferences: React.FC<OnboardingPreferencesProps> = ({
     setSubmitting(false);
   };
 
+  const handleSkip = () => {
+    if (onSkip) onSkip();
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
       <div className="relative w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-3xl border border-white/10 bg-[#0a0a0a] shadow-2xl animate-slide-up scrollbar-thin scrollbar-thumb-neutral-800 scrollbar-track-transparent">
+        {/* Close button */}
+        <button
+          onClick={handleSkip}
+          className="absolute right-4 top-4 z-20 rounded-xl bg-white/5 p-2 text-neutral-400 hover:bg-white/10 hover:text-white transition-all cursor-pointer"
+        >
+          <X className="h-5 w-5" />
+        </button>
+
         {/* Header */}
         <div className="bg-gradient-to-br from-[#39FF14]/10 to-transparent p-6 pb-8">
           <div className="flex items-center gap-3 mb-4">
@@ -186,9 +200,16 @@ export const OnboardingPreferences: React.FC<OnboardingPreferencesProps> = ({
           {/* Actions */}
           <div className="flex items-center gap-4 pt-4">
             <button
+              type="button"
+              onClick={handleSkip}
+              className="flex-1 px-6 py-3 rounded-xl text-sm font-semibold text-neutral-400 hover:text-white hover:bg-white/5 transition-all cursor-pointer"
+            >
+              Skip for now
+            </button>
+            <button
               type="submit"
               disabled={!age || selectedGenres.length === 0 || submitting}
-              className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#39FF14] text-black text-sm font-bold hover:bg-[#39FF14]/90 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#39FF14] text-black text-sm font-bold hover:bg-[#39FF14]/90 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? (
                 <>

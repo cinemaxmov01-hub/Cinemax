@@ -47,7 +47,7 @@ export interface SearchBatchResult {
   hasMore: boolean;
 }
 
-/** Fetches full TMDB details and resolves the correct movie vs TV type for video embeds. */
+/** Fetches full TMDB details and resolves the correct movie vs TV type for streaming embeds. */
 export async function prepareForPlayback(item: Movie): Promise<Movie> {
   if (item.isCustom || item.id <= 0) {
     return { ...item, media_type: item.media_type ?? "movie" };

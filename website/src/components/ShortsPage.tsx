@@ -165,7 +165,7 @@ export const ShortsPage: React.FC<ShortsPageProps> = ({ onWatch }) => {
 
         {/* End-of-feed loader */}
         <div className="h-24 flex items-center justify-center text-neutral-600 text-xs snap-end">
-          <Loader2 className="h-4 w-4 animate-spin mr-2 text-[#39FF14]" /> Loading more shorts...
+          <Loader2 className="h-4 w-4 animate-spin mr-2" /> Loading more shorts...
         </div>
       </div>
     </div>

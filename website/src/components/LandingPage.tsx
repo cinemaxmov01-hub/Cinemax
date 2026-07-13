@@ -248,7 +248,7 @@ export const LandingPage: React.FC = () => {
                   disabled={submitting}
                   className="neon-btn flex items-center justify-center gap-2 font-extrabold px-4 sm:px-6 py-2.5 sm:py-3.5 rounded-xl text-sm uppercase tracking-wide transition-all cursor-pointer whitespace-nowrap disabled:opacity-60"
                 >
-                  {submitting ? <Loader2 className="h-4 w-4 animate-spin text-[#39FF14]" /> : <>Sign In <ArrowRight className="h-4 w-4" /></>}
+                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Sign In <ArrowRight className="h-4 w-4" /></>}
                 </button>
               </form>
             )}
@@ -268,15 +268,6 @@ export const LandingPage: React.FC = () => {
                   className="w-full sm:w-auto rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-neutral-200 transition hover:bg-white/10 cursor-pointer"
                 >
                   Sign In
-                </button>
-                <button
-                  id="landing-guest-btn"
-                  type="button"
-                  onClick={() => enterAsGuest()}
-                  className="w-full sm:w-auto flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-white/15 bg-transparent px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-neutral-400 transition hover:border-[#39FF14]/40 hover:text-[#39FF14] cursor-pointer"
-                >
-                  <UserRound className="h-3.5 w-3.5" />
-                  Login as Guest
                 </button>
               </div>
             )}
@@ -305,15 +296,6 @@ export const LandingPage: React.FC = () => {
                     className="rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-neutral-200 transition hover:bg-white/10 cursor-pointer"
                   >
                     Sign In
-                  </button>
-                  <button
-                    id="landing-guest-btn-2"
-                    type="button"
-                    onClick={() => enterAsGuest()}
-                    className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-white/15 bg-transparent px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-neutral-400 transition hover:border-[#39FF14]/40 hover:text-[#39FF14] cursor-pointer"
-                  >
-                    <UserRound className="h-3.5 w-3.5" />
-                    Login as Guest
                   </button>
                 </div>
               </div>
@@ -414,72 +396,75 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* Developer Credit */}
-      <section className="relative z-10 px-4 sm:px-12 pb-24 max-w-6xl mx-auto">
+      <section className="relative z-10 px-4 sm:px-12 pb-24 max-w-4xl mx-auto">
         <div
           id="developer-credit-card"
-          className="relative overflow-hidden rounded-[2rem] border border-[#39FF14]/25 bg-[#030806] p-5 shadow-2xl sm:rounded-[3rem] sm:p-10"
+          className="relative overflow-hidden rounded-[1.5rem] border border-[#39FF14]/25 bg-[#030806] p-4 shadow-2xl sm:rounded-[2rem] sm:p-6"
         >
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(57,255,20,0.18),transparent_34%),linear-gradient(90deg,rgba(255,255,255,0.04),transparent_40%,rgba(57,255,20,0.08))]" />
           <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-[#39FF14]/80 to-transparent" />
 
-          <div className="relative grid items-center gap-8 lg:grid-cols-[1fr_0.9fr]">
-            <div className="mx-auto w-full max-w-xl">
-              <div className="mb-8 flex justify-center">
-                <svg
-                  viewBox="0 0 900 600"
-                  className="h-20 w-32 rounded-xl border border-[#39FF14]/40 shadow-[0_0_28px_rgba(57,255,20,0.22)]"
-                  role="img"
-                  aria-label="Flag of Rwanda"
-                >
-                  <rect width="900" height="600" fill="#20603D" />
-                  <rect width="900" height="400" fill="#00A1DE" />
-                  <rect width="900" height="100" y="400" fill="#FAD201" />
-                  <g transform="translate(700,150)">
-                    <circle r="65" fill="#E5BE01" />
-                    {Array.from({ length: 24 }).map((_, i: number) => (
-                      <rect
-                        key={i}
-                        x="-4"
-                        y="-115"
-                        width="8"
-                        height="45"
-                        fill="#E5BE01"
-                        transform={`rotate(${(i * 360) / 24})`}
-                      />
-                    ))}
-                  </g>
-                </svg>
+          <div className="relative grid items-center gap-6 lg:grid-cols-[1fr_0.8fr]">
+            <div className="mx-auto w-full max-w-sm">
+              <div className="mb-6 flex justify-center">
+                <div className="relative">
+                  <svg
+                    viewBox="0 0 900 600"
+                    className="h-16 w-16 rounded-full border-2 border-[#39FF14]/40 shadow-[0_0_20px_rgba(57,255,20,0.22)]"
+                    role="img"
+                    aria-label="Flag of Rwanda"
+                    style={{ clipPath: 'circle(50% at 50% 50%)' }}
+                  >
+                    <rect width="900" height="600" fill="#20603D" />
+                    <rect width="900" height="400" fill="#00A1DE" />
+                    <rect width="900" height="100" y="400" fill="#FAD201" />
+                    <g transform="translate(700,150)">
+                      <circle r="65" fill="#E5BE01" />
+                      {Array.from({ length: 24 }).map((_, i: number) => (
+                        <rect
+                          key={i}
+                          x="-4"
+                          y="-115"
+                          width="8"
+                          height="45"
+                          fill="#E5BE01"
+                          transform={`rotate(${(i * 360) / 24})`}
+                        />
+                      ))}
+                    </g>
+                  </svg>
+                </div>
               </div>
 
-              <div className="mb-8 flex items-center justify-center gap-5 text-[#39FF14]">
-                <span className="h-px w-24 bg-[#39FF14]/70" />
-                <Code2 className="h-8 w-8 drop-shadow-[0_0_12px_rgba(57,255,20,0.75)]" />
-                <span className="h-px w-24 bg-[#39FF14]/70" />
+              <div className="mb-6 flex items-center justify-center gap-4 text-[#39FF14]">
+                <span className="h-px w-16 bg-[#39FF14]/70" />
+                <Code2 className="h-6 w-6 drop-shadow-[0_0_10px_rgba(57,255,20,0.75)]" />
+                <span className="h-px w-16 bg-[#39FF14]/70" />
               </div>
 
-              <div className="space-y-5">
-                <div className="grid grid-cols-[4.5rem_1fr] items-center gap-5">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-[#39FF14]/70 text-[#39FF14] shadow-[0_0_18px_rgba(57,255,20,0.16)]">
-                    <UserRound className="h-7 w-7" />
+              <div className="space-y-4">
+                <div className="grid grid-cols-[3.5rem_1fr] items-center gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-[#39FF14]/70 text-[#39FF14] shadow-[0_0_14px_rgba(57,255,20,0.16)]">
+                    <UserRound className="h-6 w-6" />
                   </div>
-                  <div className="border-b border-white/20 pb-4">
-                    <p className="text-sm font-medium uppercase text-neutral-400">Name</p>
-                    <p className="text-3xl font-black text-[#39FF14] sm:text-4xl">shemalucin</p>
+                  <div className="border-b border-white/20 pb-3">
+                    <p className="text-xs font-medium uppercase text-neutral-400">Name</p>
+                    <p className="text-2xl font-black text-[#39FF14] sm:text-3xl">shemalucin</p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-[4.5rem_1fr] items-center gap-5">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-[#39FF14]/70 text-[#39FF14] shadow-[0_0_18px_rgba(57,255,20,0.16)]">
-                    <MapPin className="h-7 w-7" />
+                <div className="grid grid-cols-[3.5rem_1fr] items-center gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-[#39FF14]/70 text-[#39FF14] shadow-[0_0_14px_rgba(57,255,20,0.16)]">
+                    <MapPin className="h-6 w-6" />
                   </div>
-                  <div className="border-b border-white/20 pb-4">
-                    <p className="text-sm font-medium uppercase text-neutral-400">Location</p>
-                    <p className="text-3xl font-black text-[#39FF14] sm:text-4xl">Rwanda</p>
+                  <div className="border-b border-white/20 pb-3">
+                    <p className="text-xs font-medium uppercase text-neutral-400">Location</p>
+                    <p className="text-2xl font-black text-[#39FF14] sm:text-3xl">Rwanda</p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-[4.5rem_1fr] items-center gap-5">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-[#39FF14]/70 text-[#39FF14] shadow-[0_0_18px_rgba(57,255,20,0.16)]">
+                <div className="grid grid-cols-[3.5rem_1fr] items-center gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-[#39FF14]/70 text-[#39FF14] shadow-[0_0_14px_rgba(57,255,20,0.16)]">
                     <Globe2 className="h-7 w-7" />
                   </div>
                   <p className="text-lg font-semibold text-neutral-300 sm:text-xl">

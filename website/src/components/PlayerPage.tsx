@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Movie, CastMember, Review } from "../types";
 import { useApp } from "../context/AppContext";
-import {
-  ArrowLeft,
-  Star,
-  Bookmark,
-  Heart,
-  Share2,
+import { 
+  ArrowLeft, 
+  Star, 
+  Bookmark, 
+  Heart, 
+  Download, 
+  Share2, 
   Sparkles,
   Info,
   Users,
@@ -28,6 +29,7 @@ import { MovieCard } from "./MovieCard";
 import { PROVIDERS_CONFIG, buildEmbedUrl, embedUrlWithAutoplay, EMBED_IFRAME_ALLOW } from "../utils/streamingConfig";
 import { LiveChat } from "./LiveChat";
 import { WatchChoiceModal } from "./WatchChoiceModal";
+import { DownloadChoiceModal } from "./DownloadChoiceModal";
 
 /**
  * "Up Next" — a tall, auto-sliding recommended queue that lives in the
@@ -267,16 +269,40 @@ export const PlayerPage: React.FC = () => {
     removeFromWatchlist,
     setCurrentView,
     searchQuery,
+    downloadMovie,
+    downloads,
+    downloadStorageUsed,
+    downloadStorageLimit,
     isGuest,
     requireSignInPrompt,
     t,
   } = useApp();
 
+  const [downloadBusy, setDownloadBusy] = useState(false);
+  const [downloadMsg, setDownloadMsg] = useState<string | null>(null);
   const [playerAds, setPlayerAds] = useState<PublicAd[]>([]);
 
   useEffect(() => {
     fetchPublicAds().then((ads) => setPlayerAds(ads.filter((a) => a.placement === "player_pre_roll")));
   }, []);
+
+  const handleDownload = async (mode: "device" | "library") => {
+    if (mode === "library" && (isGuest || !user)) {
+      requireSignInPrompt();
+      return;
+    }
+    setDownloadChoiceOpen(false);
+    setDownloadMsg(null);
+    setDownloadBusy(true);
+    const result = await downloadMovie(selectedMovie!, mode);
+    setDownloadBusy(false);
+    if (result.ok) {
+      setDownloadMsg(mode === "device" ? "Device download started." : "Saved to Cinemax Download History.");
+    } else {
+      setDownloadMsg(result.error || "Download failed.");
+    }
+    setTimeout(() => setDownloadMsg(null), 5000);
+  };
 
   const openChoiceForMovie = (movie: Movie) => setChoiceMovie(movie);
 
@@ -287,6 +313,9 @@ export const PlayerPage: React.FC = () => {
     setChoiceMovie(null);
     setIsLoadingVideo(true);
   };
+
+  const isDownloaded = selectedMovie ? downloads.some((d) => d.movie_id === selectedMovie.id) : false;
+  const storageFull = downloadStorageUsed >= downloadStorageLimit;
 
   const [currentSeason, setCurrentSeason] = useState(1);
   const [currentEpisode, setCurrentEpisode] = useState(1);
@@ -306,6 +335,7 @@ export const PlayerPage: React.FC = () => {
   const [similarMovies, setSimilarMovies] = useState<Movie[]>([]);
   const [showLiveChat, setShowLiveChat] = useState(false);
   const [choiceMovie, setChoiceMovie] = useState<Movie | null>(null);
+  const [downloadChoiceOpen, setDownloadChoiceOpen] = useState(false);
 
   const isTv = selectedMovie ? isTvShow(selectedMovie) : false;
   const isFavorited = user && selectedMovie ? user.favorites.includes(selectedMovie.id) : false;
@@ -685,21 +715,21 @@ export const PlayerPage: React.FC = () => {
                   <span className="text-white">CINEMA</span><span className="text-[#39FF14]">X</span>
                 </span>
                 <p className="text-[10px] text-neutral-500 font-mono tracking-widest uppercase">
-                  Initializing...
+                  Initializing Stream...
                 </p>
               </div>
             </div>
           )}
         </div>
 
-        {/* Server Toggle Row — Server P1 for the full movie/episode */}
+        {/* Server Toggle Row — 3 reliable, ad-blocked sources for the full movie/episode */}
         {playerMode !== "trailer" && !selectedMovie.isCustom && (
           <div id="server-toggle-row" className="max-w-5xl mt-4 space-y-2">
             <span className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest px-1">
-              Video Server
+              {t("chooseServer")}
             </span>
-            <div className="grid grid-cols-1 gap-2">
-              {PROVIDERS_CONFIG.map((server) => {
+            <div className="grid grid-cols-3 sm:grid-cols-3 gap-2">
+              {PROVIDERS_CONFIG.map((server, idx) => {
                 const isActive = server.id === activeServerId;
                 return (
                   <button
@@ -713,7 +743,7 @@ export const PlayerPage: React.FC = () => {
                         : "bg-black/40 border-white/10 text-neutral-400 hover:text-white hover:border-[#22c55e]/30"
                     }`}
                   >
-                    {server.name}
+                    {server.name || `P${idx + 1}`}
                   </button>
                 );
               })}
@@ -834,7 +864,26 @@ export const PlayerPage: React.FC = () => {
               <Share2 className="h-4 w-4" />
               <span>Share</span>
             </button>
+
+            <button
+              id="player-action-download"
+              onClick={() => setDownloadChoiceOpen(true)}
+              disabled={downloadBusy || isDownloaded || storageFull}
+              className="flex items-center gap-2 px-5 py-3 rounded-2xl btn-secondary text-xs font-bold cursor-pointer disabled:opacity-50"
+              title={storageFull ? "2 GB storage full — delete items in Download History" : isDownloaded ? "Already downloaded" : "Save to device"}
+            >
+              <Download className="h-4 w-4" />
+              <span>{downloadBusy ? "Saving…" : isDownloaded ? "Downloaded" : "Download"}</span>
+            </button>
           </div>
+          {downloadMsg && (
+            <p className="text-xs font-semibold text-[#39FF14] mt-2">{downloadMsg}</p>
+          )}
+          {storageFull && !isDownloaded && (
+            <p className="text-xs font-semibold text-rose-400 mt-2">
+              Download storage full (2 GB). Delete items in Download History to free space.
+            </p>
+          )}
 
           {/* Real-time Online Indicator */}
           <div className="flex items-center gap-2 text-xs glass-card px-4 py-2 rounded-xl">
@@ -1040,6 +1089,14 @@ export const PlayerPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* DOWNLOAD CHOICE MODAL */}
+      <DownloadChoiceModal
+        movie={selectedMovie}
+        isOpen={downloadChoiceOpen}
+        onClose={() => setDownloadChoiceOpen(false)}
+        onChoose={handleDownload}
+      />
 
     </div>
   );

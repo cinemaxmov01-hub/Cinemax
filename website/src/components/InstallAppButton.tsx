@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Download, Check } from "lucide-react";
+import { useApp } from "../context/AppContext";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -33,6 +34,7 @@ export const InstallAppButton: React.FC<{ variant?: "sidebar" | "card" | "header
   variant = "sidebar",
   label = "Install App",
 }) => {
+  const { addNotification } = useApp();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
@@ -56,25 +58,78 @@ export const InstallAppButton: React.FC<{ variant?: "sidebar" | "card" | "header
   };
 
   const handleApkDownload = async () => {
-    const href = API_BASE ? `${API_BASE}/api/download-apk` : APK_URL;
     setApkBusy(true);
     try {
-      const res = await fetch(href);
-      if (!res.ok) {
-        setShowFallbackInfo(true);
-        return;
+      // Try backend API first
+      if (API_BASE) {
+        try {
+          const res = await fetch(`${API_BASE}/api/download-apk`, {
+            method: "GET",
+            credentials: "include",
+          });
+          if (res.ok) {
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = APK_FILENAME;
+            a.rel = "noopener";
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 5000);
+            addNotification({
+              type: "system",
+              title: "APK Download Started",
+              message: "Cinemax APK is being downloaded to your device.",
+            });
+            return;
+          }
+        } catch (apiErr) {
+          console.warn("Backend APK download failed, trying direct URL:", apiErr);
+        }
       }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = APK_FILENAME;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 5000);
-    } catch {
+
+      // Fallback to direct public file
+      try {
+        const res = await fetch(APK_URL);
+        if (res.ok) {
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = APK_FILENAME;
+          a.rel = "noopener";
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 5000);
+          addNotification({
+            type: "system",
+            title: "APK Download Started",
+            message: "Cinemax APK is being downloaded to your device.",
+          });
+          return;
+        }
+      } catch (directErr) {
+        console.warn("Direct APK download failed:", directErr);
+      }
+
+      // Final fallback: open direct link
+      window.open(APK_URL, "_blank");
+      addNotification({
+        type: "system",
+        title: "APK Download",
+        message: "Opening APK download in new tab. If download doesn't start, check your browser's download settings.",
+      });
+    } catch (err) {
+      console.error("APK download completely failed:", err);
       setShowFallbackInfo(true);
+      addNotification({
+        type: "system",
+        title: "Download Failed",
+        message: "Unable to download APK. Please try again or contact support.",
+      });
     } finally {
       setApkBusy(false);
     }

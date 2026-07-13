@@ -11,6 +11,8 @@ import {
   downloadRemoteFile,
   computeDownloadSize,
   formatBytes,
+  pickDirectoryForDownloads,
+  saveBlobToDevice,
 } from "../utils/localDownloads";
 import { getImageUrl } from "../utils/tmdb";
 import { initTmdbFromSiteConfig, setTmdbApiKey } from "../utils/tmdb";
@@ -47,7 +49,7 @@ interface AppContextType {
   enterAsGuest: (email?: string) => void;
   isGuest: boolean;
   needsOnboarding: boolean;
-  completeOnboarding: (preferences: { age: number; favoriteGenres: string[] }) => Promise<{ ok: boolean; error?: string }>;
+  completeOnboarding: (preferences: { age: string; favoriteGenres: string[] }) => Promise<{ ok: boolean; error?: string }>;
   dismissOnboarding: () => void;
   authModalOpen: boolean;
   authModalMode: "signin" | "signup";
@@ -85,7 +87,6 @@ interface AppContextType {
   notifications: AppNotification[];
   unreadCount: number;
   addNotification: (n: Omit<AppNotification, "id" | "timestamp" | "read">) => void;
-  reportErrorToAdmin: (error: Error, context: string) => void;
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
   clearNotifications: () => void;
@@ -188,9 +189,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [pipIsPlaying, setPipIsPlaying] = useState<boolean>(false);
 
   // Theme — the site is dark by default (its original design), with an
-  // optional Light Grey theme the person can switch to and which persists
-  // across visits. Internally still tracked as "dark" | "light", but the
-  // "light" palette is the Light Grey theme (see index.css html.light).
+  // optional light mode the person can switch to and which persists across
+  // visits.
   const [theme, setTheme] = useState<"dark" | "light">(() => {
     const saved = typeof window !== "undefined" ? localStorage.getItem("cinemax_theme") : null;
     return saved === "light" ? "light" : "dark";
@@ -311,9 +311,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     avatar: raw.avatar,
     banner: raw.banner || "https://images.unsplash.com/photo-1574375927938-d5a98e8edd86?q=80&w=1200&auto=format&fit=crop",
     subscription: raw.subscription || "Free",
-    premium: Boolean(raw.premium),
-    premiumSource: raw.premiumSource || "none",
-    premiumExpiresAt: raw.premiumExpiresAt || null,
     badges: raw.role === "admin" ? ["Member", "Admin"] : ["Member"],
     role: raw.role || "user",
     favorites: raw.favorites || [],
@@ -474,7 +471,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
    * user object so the homepage can personalize on the very next render —
    * no extra reload or re-login required.
    */
-  const completeOnboarding = async (preferences: { age: number; favoriteGenres: string[] }): Promise<{ ok: boolean; error?: string }> => {
+  const completeOnboarding = async (preferences: { age: string; favoriteGenres: string[] }): Promise<{ ok: boolean; error?: string }> => {
     try {
       const res = await fetch(`${API_BASE}/api/auth/onboarding`, {
         method: "POST",
@@ -634,6 +631,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setIsGuest(false);
       fetchNotifications();
       maybeShowAdminDestination(mapped);
+      
+      // Check if user needs onboarding (first-time login without preferences)
+      if (!mapped.onboarding) {
+        setNeedsOnboarding(true);
+      }
+      
       return { ok: true };
     } catch (err: any) {
       const error = err?.message || "Couldn't reach the server. Please try again.";
@@ -1043,7 +1046,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         release_date: movie.release_date || movie.first_air_date || null,
         downloadedAt: new Date().toISOString(),
         cinemaxVersion: 2,
-        note: "Cinemax offline library package — metadata and artwork. Playback requires internet.",
+        note: "Cinemax offline library package — metadata and artwork. Stream playback requires internet.",
       };
 
       const jsonBlob = new Blob([JSON.stringify(packageData, null, 2)], { type: "application/json" });
@@ -1058,70 +1061,99 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       const safeName = title.replace(/[^\w\s-]/g, "").trim().slice(0, 60) || "cinemax-title";
       if (mode === "device") {
+        const targetDirectory = await pickDirectoryForDownloads();
         const dlUrl = (movie as any).download_url as string | undefined | null;
+        
+        // Try explicit download URL first
         if (dlUrl) {
           try {
-            // download the video file robustly (with progress support)
-            await downloadRemoteFile(dlUrl, `${safeName}.mp4`, (_loaded, _total) => {
-              // progress callback intentionally left blank — UI can show progress separately if needed
-            });
-            // also save metadata and artwork to device
-            triggerBrowserDownload(jsonBlob, `${safeName}.cinemax.json`);
-            if (posterBlob) triggerBrowserDownload(posterBlob, `${safeName}-poster.jpg`);
-            if (backdropBlob) triggerBrowserDownload(backdropBlob, `${safeName}-backdrop.jpg`);
+            console.log("Attempting download from explicit URL:", dlUrl);
+            await downloadRemoteFile(dlUrl, `${safeName}.mp4`, (loaded, total) => {
+              const progress = total ? Math.round((loaded / total) * 100) : 0;
+              console.log(`Download progress: ${progress}%`);
+            }, { saveToDevice: true, targetDirectory });
+            
+            // Save metadata files after successful video download
+            await saveBlobToDevice(jsonBlob, `${safeName}.cinemax.json`, targetDirectory);
+            if (posterBlob) await saveBlobToDevice(posterBlob, `${safeName}-poster.jpg`, targetDirectory);
+            if (backdropBlob) await saveBlobToDevice(backdropBlob, `${safeName}-backdrop.jpg`, targetDirectory);
+            
             addNotification({
               type: "system",
-              title: "Device download started",
-              message: `"${title}" is being saved to your device (${formatBytes(sizeBytes)}).`,
+              title: "Download complete",
+              message: `"${title}" has been saved to your device storage.`,
             });
             return { ok: true };
           } catch (err: any) {
-            // fallback to the existing behavior below if remote download fails
-            console.error("Full movie device download failed:", err);
+            console.error("Explicit URL download failed:", err);
+            // Continue to provider resolution
           }
         }
-        // If no explicit download_url exists (or the download failed above),
-        // try to resolve a direct media link by probing the known provider
-        // embed pages via the backend resolver, then proxying that source
-        // back to the client so cross-origin fetches succeed. Try providers
-        // in order until one yields a usable source.
-        {
-          for (const provider of PROVIDERS_CONFIG) {
-            try {
-              const embed = buildEmbedUrl(provider, mediaType, movie.id as number, 1, 1);
-              const resolveRes = await fetch(`${API_BASE}/api/stream/full`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ url: embed }),
-              });
-              if (!resolveRes.ok) continue;
-              const j = await resolveRes.json();
-              if (j && j.sourceUrl) {
-                const proxied = `${API_BASE}/api/proxy?url=${encodeURIComponent(j.sourceUrl)}`;
-                await downloadRemoteFile(proxied, `${safeName}.mp4`);
-                // also save metadata and artwork to device
-                triggerBrowserDownload(jsonBlob, `${safeName}.cinemax.json`);
-                if (posterBlob) triggerBrowserDownload(posterBlob, `${safeName}-poster.jpg`);
-                if (backdropBlob) triggerBrowserDownload(backdropBlob, `${safeName}-backdrop.jpg`);
+        
+        // If no explicit download URL or it failed, try provider resolution
+        console.log("Attempting provider resolution for full movie download...");
+        let videoDownloaded = false;
+        
+        for (const provider of PROVIDERS_CONFIG) {
+          try {
+            console.log(`Trying provider: ${provider.name} (${provider.id})`);
+            const embed = buildEmbedUrl(provider, mediaType, movie.id as number, 1, 1);
+            
+            const resolveRes = await fetch(`${API_BASE}/api/stream/full`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({ url: embed }),
+            });
+            
+            if (!resolveRes.ok) {
+              console.log(`Provider ${provider.name} returned status: ${resolveRes.status}`);
+              continue;
+            }
+            
+            const j = await resolveRes.json();
+            console.log(`Provider ${provider.name} response:`, j);
+            
+            if (j && j.sourceUrl) {
+              console.log(`Found video source from ${provider.name}:`, j.sourceUrl);
+              const proxied = `${API_BASE}/api/proxy?url=${encodeURIComponent(j.sourceUrl)}`;
+              
+              try {
+                await downloadRemoteFile(proxied, `${safeName}.mp4`, (loaded, total) => {
+                  const progress = total ? Math.round((loaded / total) * 100) : 0;
+                  console.log(`Video download progress: ${progress}%`);
+                }, { saveToDevice: true, targetDirectory });
+                
+                // Save metadata files after successful video download
+                await saveBlobToDevice(jsonBlob, `${safeName}.cinemax.json`, targetDirectory);
+                if (posterBlob) await saveBlobToDevice(posterBlob, `${safeName}-poster.jpg`, targetDirectory);
+                if (backdropBlob) await saveBlobToDevice(backdropBlob, `${safeName}-backdrop.jpg`, targetDirectory);
+                
                 addNotification({
                   type: "system",
-                  title: "Device download started",
-                  message: `"${title}" is being saved to your device (${formatBytes(sizeBytes)}).`,
+                  title: "Download complete",
+                  message: `"${title}" has been saved to your device storage using ${provider.name}.`,
                 });
+                
+                videoDownloaded = true;
                 return { ok: true };
+              } catch (downloadErr: any) {
+                console.error(`Video download failed for ${provider.name}:`, downloadErr);
+                continue; // Try next provider
               }
-            } catch (e) {
-              continue; // try next provider
             }
+          } catch (e) {
+            console.error(`Provider ${provider.name} resolution failed:`, e);
+            continue; // Try next provider
           }
         }
 
-        // fallback — save package + artwork only
-        return {
-          ok: false,
-          error:
-            "No downloadable full-video source is available for this title right now. Try another server, or add an official media/download URL for this title in the admin catalog.",
-        };
+        if (!videoDownloaded) {
+          return {
+            ok: false,
+            error: "Unable to download the full movie file. The video source could not be resolved from any streaming server. Please try again later or contact support if this issue persists.",
+          };
+        }
       }
 
       await saveLocalDownload({
@@ -1303,7 +1335,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       case "set_default_quality": {
         const q = (action.value || "Auto") as UserPreferences["defaultQuality"];
         updatePreferences({ defaultQuality: q });
-        return `Default video quality is now ${q}.`;
+        return `Default streaming quality is now ${q}.`;
       }
       case "toggle_mature_lock": {
         const next = !(user?.preferences?.matureContentLock ?? false);
@@ -1340,26 +1372,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     })
       .then(() => fetchNotifications())
       .catch(() => console.error("Failed to sync notification to server"));
-  };
-
-  const reportErrorToAdmin = (error: Error, context: string) => {
-    const errorMessage = error.message || "Unknown error";
-    const errorStack = error.stack || "No stack trace";
-    
-    // Send error report to admin via notification system
-    syncFetch(`${API_BASE}/api/admin/error-report`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({
-        error: errorMessage,
-        stack: errorStack,
-        context,
-        timestamp: new Date().toISOString(),
-        userAgent: navigator.userAgent,
-        url: window.location.href,
-      }),
-    }).catch(() => console.error("Failed to report error to admin"));
   };
 
   const markNotificationRead = (id: string) => {
@@ -1454,7 +1466,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         notifications,
         unreadCount,
         addNotification,
-        reportErrorToAdmin,
         markNotificationRead,
         markAllNotificationsRead,
         clearNotifications,

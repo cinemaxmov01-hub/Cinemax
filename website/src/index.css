@@ -39,37 +39,34 @@
   --success-text: #39FF14;
 }
 
-/* Light Grey theme — replaces the old near-white "Light Mode" with an
-   actual light grey palette that still reads clearly as a distinct,
-   properly-contrasted theme rather than plain white. */
 html.light {
   --accent: #39FF14;
   --accent-hover: #2ecc10;
   --accent-text: #15803d;
-  --accent-muted-bg: #dde7dd;
-  --accent-muted-border: #bcd2bc;
+  --accent-muted-bg: #ecfdf5;
+  --accent-muted-border: #bbf7d0;
 
-  --bg-page: #d7d7db;
-  --bg-surface: #cbcbcf;
-  --bg-elevated: #dcdce0;
-  --bg-input: #c3c3c8;
-  --bg-hover: #bcbcc2;
-  --bg-overlay: #c9c9cd;
+  --bg-page: #f4f4f5;
+  --bg-surface: #ffffff;
+  --bg-elevated: #fafafa;
+  --bg-input: #ffffff;
+  --bg-hover: #f0f0f0;
+  --bg-overlay: #ffffff;
 
-  --border: #a9a9af;
-  --border-strong: #93939a;
+  --border: #e4e4e7;
+  --border-strong: #d4d4d8;
 
-  --text-primary: #1c1c1f;
-  --text-secondary: #3f3f46;
-  --text-muted: #55555c;
-  --text-faint: #77777e;
+  --text-primary: #09090b;
+  --text-secondary: #52525b;
+  --text-muted: #71717a;
+  --text-faint: #a1a1aa;
 
-  --danger-bg: #f3dede;
-  --danger-border: #e0b8b8;
-  --danger-text: #b91c1c;
+  --danger-bg: #fef2f2;
+  --danger-border: #fecaca;
+  --danger-text: #dc2626;
 
-  --success-bg: #dde7dd;
-  --success-border: #bcd2bc;
+  --success-bg: #ecfdf5;
+  --success-border: #bbf7d0;
   --success-text: #15803d;
 }
 
@@ -194,7 +191,7 @@ body {
   box-shadow: none;
 }
 
-/* Brand wordmark — always readable on dark hero/landing regardless of the Light Grey theme */
+/* Brand wordmark — always readable on dark hero/landing regardless of light mode */
 .on-dark-bg .brand-cinema,
 #landing-page .brand-cinema,
 #splash-screen .brand-cinema {
@@ -222,7 +219,7 @@ html.light .brand-x {
   background: linear-gradient(to top, var(--bg-page) 0%, transparent 100%);
 }
 html.light .card-hover-overlay {
-  background: linear-gradient(to top, #d7d7db 0%, rgba(215,215,219,0) 100%);
+  background: linear-gradient(to top, #ffffff 0%, rgba(255,255,255,0) 100%);
 }
 
 /* Notification type chips */
@@ -422,7 +419,7 @@ html.light textarea::placeholder {
   color: var(--text-muted) !important;
 }
 
-/* Light Grey theme: structural chrome */
+/* Light mode: structural chrome */
 html.light header#top-navbar,
 html.light aside,
 html.light #site-footer,
@@ -482,7 +479,7 @@ html.light #player-page-container .surface-panel {
   border-color: #2a2a2a !important;
 }
 
-/* Light Grey theme typography weight bump */
+/* Light mode typography weight bump */
 html.light, html.light p, html.light span, html.light div, html.light a,
 html.light button, html.light li, html.light label, html.light input,
 html.light textarea, html.light h1, html.light h2, html.light h3,
@@ -502,7 +499,7 @@ html.light .font-extrabold, html.light .font-black { font-weight: 900 !important
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover { background: var(--accent-muted-border); }
-html.light ::-webkit-scrollbar-thumb { background: var(--border-strong); }
+html.light ::-webkit-scrollbar-thumb { background: #d4d4d8; }
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -605,11 +602,6 @@ html.light ::-webkit-scrollbar-thumb { background: var(--border-strong); }
   height: 26rem;
   max-height: 26rem;
   min-height: 26rem;
-}
-.live-chat-panel.fixed {
-  height: auto;
-  max-height: none;
-  min-height: 0;
 }
 .live-chat-messages { flex: 1; min-height: 0; overflow-y: auto; }
 .live-chat-composer {
@@ -717,9 +709,9 @@ html.light #sidebar-nav select {
   color: var(--text-primary) !important;
 }
 
-/* Light Grey theme polish */
+/* Light mode polish */
 html.light #home-view #hero-banner {
-  background: linear-gradient(135deg, var(--bg-elevated) 0%, var(--bg-page) 100%);
+  background: linear-gradient(135deg, #fafafa 0%, #f4f4f5 100%);
 }
 html.light #home-view #hero-banner .bg-gradient-to-t {
   background: linear-gradient(to top, var(--bg-page) 0%, transparent 70%) !important;

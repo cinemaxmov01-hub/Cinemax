@@ -1,6 +1,6 @@
 import React from "react";
 import { Movie } from "../types";
-import { Star, Play, Plus, Check, Loader2, Crown } from "lucide-react";
+import { Star, Play, Plus, Check, Loader2 } from "lucide-react";
 import { getImageUrl, isTvShow } from "../utils/tmdb";
 import { useApp } from "../context/AppContext";
 
@@ -12,13 +12,12 @@ interface MovieCardProps {
 }
 
 export const MovieCard: React.FC<MovieCardProps> = ({ movie, rank, onClick, isPreparing }) => {
-  const { user, addToWatchlist, removeFromWatchlist, siteConfig } = useApp();
+  const { user, addToWatchlist, removeFromWatchlist } = useApp();
 
   const isTv = isTvShow(movie);
   const titleText = movie.title || movie.name || "Untitled";
   const rating = movie.vote_average ? movie.vote_average.toFixed(1) : "0.0";
   const year = (movie.release_date || movie.first_air_date || "").slice(0, 4) || "N/A";
-  const isPremiumTitle = Boolean(siteConfig.premiumFeatureEnabled) && (siteConfig.premiumOnlyMovieIds || []).includes(movie.id);
 
   const isWatchlisted = user ? (user.myList || user.watchlist || []).includes(movie.id) : false;
 
@@ -47,16 +46,6 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, rank, onClick, isPr
           className="absolute top-2 left-2 z-20 flex h-8 w-8 items-center justify-center rounded-xl logo-mark font-sans font-black text-sm"
         >
           {rank}
-        </div>
-      )}
-
-      {isPremiumTitle && (
-        <div
-          id={`premium-badge-${movie.id}`}
-          className="absolute top-2 right-2 z-20 flex items-center gap-1 rounded-md bg-gradient-to-r from-amber-400 to-orange-500 px-1.5 py-0.5"
-        >
-          <Crown className="h-2.5 w-2.5 text-black" fill="currentColor" />
-          <span className="text-[9px] font-extrabold uppercase tracking-wider text-black">Premium</span>
         </div>
       )}
 

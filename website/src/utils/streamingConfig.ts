@@ -13,8 +13,8 @@ export interface StreamingProvider {
 }
 
 /**
- * Video sources for the Multi-Server Movie Player.
- * Only Server P1 is available for playing movies.
+ * Streaming sources for the Multi-Server Movie Player.
+ * Optimized configuration with only P1, P2, and P3 in that specific order.
  */
 export const PROVIDERS_CONFIG: StreamingProvider[] = [
   {
@@ -28,6 +28,32 @@ export const PROVIDERS_CONFIG: StreamingProvider[] = [
     audioOptions: ["Original", "English"],
     subtitlesOptions: ["Embedded", "English"],
     defaultLatency: 95,
+    status: "Online",
+  },
+  {
+    id: "vidsrc-me",
+    name: "P2",
+    homepage: "https://vidsrc.me",
+    moviePattern: "https://vidsrc.me/embed/movie?tmdb={id}&ds_lang=en&autoplay=1",
+    tvPattern: "https://vidsrc.me/embed/tv?tmdb={id}&season={season}&episode={episode}&ds_lang=en&autoplay=1",
+    qualityOptions: ["1080p", "720p", "Auto"],
+    audioOptions: ["Original", "English"],
+    subtitlesOptions: ["Embedded", "English"],
+    defaultLatency: 100,
+    status: "Online",
+  },
+  {
+    // Vidlink.pro — clean player, brand-color theming, autoplay, next-episode
+    // support out of the box. Great fallback when P1/P2 rate-limit.
+    id: "vidlink-pro",
+    name: "P3",
+    homepage: "https://vidlink.pro",
+    moviePattern: "https://vidlink.pro/movie/{id}?primaryColor=39FF14&secondaryColor=39FF14&iconColor=39FF14&autoplay=true&title=true",
+    tvPattern: "https://vidlink.pro/tv/{id}/{season}/{episode}?primaryColor=39FF14&secondaryColor=39FF14&iconColor=39FF14&autoplay=true&nextbutton=true&title=true",
+    qualityOptions: ["1080p", "720p", "Auto"],
+    audioOptions: ["Original", "English"],
+    subtitlesOptions: ["Embedded", "English"],
+    defaultLatency: 115,
     status: "Online",
   },
 ];

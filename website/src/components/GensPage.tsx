@@ -7,7 +7,7 @@ import { useInfiniteDiscover, DiscoverPage } from "../utils/useInfiniteDiscover"
 import { Movie } from "../types";
 
 interface GensPageProps {
-  /** Same handler MoviesPage/TVShowsPage use — resolves video source and
+  /** Same handler MoviesPage/TVShowsPage use — resolves streaming source and
    *  opens the exact same custom player as every other title on the site. */
   onMovieClick: (movie: Movie) => void;
 }
@@ -97,11 +97,21 @@ const GENS_CATEGORIES: GensCollection[] = [
 ];
 
 export const GensPage: React.FC<GensPageProps> = ({ onMovieClick }) => {
-  const { user, setCurrentView } = useApp();
+  const { user, isGuest, setCurrentView, requireSignInPrompt } = useApp();
   const [accessDenied, setAccessDenied] = useState(false);
   const [accessReason, setAccessReason] = useState("");
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [activeId, setActiveId] = useState<string>(GENS_CATEGORIES[0].id);
+
+  // Restrict guest access
+  useEffect(() => {
+    if (isGuest) {
+      requireSignInPrompt();
+      setAccessDenied(true);
+      setAccessReason("Guests cannot access this page. Please sign in to continue.");
+      setCheckingAccess(false);
+    }
+  }, [isGuest, requireSignInPrompt]);
 
   const activeCategory = useMemo(
     () => GENS_CATEGORIES.find((c) => c.id === activeId) || GENS_CATEGORIES[0],
@@ -116,7 +126,7 @@ export const GensPage: React.FC<GensPageProps> = ({ onMovieClick }) => {
   useEffect(() => {
     let cancelled = false;
 
-    const checkAgeRestriction = () => {
+    const checkAgeRestriction = async () => {
       if (!user) {
         setAccessDenied(true);
         setAccessReason("Please sign in to access this page.");
@@ -124,25 +134,27 @@ export const GensPage: React.FC<GensPageProps> = ({ onMovieClick }) => {
         return;
       }
 
-      // Check age from onboarding data
-      const userAge = user.onboarding?.age;
-      
-      if (!userAge) {
-        setAccessDenied(true);
-        setAccessReason("Please complete your profile setup to access this page.");
-        setCheckingAccess(false);
-        return;
-      }
+      try {
+        const response = await fetch(`${API_BASE}/api/auth/age-verification`, {
+          credentials: "include",
+        });
+        const data = await response.json();
+        if (cancelled) return;
 
-      if (userAge < 18) {
-        setAccessDenied(true);
-        setAccessReason(`You must be at least 18 years old to access Gens. Your current age is ${userAge}.`);
-        setCheckingAccess(false);
-        return;
+        if (!data.allowed) {
+          setAccessDenied(true);
+          setAccessReason(data.reason || "Age restriction applies to this content.");
+        } else {
+          setAccessDenied(false);
+        }
+      } catch {
+        if (!cancelled) {
+          setAccessDenied(true);
+          setAccessReason("Unable to verify age at this time. Please try again later.");
+        }
+      } finally {
+        if (!cancelled) setCheckingAccess(false);
       }
-
-      setAccessDenied(false);
-      setCheckingAccess(false);
     };
 
     checkAgeRestriction();
@@ -228,14 +240,9 @@ export const GensPage: React.FC<GensPageProps> = ({ onMovieClick }) => {
             <Heart className="h-6 w-6 sm:h-8 sm:w-8 text-white" fill="currentColor" />
           </div>
           <div>
-            <div className="flex items-center gap-2 sm:gap-3">
-              <h1 className="text-2xl sm:text-4xl font-bold bg-gradient-to-r from-pink-400 to-red-400 bg-clip-text text-transparent">
-                Gens
-              </h1>
-              <span className="rounded bg-[#39FF14] px-1.5 py-0.5 text-[10px] font-extrabold text-black uppercase tracking-wider flex-shrink-0">
-                18+
-              </span>
-            </div>
+            <h1 className="text-2xl sm:text-4xl font-bold bg-gradient-to-r from-pink-400 to-red-400 bg-clip-text text-transparent">
+              Gens
+            </h1>
             <p className="text-xs sm:text-base text-neutral-400">Romance & top-rated drama for the 18+ crowd</p>
           </div>
         </div>

@@ -20,8 +20,6 @@ import {
   ImagePlus,
   Mic,
   Square,
-  Maximize2,
-  Minimize2,
 } from "lucide-react";
 
 const POPULAR_POLL_MS = 4000;
@@ -109,62 +107,43 @@ export const LiveChat: React.FC<LiveChatProps> = ({ variant = "sidebar" }) => {
   const isHome = variant === "home";
 
   const [collapsed, setCollapsed] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
   const [tab, setTab] = useState<"popular" | "inbox">("popular");
   const [unreadTotal, setUnreadTotal] = useState(0);
 
   return (
-    <>
-      <div
-        id="live-chat-panel"
-        className={`solid-card overflow-hidden border border-white/5 live-chat-panel ${
-          isHome ? "live-chat-home" : ""
-        } ${collapsed ? "flex-none" : ""} ${
-          isExpanded
-            ? "fixed inset-4 sm:inset-8 z-[10000] rounded-3xl flex flex-col"
-            : "rounded-3xl"
-        }`}
-      >
+    <div
+      id="live-chat-panel"
+      className={`solid-card rounded-3xl overflow-hidden border border-white/5 live-chat-panel ${
+        isHome ? "live-chat-home" : ""
+      } ${collapsed ? "flex-none" : ""}`}
+    >
       {/* Header */}
-      <div
+      <button
         id="live-chat-header"
-        className="w-full flex-none flex items-center justify-between px-4 py-3 border-b border-white/5 bg-gradient-to-r from-[#39FF14]/10 to-transparent"
+        onClick={() => setCollapsed((c) => !c)}
+        className="w-full flex-none flex items-center justify-between px-4 py-3 border-b border-white/5 bg-gradient-to-r from-[#39FF14]/10 to-transparent cursor-pointer"
       >
-        <button
-          onClick={() => setCollapsed((c) => !c)}
-          className="flex items-center gap-2 cursor-pointer"
-        >
+        <div className="flex items-center gap-2">
           <MessageCircle className="h-3.5 w-3.5 text-[#39FF14]" />
           <span className="font-sans font-bold text-xs text-white">{t("liveChat")}</span>
           <span className="relative flex h-1.5 w-1.5">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#39FF14] opacity-75" />
             <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#39FF14]" />
           </span>
-        </button>
-        <div className="flex items-center gap-3">
+        </div>
+        <div className="flex items-center gap-2">
           {unreadTotal > 0 && (
             <span className="h-4 min-w-4 px-1 rounded-full bg-rose-500 text-[9px] font-black text-white flex items-center justify-center">
               {unreadTotal > 9 ? "9+" : unreadTotal}
             </span>
           )}
-          <button
-            id="live-chat-expand-toggle"
-            onClick={() => { setIsExpanded((v) => !v); setCollapsed(false); }}
-            title={isExpanded ? "Shrink live chat" : "Expand live chat"}
-            aria-label={isExpanded ? "Minimize live chat" : "Maximize live chat"}
-            className="text-neutral-500 hover:text-white transition-colors cursor-pointer"
-          >
-            {isExpanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
-          </button>
-          <button
-            onClick={() => setCollapsed((c) => !c)}
-            aria-label={collapsed ? "Expand live chat" : "Collapse live chat"}
-            className="text-neutral-500 hover:text-white transition-colors cursor-pointer"
-          >
-            {collapsed ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
-          </button>
+          {collapsed ? (
+            <ChevronDown className="h-3.5 w-3.5 text-neutral-500" />
+          ) : (
+            <ChevronUp className="h-3.5 w-3.5 text-neutral-500" />
+          )}
         </div>
-      </div>
+      </button>
 
       {!collapsed && (
         <>
@@ -205,8 +184,7 @@ export const LiveChat: React.FC<LiveChatProps> = ({ variant = "sidebar" }) => {
           </div>
         </>
       )}
-      </div>
-    </>
+    </div>
   );
 };
 
@@ -406,7 +384,7 @@ const PopularTab: React.FC<{ isSignedIn: boolean; myId?: string; onSignInRequire
       >
         {loading ? (
           <div className="flex items-center justify-center h-full text-neutral-600">
-            <Loader2 className="h-5 w-5 animate-spin text-[#39FF14]" />
+            <Loader2 className="h-5 w-5 animate-spin" />
           </div>
         ) : topLevel.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-2 text-center px-4">
@@ -693,7 +671,7 @@ const InboxTab: React.FC<{
         <div className="flex-1 overflow-y-auto no-scrollbar">
           {loadingList ? (
             <div className="flex items-center justify-center h-full text-neutral-600">
-              <Loader2 className="h-5 w-5 animate-spin text-[#39FF14]" />
+              <Loader2 className="h-5 w-5 animate-spin" />
             </div>
           ) : conversations.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full gap-2 text-center px-6">

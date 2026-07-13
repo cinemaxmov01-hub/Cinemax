@@ -16,7 +16,7 @@ export interface Movie {
   number_of_episodes?: number;
   // Present only on admin-authored "custom content" (CMS) entries — these
   // have a negative id and play their trailer directly rather than through
-  // the multi-provider video embed used for real TMDB titles.
+  // the multi-provider streaming embed used for real TMDB titles.
   isCustom?: boolean;
   trailerYoutubeKey?: string;
   media_type?: "movie" | "tv";
@@ -81,13 +81,7 @@ export interface UserProfile {
   email: string;
   avatar: string;
   banner: string;
-  subscription: "Free" | "Basic" | "Standard" | "Premium";
-  // Authoritative Premium status computed server-side (see publicUser() in
-  // the backend) from subscription tier + admin override + role — never
-  // computed on the client.
-  premium?: boolean;
-  premiumSource?: "subscription" | "admin_override" | "admin_role" | "none";
-  premiumExpiresAt?: string | null;
+  subscription: "Free" | "Premium";
   badges: string[];
   role?: "user" | "admin";
   favorites: number[]; // TMDB movie/tv IDs
