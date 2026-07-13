@@ -21,7 +21,7 @@ export function resolveOptionalServiceUrl(envValue: string | undefined): string 
  * Compatibility helper: allow resolving a service url with a fallback.
  */
 export function resolveServiceUrl(envValue: string | undefined, fallback: string): string {
-  const resolved = !envValue ? "" : String(envValue).replace(/\/+$/, "");
-  return resolved || fallback;
+  if (!envValue) return fallback;
+  return String(envValue).replace(/\/+$/, "") || fallback;
 }
 
