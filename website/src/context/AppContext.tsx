@@ -109,8 +109,7 @@ interface AppContextType {
   setPipEpisode: (episode: number) => void;
   pipIsPlaying: boolean;
   setPipIsPlaying: (isPlaying: boolean) => void;
-  theme: "dark" | "light";
-  toggleTheme: () => void;
+  theme: "dark";
   t: (key: string) => string;
   appLanguage: AppLang;
   setAppLanguage: (lang: AppLang) => void;
@@ -188,13 +187,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [pipEpisode, setPipEpisode] = useState<number>(1);
   const [pipIsPlaying, setPipIsPlaying] = useState<boolean>(false);
 
-  // Theme — the site is dark by default (its original design), with an
-  // optional light mode the person can switch to and which persists across
-  // visits.
-  const [theme, setTheme] = useState<"dark" | "light">(() => {
-    const saved = typeof window !== "undefined" ? localStorage.getItem("cinemax_theme") : null;
-    return saved === "light" ? "light" : "dark";
-  });
+  // Theme — locked to dark mode only
+  const theme: "dark" = "dark";
   const [guestLanguage, setGuestLanguage] = useState<AppLang>(() => {
     if (typeof window === "undefined") return "English";
     const saved = localStorage.getItem("cinemax_lang");
@@ -262,10 +256,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   useEffect(() => {
-    document.documentElement.classList.toggle("light", theme === "light");
-    document.documentElement.classList.toggle("dark", theme === "dark");
-    localStorage.setItem("cinemax_theme", theme);
-  }, [theme]);
+    document.documentElement.classList.add("dark");
+  }, []);
 
   useEffect(() => {
     const reduced = user?.preferences?.reducedMotion ?? false;
@@ -279,8 +271,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     document.documentElement.lang = code;
     document.documentElement.dir = lang === "Arabic" ? "rtl" : "ltr";
   }, [user?.preferences?.appLanguage, guestLanguage, isGuest]);
-
-  const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
 
   // Notification Center
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -1489,7 +1479,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         pipIsPlaying,
         setPipIsPlaying,
         theme,
-        toggleTheme,
         t,
         appLanguage,
         setAppLanguage,

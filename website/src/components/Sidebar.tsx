@@ -48,7 +48,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
     logoutUser,
     openAuthModal,
     theme,
-    toggleTheme,
     t,
     appLanguage,
     setAppLanguage,
@@ -291,20 +290,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
               <Info className="h-4 w-4 text-neutral-500" />
               <span>{t("aboutCinemax")}</span>
             </button>
-            <button
-              id="nav-theme-toggle-btn"
-              onClick={toggleTheme}
-              className="flex w-full items-center gap-4 px-4 py-2.5 text-sm rounded-lg hover:text-white hover:bg-white/5 transition-colors"
-              title="Toggle dark / light mode"
-            >
-              {theme === "dark" ? (
-                <Sun className="h-4 w-4 text-neutral-500" />
-              ) : (
-                <Moon className="h-4 w-4 text-neutral-500" />
-              )}
-              <span className="flex-1 text-left">{theme === "dark" ? t("lightMode") : t("darkMode")}</span>
-            </button>
-            <div className="flex w-full items-center gap-4 px-4 py-2.5 text-sm rounded-lg">
+<div className="flex w-full items-center gap-4 px-4 py-2.5 text-sm rounded-lg">
               <Globe className="h-4 w-4 text-neutral-500 flex-shrink-0" />
               <span className="flex-1 text-left text-neutral-400">{t("language")}</span>
               <select

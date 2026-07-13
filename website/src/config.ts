@@ -14,7 +14,7 @@
  * Otherwise ensures it does not end with a trailing slash.
  */
 export function resolveOptionalServiceUrl(envValue: string | undefined): string {
-  return resolveServiceUrl(envValue, "https://cinemax-backend.onrender.com");
+  return resolveServiceUrl(envValue, "https://cinemaxmovie-backend-1mol.onrender.com");
 }
 
 /**

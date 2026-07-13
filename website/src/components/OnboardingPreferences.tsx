@@ -65,12 +65,12 @@ const GENRE_OPTIONS = [
 ];
 
 const AGE_RANGES = [
-  { id: "13-17", label: "13-17" },
-  { id: "18-24", label: "18-24" },
-  { id: "25-34", label: "25-34" },
-  { id: "35-44", label: "35-44" },
-  { id: "45-54", label: "45-54" },
-  { id: "55+", label: "55+" },
+  { id: "13-17", label: "13-17", isAdult: false },
+  { id: "18-24", label: "18-24", isAdult: true },
+  { id: "25-34", label: "25-34", isAdult: true },
+  { id: "35-44", label: "35-44", isAdult: true },
+  { id: "45-54", label: "45-54", isAdult: true },
+  { id: "55+", label: "55+", isAdult: true },
 ];
 
 export const OnboardingPreferences: React.FC<OnboardingPreferencesProps> = ({
@@ -81,6 +81,9 @@ export const OnboardingPreferences: React.FC<OnboardingPreferencesProps> = ({
   const [age, setAge] = useState("");
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+
+  const selectedAgeRange = AGE_RANGES.find((r) => r.id === age);
+  const isAdult = selectedAgeRange?.isAdult ?? false;
 
   if (!isOpen) return null;
 
@@ -130,6 +133,17 @@ export const OnboardingPreferences: React.FC<OnboardingPreferencesProps> = ({
               <p className="text-sm text-neutral-400">Tell us about yourself to get tailored recommendations</p>
             </div>
           </div>
+          {age && (
+            <div className={`mt-4 p-3 rounded-xl text-xs font-semibold ${
+              isAdult 
+                ? "bg-pink-500/10 border border-pink-500/30 text-pink-300" 
+                : "bg-blue-500/10 border border-blue-500/30 text-blue-300"
+            }`}>
+              {isAdult 
+                ? "✓ You're eligible for Gens (18+ romance & drama content)" 
+                : "Gens is restricted to 18+ users. You'll have access to age-appropriate content."}
+            </div>
+          )}
         </div>
 
         {/* Form */}

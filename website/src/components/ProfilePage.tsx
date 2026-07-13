@@ -138,7 +138,6 @@ export const ProfilePage: React.FC = () => {
     openForgotPasswordModal,
     t,
     theme,
-    toggleTheme,
   } = useApp();
 
   const [portalBusy, setPortalBusy] = useState(false);
@@ -539,12 +538,6 @@ export const ProfilePage: React.FC = () => {
 
           {tab === "preferences" && (
             <div className="space-y-8">
-              <SettingsSection title={t("theme")} description="Switch between dark and light mode." icon={theme === "light" ? Sun : Moon}>
-                <SettingsRow title={theme === "light" ? t("lightMode") : t("darkMode")} description="Applies instantly across the entire site.">
-                  <Toggle checked={theme === "light"} onChange={() => toggleTheme()} />
-                </SettingsRow>
-              </SettingsSection>
-
               <SettingsSection title={t("language")} description="Interface language — 12 languages supported." icon={Globe}>
                 <SettingsRow title={t("language")}>
                   <select

@@ -43,6 +43,9 @@ function buildAllowedOrigins(): string[] {
     "https://cinemaxmovie-admin.onrender.com",
     "https://cinemax-website.onrender.com",
     "https://cinemax-admin.onrender.com",
+    "https://cinemaxmovie-backend-1mol.onrender.com",
+    "https://cinemaxmovie-site.onrender.com",
+    "https://cinemax-tc3o.onrender.com",
   );
   // Local dev conveniences.
   raw.push("http://localhost:5173", "http://localhost:5174", "http://localhost:3000");

@@ -798,7 +798,7 @@ const CinemaxDashboard: React.FC = () => {
         <header id="top-navbar" className="h-20 glass-navbar sticky top-0 z-40 px-4 lg:px-8 flex items-center justify-between gap-4">
           
           {/* Mobile Hamburguer & Search bar */}
-          <div className="flex items-center gap-4 flex-1 max-w-lg">
+          <div className="flex items-center gap-2 sm:gap-4 flex-1 max-w-lg">
             <button
               id="mobile-menu-trigger"
               aria-label="Open navigation menu"
@@ -815,7 +815,7 @@ const CinemaxDashboard: React.FC = () => {
                 id="header-search-input"
                 type="text"
                 aria-label="Search movies, TV shows, and actors"
-                placeholder="Search movies, TV shows, actors..."
+                placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-white/5 border border-white/10 rounded-2xl pl-11 pr-12 py-2.5 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-[#39FF14]/50 transition-colors"
@@ -826,8 +826,8 @@ const CinemaxDashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Center Navigation: Movies / TV Shows / Gens / All Categories */}
-          <nav className="hidden xl:flex items-center gap-1 flex-shrink-0">
+          {/* Center Navigation: Movies / TV Shows / Gens / All Categories - Now visible on all screen sizes */}
+          <nav className="flex items-center gap-1 flex-shrink-0 overflow-x-auto scrollbar-thin scrollbar-thumb-neutral-800 scrollbar-track-transparent">
             <button
               id="nav-movies-btn"
               onClick={() => { setActiveGenre(null); setActiveGenreName(null); setCurrentView("movies"); }}
@@ -928,14 +928,14 @@ const CinemaxDashboard: React.FC = () => {
           </nav>
 
           {/* Right Header Navigation widgets */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             {/* Notification bell — locked for guests */}
             <div className="relative">
               <button
                 id="notification-bell-btn"
                 aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
                 onClick={() => (currentUser && !isGuest ? setNotifOpen((v) => !v) : requireSignInPrompt())}
-                className="p-2.5 rounded-2xl border border-white/10 hover:border-[#39FF14]/20 bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition-all relative cursor-pointer"
+                className="p-2 sm:p-2.5 rounded-2xl border border-white/10 hover:border-[#39FF14]/20 bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition-all relative cursor-pointer"
               >
                 {isGuest ? <Lock className="h-4 w-4" /> : <Bell className="h-4 w-4" />}
                 {!isGuest && unreadCount > 0 && (
@@ -955,17 +955,17 @@ const CinemaxDashboard: React.FC = () => {
                 onClick={() => setCurrentView("profile")}
                 className="rounded-full border border-white/15 overflow-hidden cursor-pointer hover:border-[#39FF14] transition-colors"
               >
-                <AvatarRenderer value={currentUser.avatar} size={40} initials={currentUser.name?.[0]?.toUpperCase() || "C"} />
+                <AvatarRenderer value={currentUser.avatar} size={36} initials={currentUser.name?.[0]?.toUpperCase() || "C"} />
               </button>
             ) : (
               <button
                 id="header-login-btn"
                 onClick={() => requireSignInPrompt()}
                 title="Sign in to access your profile"
-                className="neon-btn text-xs px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-md flex items-center gap-1.5"
+                className="neon-btn text-[10px] sm:text-xs px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition-all cursor-pointer shadow-md flex items-center gap-1.5"
               >
-                <Lock className="h-3.5 w-3.5" />
-                Sign In
+                <Lock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                <span className="hidden sm:inline">Sign In</span>
               </button>
             )}
           </div>

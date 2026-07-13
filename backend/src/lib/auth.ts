@@ -100,19 +100,20 @@ export function getUserById(id: string): DbUser | undefined {
   return db.data.users.find((u) => u.id === id);
 }
 
-export function createUser(email: string, password: string, name: string, passwordHashOverride?: string): DbUser {
+export function createUser(email: string, password: string, name: string, passwordHashOverride?: string, googleId?: string, googleAvatar?: string): DbUser {
   const now = new Date().toISOString();
   const user: DbUser = {
     id: crypto.randomUUID(),
     email: email.toLowerCase().trim(),
     password_hash: passwordHashOverride || bcrypt.hashSync(password, 12),
     name: name.trim(),
-    avatar: "anim:aurora",
+    avatar: googleAvatar || "anim:aurora",
     banner: "",
     subscription: "Free",
     role: "user",
     status: "active",
     preferences: JSON.stringify(DEFAULT_PREFERENCES),
+    google_id: googleId,
     created_at: now,
     updated_at: now,
   };

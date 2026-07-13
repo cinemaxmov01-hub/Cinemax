@@ -1867,6 +1867,8 @@ authRouter.get("/api/auth/google/callback", async (req, res) => {
     const email: string = (profile.email || "").toLowerCase().trim();
     const emailVerified: boolean = !!profile.email_verified;
     const name: string = profile.name || (email ? email.split("@")[0] : "Cinemax User");
+    const googleId: string = profile.sub; // Google's unique user ID
+    const googleAvatar: string = profile.picture || ""; // Google profile picture URL
 
     if (!email || !emailVerified) {
       sendGoogleAuthError(res, saved.returnTo, "Your Google account has no verified email. Please try a different account.");
@@ -1883,7 +1885,14 @@ authRouter.get("/api/auth/google/callback", async (req, res) => {
       const randomPassword = crypto.randomBytes(24).toString("hex");
       const bcrypt = await import("bcryptjs");
       const passwordHash = bcrypt.default.hashSync(randomPassword, 12);
-      user = createUser(email, randomPassword, name, passwordHash);
+      user = createUser(email, randomPassword, name, passwordHash, googleId, googleAvatar);
+    } else if (!user.google_id && googleId) {
+      // Link existing account to Google if not already linked
+      user.google_id = googleId;
+      if (googleAvatar && !user.avatar || user.avatar === "anim:aurora") {
+        user.avatar = googleAvatar;
+      }
+      db.save();
     }
     if (user.status === "banned" || user.status === "suspended") {
       sendGoogleAuthError(res, saved.returnTo, "This account isn't allowed to sign in. Please contact support.");

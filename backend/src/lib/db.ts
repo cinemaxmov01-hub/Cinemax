@@ -27,6 +27,7 @@ export interface DbUser {
   role: "user" | "admin";
   status: "active" | "suspended" | "banned";
   preferences: string;
+  google_id?: string; // Google OAuth user ID (sub field from Google)
   onboarding?: {
     age: string;
     favoriteGenres: string[];
