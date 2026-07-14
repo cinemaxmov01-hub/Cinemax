@@ -1,54 +1,35 @@
 // ---------------------------------------------------------------------------
-// MAILER — uses dual email services:
-// - Brevo (Sendinblue) for user Sign Up and Forgot Password OTP emails
-// - Resend for Admin Panel login OTP emails
-// Configured via BREVO_API_KEY and RESEND_API_KEY in .env.
+// MAILER — uses Brevo (Sendinblue) HTTP API to deliver one-time passcodes
+// for sign-up, forgot password, and admin login. Configured via BREVO_API_KEY
+// in .env. Get a free API key at https://app.brevo.com/settings/keys/api
 // ---------------------------------------------------------------------------
 
-import { Resend } from "resend";
-
 const BREVO_API_KEY = (process.env.BREVO_API_KEY || "").trim();
-const RESEND_API_KEY = (process.env.RESEND_API_KEY || "").trim();
 const FROM_EMAIL = "cinemaxmov01@gmail.com";
 
-let resend: Resend | null = null;
-let brevoConfigured = false;
-let resendConfigured = false;
+let configured = false;
 
 if (BREVO_API_KEY) {
-  brevoConfigured = true;
+  configured = true;
   console.log("[mailer] Brevo API configured");
 } else {
   console.log("[mailer] Brevo API not configured - BREVO_API_KEY missing");
 }
 
-if (RESEND_API_KEY) {
-  resend = new Resend(RESEND_API_KEY);
-  resendConfigured = true;
-  console.log("[mailer] Resend SDK configured");
-} else {
-  console.log("[mailer] Resend SDK not configured - RESEND_API_KEY missing");
-}
-
 export function isMailerConfigured(): boolean {
-  return brevoConfigured || resendConfigured;
+  return configured;
 }
 
 export function getMailerStatus() {
   return {
-    configured: isMailerConfigured(),
+    configured,
     user: FROM_EMAIL,
-    brevoConfigured,
-    resendConfigured,
   };
 }
 
-/** Sends a one-time passcode to the admin's email address using Resend. */
+/** Sends a one-time passcode to the admin's email address. */
 export async function sendOtpEmail(toEmail: string, otp: string): Promise<void> {
-  if (!resendConfigured || !resend) {
-    throw new Error("Resend email service is not configured for admin login.");
-  }
-  await sendViaResend(
+  await sendEmail(
     toEmail,
     `Your Cinemax admin login code: ${otp}`,
     `Your one-time login code is ${otp}. It expires in 10 minutes.`,
@@ -56,12 +37,9 @@ export async function sendOtpEmail(toEmail: string, otp: string): Promise<void> 
   );
 }
 
-/** Sends a sign-up verification code using Brevo. */
+/** Sends a sign-up verification code. */
 export async function sendSignupVerificationEmail(toEmail: string, otp: string): Promise<void> {
-  if (!brevoConfigured) {
-    throw new Error("Brevo email service is not configured for sign-up verification.");
-  }
-  await sendViaBrevo(
+  await sendEmail(
     toEmail,
     `Verify your Cinemax account: ${otp}`,
     `Your verification code is ${otp}. It expires in 10 minutes.`,
@@ -69,12 +47,11 @@ export async function sendSignupVerificationEmail(toEmail: string, otp: string):
   );
 }
 
-/** Sends a password-reset OTP code using Brevo. */
+/** Sends a password-reset OTP code — the user types this into the app, it is
+ *  never embedded in a clickable link, so possessing the email is the only
+ *  way to complete a reset. */
 export async function sendPasswordResetEmail(toEmail: string, otp: string): Promise<void> {
-  if (!brevoConfigured) {
-    throw new Error("Brevo email service is not configured for password reset.");
-  }
-  await sendViaBrevo(
+  await sendEmail(
     toEmail,
     `Your Cinemax password reset code: ${otp}`,
     `Your password reset code is ${otp}. It expires in 10 minutes. If you didn't request this, you can ignore this email.`,
@@ -94,7 +71,11 @@ function buildCodeEmailHtml(title: string, subtitle: string, otp: string): strin
   `;
 }
 
-async function sendViaBrevo(toEmail: string, subject: string, text: string, html: string): Promise<void> {
+async function sendEmail(toEmail: string, subject: string, text: string, html: string): Promise<void> {
+  if (!configured) {
+    console.error("[mailer] Brevo API not configured");
+    throw new Error("Email delivery is not configured on the server.");
+  }
   try {
     console.log("[mailer] Sending via Brevo to:", toEmail);
     const response = await fetch('https://api.brevo.com/v3/smtp/email', {
@@ -124,31 +105,5 @@ async function sendViaBrevo(toEmail: string, subject: string, text: string, html
   } catch (error: any) {
     console.error("[mailer] Brevo error:", error);
     throw new Error("Failed to send email via Brevo: " + (error?.message || "Unknown error"));
-  }
-}
-
-async function sendViaResend(toEmail: string, subject: string, text: string, html: string): Promise<void> {
-  if (!resend) {
-    throw new Error("Resend SDK not initialized");
-  }
-  try {
-    console.log("[mailer] Sending via Resend to:", toEmail);
-    const { data, error } = await resend.emails.send({
-      from: `Cinemax <${FROM_EMAIL}>`,
-      to: [toEmail],
-      subject,
-      text,
-      html,
-    });
-
-    if (error) {
-      console.error("[mailer] Resend API error:", error);
-      throw new Error(`Resend API error: ${error.message}`);
-    }
-
-    console.log("[mailer] Email sent successfully via Resend to:", toEmail, "ID:", data?.id);
-  } catch (error: any) {
-    console.error("[mailer] Resend error:", error);
-    throw new Error("Failed to send email via Resend: " + (error?.message || "Unknown error"));
   }
 }

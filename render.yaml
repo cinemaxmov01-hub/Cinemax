@@ -34,8 +34,6 @@ services:
         value: cinemaxmov01@gmail.com
       - key: BREVO_API_KEY
         value: xsmtpsib-09e0378a3c7393881ce01fe64f9c41bbf37567536be70f0ded3201de21db04e4-pR2SA5FShbDpSrFH
-      - key: RESEND_API_KEY
-        sync: false
       # Optional extra CORS origins (comma-separated). WEBSITE_URL and
       # ADMIN_PANEL_URL below are already trusted automatically.
       - key: CORS_ORIGIN
