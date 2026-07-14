@@ -170,7 +170,7 @@ body {
   font-weight: 700;
   border: none;
   box-shadow: none;
-  transition: background 0.15s ease, opacity 0.15s ease;
+  transition: background 0.1s ease, opacity 0.1s ease, transform 0.05s ease;
 }
 
 .neon-btn:hover,
@@ -180,18 +180,27 @@ body {
   transform: none;
 }
 
+.neon-btn:active,
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
 .btn-secondary {
   background: var(--bg-elevated);
   color: var(--text-primary);
   border: 1px solid var(--border-strong);
   font-weight: 600;
   box-shadow: none;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition: background 0.1s ease, border-color 0.1s ease, transform 0.05s ease;
 }
 
 .btn-secondary:hover {
   background: var(--bg-hover);
   border-color: var(--accent-muted-border);
+}
+
+.btn-secondary:active {
+  transform: scale(0.98);
 }
 
 .btn-forgot {
@@ -200,10 +209,15 @@ body {
   border: 1px solid var(--accent-muted-border);
   font-weight: 700;
   box-shadow: none;
+  transition: background 0.1s ease, transform 0.05s ease;
 }
 
 .btn-forgot:hover {
   background: var(--accent-muted-bg);
+}
+
+.btn-forgot:active {
+  transform: scale(0.98);
 }
 
 .logo-mark {

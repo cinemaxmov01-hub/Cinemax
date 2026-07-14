@@ -237,11 +237,11 @@ const SideCastPanel: React.FC<{ cast: CastMember[]; title: string }> = ({ cast, 
       <h3 className="text-[10px] font-black uppercase tracking-widest text-neutral-500">{title}</h3>
       <div className="grid grid-cols-2 gap-3">
         {cast.slice(0, 8).map((member, idx) => (
-          <div key={`${member.id || member.name}-${idx}`} className="min-w-0 rounded-2xl border border-white/10 bg-black/35 p-3 text-center">
+          <div key={`${member.id || member.name}-${idx}`} className="min-w-0 p-3 text-center">
             <img
               src={member.profile_path ? getImageUrl(member.profile_path, "w500") : "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=150&auto=format&fit=crop"}
               alt={member.name}
-              className="mx-auto h-16 w-16 rounded-2xl object-cover border border-white/10"
+              className="mx-auto h-24 w-24 rounded-full object-cover"
               referrerPolicy="no-referrer"
             />
             <p className="mt-2 truncate text-[11px] font-bold text-white">{member.name}</p>
@@ -443,13 +443,24 @@ export const PlayerPage: React.FC = () => {
     const loadSeasonEpisodes = async () => {
       try {
         const episodes = await tmdb.getTVSeason(selectedMovie.id, currentSeason);
-        const nums = episodes.map((e) => e.episode_number).sort((a, b) => a - b);
-        setEpisodesList(nums);
-        if (nums.length > 0 && !nums.includes(currentEpisode)) {
-          setCurrentEpisode(nums[nums.length - 1]);
+        // Filter out any null/invalid episode numbers and sort
+        const nums = episodes
+          .map((e) => e.episode_number)
+          .filter((n) => n != null && !isNaN(n) && n > 0)
+          .sort((a, b) => a - b);
+        
+        // Remove duplicates while preserving order
+        const uniqueNums = [...new Set(nums)];
+        
+        setEpisodesList(uniqueNums);
+        
+        // If current episode is not in the list, default to first available episode
+        if (uniqueNums.length > 0 && !uniqueNums.includes(currentEpisode)) {
+          setCurrentEpisode(uniqueNums[0]);
         }
       } catch (err) {
         console.error("Error loading season episodes", err);
+        // Fallback to episode 1 if API fails
         setEpisodesList([1]);
         setCurrentEpisode(1);
       }

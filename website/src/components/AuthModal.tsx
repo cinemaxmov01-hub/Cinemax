@@ -7,9 +7,9 @@ const GuestContinueButton: React.FC<{ onClick: () => void }> = ({ onClick }) => 
     type="button"
     id="continue-as-guest-btn"
     onClick={onClick}
-    className="w-full flex items-center justify-center gap-2.5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-bold bg-white/5 text-white hover:bg-white/10 transition-colors cursor-pointer border border-white/10"
+    className="w-full flex items-center justify-center gap-2 py-2 sm:py-2.5 rounded-xl text-[10px] sm:text-xs font-bold bg-white/5 text-white hover:bg-white/10 transition-colors cursor-pointer border border-white/10"
   >
-    <UserRound className="h-4 w-4" />
+    <UserRound className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
     <span>Continue as Guest</span>
   </button>
 );
@@ -619,12 +619,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             id="auth-submit-btn"
             type="submit"
             disabled={submitting}
-            className="w-full neon-btn flex items-center justify-center gap-2 font-extrabold py-2.5 sm:py-3.5 rounded-xl text-[11px] sm:text-xs cursor-pointer mt-2 disabled:opacity-60"
+            className="w-full neon-btn flex items-center justify-center gap-2 font-extrabold py-2 sm:py-3 rounded-xl text-[10px] sm:text-xs cursor-pointer mt-2 disabled:opacity-60"
           >
-            {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : (
+            {submitting ? <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" /> : (
               <>
                 <span>{submitLabel}</span>
-                <ArrowRight className="h-4 w-4 stroke-[3px]" />
+                <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 stroke-[3px]" />
               </>
             )}
           </button>
@@ -647,7 +647,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               id="auth-forgot-password-btn"
               type="button"
               onClick={goToForgot}
-              className="w-full btn-forgot mt-3 py-2.5 sm:py-3 rounded-xl text-[11px] sm:text-xs uppercase tracking-wide cursor-pointer"
+              className="w-full btn-forgot mt-3 py-2 sm:py-2.5 rounded-xl text-[10px] sm:text-xs uppercase tracking-wide cursor-pointer"
             >
               Forgot Password
             </button>

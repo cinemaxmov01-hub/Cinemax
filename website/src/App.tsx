@@ -233,7 +233,7 @@ const CinemaxDashboard: React.FC = () => {
           const catRes = await fetch("/api/categories/public");
           if (catRes.ok) {
             const { hiddenIds: hiddenGenreIds, labels } = await catRes.json();
-            const hiddenSet = new Set(hiddenGenreIds);
+            const hiddenSet = new Set(hiddenGenreIds || []);
             setAllGenres(
               genreList
                 .filter((g: { id: number }) => !hiddenSet.has(g.id))
@@ -243,9 +243,11 @@ const CinemaxDashboard: React.FC = () => {
                 }))
             );
           } else {
+            console.warn("[App] Categories API returned non-OK status, using default genres");
             setAllGenres(genreList);
           }
-        } catch {
+        } catch (err) {
+          console.error("[App] Failed to fetch categories overrides, using default genres:", err);
           setAllGenres(genreList);
         }
       } catch (err) {
