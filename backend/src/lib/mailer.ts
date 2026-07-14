@@ -61,12 +61,13 @@ export async function sendPasswordResetEmail(toEmail: string, otp: string): Prom
 
 function buildCodeEmailHtml(title: string, subtitle: string, otp: string): string {
   return `
-    <div style="font-family: -apple-system, Segoe UI, Roboto, sans-serif; max-width: 420px; margin: 0 auto; padding: 32px 24px; background:#0a0a0a; border-radius: 16px; color:#fff;">
-      <div style="width:40px;height:40px;border-radius:12px;background:#22c55e;display:flex;align-items:center;justify-content:center;font-weight:900;color:#000;font-size:20px;">C</div>
-      <h2 style="margin: 20px 0 8px; font-size: 18px;">${title}</h2>
-      <p style="color:#a3a3a3; font-size: 13px; margin-bottom: 24px;">${subtitle} It expires in 10 minutes.</p>
-      <div style="font-size: 32px; font-weight: 800; letter-spacing: 8px; background:#141414; border:1px solid #262626; border-radius:12px; padding: 16px; text-align:center;">${otp}</div>
-      <p style="color:#525252; font-size: 11px; margin-top: 24px;">If you didn't request this, you can safely ignore this email.</p>
+    <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
+      <h2 style="color: #333; text-align: center;">Cinemax Verification</h2>
+      <p>Uraho, use the following One-Time Password (OTP) to complete your request. This code is valid for 5 minutes:</p>
+      <div style="background-color: #f9f9f9; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #e50914; margin: 20px 0; border-radius: 4px;">
+        ${otp}
+      </div>
+      <p style="font-size: 12px; color: #777; text-align: center;">If you did not request this code, please ignore this email.</p>
     </div>
   `;
 }
@@ -97,7 +98,10 @@ async function sendEmail(toEmail: string, subject: string, text: string, html: s
     const data = await response.json();
     console.log('[mailer] Brevo response:', data);
 
-    if (!response.ok) {
+    if (response.ok) {
+      console.log('[mailer] Brevo email sent successfully:', data);
+    } else {
+      console.error('[mailer] Brevo API rejected the key/payload:', data);
       throw new Error(`Brevo API error: ${response.status} - ${JSON.stringify(data)}`);
     }
 
