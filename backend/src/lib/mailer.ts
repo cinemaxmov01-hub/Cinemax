@@ -1,11 +1,29 @@
 import nodemailer from "nodemailer";
 
 // ---------------------------------------------------------------------------
-// MAILER — used exclusively to deliver one-time passcodes to the admin
-// account during login. Configured via EMAIL_USER / EMAIL_APP_PASSWORD in
-// .env (a Gmail address + a Gmail "App Password", NOT the account's normal
-// password — generate one at https://myaccount.google.com/apppasswords).
+// MAILER — used to deliver OTP codes (admin login, sign-up verification,
+// password reset).
+//
+// Render blocks ALL outbound SMTP ports (25, 465, 587) on free-tier web
+// services (see https://render.com/changelog/free-web-services-will-no-
+// longer-allow-outbound-traffic-to-smtp-ports), so plain Nodemailer/Gmail
+// SMTP hangs and times out in production no matter which port is used.
+//
+// To work around this we send over HTTPS instead, via Resend's REST API
+// (https://resend.com), which needs only port 443 — always open. Configure
+// RESEND_API_KEY (+ optionally RESEND_FROM) in .env / the Render dashboard.
+//
+// If RESEND_API_KEY isn't set, we fall back to the original Gmail SMTP
+// transporter. That path still works fine for local development (or any
+// host that doesn't block SMTP) — it just won't work on a Render free
+// instance.
 // ---------------------------------------------------------------------------
+
+const RESEND_API_KEY = (process.env.RESEND_API_KEY || "").trim();
+// Must be either "onboarding@resend.dev" (works with no domain setup, but
+// only delivers to the email you signed up to Resend with) or an address on
+// a domain you've verified in the Resend dashboard.
+const RESEND_FROM = (process.env.RESEND_FROM || "Cinemax <onboarding@resend.dev>").trim();
 
 const EMAIL_USER = (process.env.EMAIL_USER || process.env.GMAIL_USER || process.env.ADMIN_EMAIL || "").trim();
 // Gmail App Passwords are often copied as four space-separated groups. Gmail
@@ -15,7 +33,7 @@ const EMAIL_APP_PASSWORD = (process.env.EMAIL_APP_PASSWORD || process.env.GMAIL_
 
 let transporter: ReturnType<typeof nodemailer.createTransport> | null = null;
 
-if (EMAIL_USER && EMAIL_APP_PASSWORD) {
+if (!RESEND_API_KEY && EMAIL_USER && EMAIL_APP_PASSWORD) {
   transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
@@ -29,20 +47,26 @@ if (EMAIL_USER && EMAIL_APP_PASSWORD) {
     greetingTimeout: 10_000,
     socketTimeout: 10_000,
   });
-} else {
-  // Avoid noisy terminal output in dev when mailer isn't configured.
-  // OTP endpoints will still return a clear 503 when used.
 }
 
+type MailerMode = "resend" | "smtp" | "none";
+
+function getMode(): MailerMode {
+  if (RESEND_API_KEY) return "resend";
+  if (transporter) return "smtp";
+  return "none";
+}
 
 export function isMailerConfigured(): boolean {
-  return transporter !== null;
+  return getMode() !== "none";
 }
 
 export function getMailerStatus() {
+  const mode = getMode();
   return {
-    configured: transporter !== null,
-    user: EMAIL_USER || null,
+    configured: mode !== "none",
+    mode,
+    user: mode === "resend" ? RESEND_FROM : EMAIL_USER || null,
   };
 }
 
@@ -91,19 +115,20 @@ function buildCodeEmailHtml(title: string, subtitle: string, otp: string): strin
 }
 
 async function sendEmail(toEmail: string, subject: string, text: string, html: string): Promise<void> {
-  if (!transporter) {
-    console.error("[mailer] Transporter is null - EMAIL_USER:", !!EMAIL_USER, "EMAIL_APP_PASSWORD:", !!EMAIL_APP_PASSWORD);
+  const mode = getMode();
+
+  if (mode === "none") {
+    console.error("[mailer] Not configured - RESEND_API_KEY:", !!RESEND_API_KEY, "EMAIL_USER:", !!EMAIL_USER, "EMAIL_APP_PASSWORD:", !!EMAIL_APP_PASSWORD);
     throw new Error("Email delivery is not configured on the server.");
   }
+
+  console.log(`[mailer] Attempting to send email to: ${toEmail} (mode: ${mode})`);
   try {
-    console.log("[mailer] Attempting to send email to:", toEmail);
-    await transporter.sendMail({
-      from: `"Cinemax" <${EMAIL_USER}>`,
-      to: toEmail,
-      subject,
-      text,
-      html,
-    });
+    if (mode === "resend") {
+      await sendViaResend(toEmail, subject, text, html);
+    } else {
+      await sendViaSmtp(toEmail, subject, text, html);
+    }
     console.log("[mailer] Email sent successfully to:", toEmail);
   } catch (error: any) {
     console.error("[mailer] Failed to send email to:", toEmail);
@@ -116,4 +141,47 @@ async function sendEmail(toEmail: string, subject: string, text: string, html: s
     }
     throw new Error("Failed to send email: " + (error?.message || "Unknown error"));
   }
+}
+
+/** Sends over HTTPS via Resend's REST API — no SMTP ports involved, so this
+ *  works even on hosts (like Render's free tier) that block outbound SMTP. */
+async function sendViaResend(toEmail: string, subject: string, text: string, html: string): Promise<void> {
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: RESEND_FROM,
+      to: [toEmail],
+      subject,
+      text,
+      html,
+    }),
+  });
+
+  if (!res.ok) {
+    let detail = "";
+    try {
+      const body = await res.json();
+      detail = body?.message || JSON.stringify(body);
+    } catch {
+      detail = await res.text().catch(() => "");
+    }
+    throw new Error(`Resend API error (${res.status}): ${detail || "unknown error"}`);
+  }
+}
+
+async function sendViaSmtp(toEmail: string, subject: string, text: string, html: string): Promise<void> {
+  if (!transporter) {
+    throw new Error("SMTP transporter is not configured.");
+  }
+  await transporter.sendMail({
+    from: `"Cinemax" <${EMAIL_USER}>`,
+    to: toEmail,
+    subject,
+    text,
+    html,
+  });
 }
