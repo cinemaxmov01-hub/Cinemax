@@ -32,8 +32,8 @@ services:
         sync: false
       - key: EMAIL_USER
         value: cinemaxmov01@gmail.com
-      - key: EMAIL_APP_PASSWORD
-        value: xljd xrvd gypk qwms
+      - key: RESEND_API_KEY
+        sync: false
       # Optional extra CORS origins (comma-separated). WEBSITE_URL and
       # ADMIN_PANEL_URL below are already trusted automatically.
       - key: CORS_ORIGIN
