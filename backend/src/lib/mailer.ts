@@ -1,22 +1,23 @@
 // ---------------------------------------------------------------------------
-// MAILER — uses Resend HTTP API to deliver one-time passcodes for sign-up,
+// MAILER — uses Resend SDK to deliver one-time passcodes for sign-up,
 // forgot password, and admin login. Configured via RESEND_API_KEY in .env.
 // Get a free API key at https://resend.com/api-keys.
 // ---------------------------------------------------------------------------
 
+import { Resend } from "resend";
+
 const RESEND_API_KEY = (process.env.RESEND_API_KEY || "").trim();
-const FROM_EMAIL = process.env.EMAIL_USER || "cinemaxmov01@gmail.com";
+const FROM_EMAIL = process.env.EMAIL_USER || "onboarding@resend.dev";
 
-// @ts-ignore - fetch is available in Node.js 18+
-declare const fetch: any;
-
+let resend: Resend | null = null;
 let configured = false;
 
 if (RESEND_API_KEY) {
+  resend = new Resend(RESEND_API_KEY);
   configured = true;
-  console.log("[mailer] Resend API configured");
+  console.log("[mailer] Resend SDK configured");
 } else {
-  console.log("[mailer] Resend API not configured - RESEND_API_KEY missing");
+  console.log("[mailer] Resend SDK not configured - RESEND_API_KEY missing");
 }
 
 export function isMailerConfigured(): boolean {
@@ -75,34 +76,26 @@ function buildCodeEmailHtml(title: string, subtitle: string, otp: string): strin
 }
 
 async function sendEmail(toEmail: string, subject: string, text: string, html: string): Promise<void> {
-  if (!configured) {
-    console.error("[mailer] Resend API not configured");
+  if (!resend) {
+    console.error("[mailer] Resend SDK not initialized");
     throw new Error("Email delivery is not configured on the server.");
   }
   try {
     console.log("[mailer] Attempting to send email to:", toEmail);
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: `Cinemax <${FROM_EMAIL}>`,
-        to: [toEmail],
-        subject,
-        text,
-        html,
-      }),
+    const { data, error } = await resend.emails.send({
+      from: `Cinemax <${FROM_EMAIL}>`,
+      to: [toEmail],
+      subject,
+      text,
+      html,
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("[mailer] Resend API error:", response.status, errorText);
-      throw new Error(`Resend API returned ${response.status}: ${errorText}`);
+    if (error) {
+      console.error("[mailer] Resend API error:", error);
+      throw new Error(`Resend API error: ${error.message}`);
     }
 
-    console.log("[mailer] Email sent successfully to:", toEmail);
+    console.log("[mailer] Email sent successfully to:", toEmail, "ID:", data?.id);
   } catch (error: any) {
     console.error("[mailer] Failed to send email to:", toEmail);
     console.error("[mailer] Error details:", error?.message || error);
