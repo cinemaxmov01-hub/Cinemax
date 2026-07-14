@@ -407,13 +407,13 @@ export const LandingPage: React.FC = () => {
           <div className="relative grid items-center gap-6 lg:grid-cols-[1fr_0.8fr]">
             <div className="mx-auto w-full max-w-sm">
               <div className="mb-6 flex justify-center">
-                <div className="relative">
+                <div className="relative rounded-2xl border border-[#39FF14]/40 bg-gradient-to-b from-white/[0.06] to-transparent p-3 shadow-[0_0_24px_rgba(57,255,20,0.2)]">
+                  <div className="absolute inset-x-3 top-0 h-px bg-gradient-to-r from-transparent via-[#39FF14]/70 to-transparent" />
                   <svg
                     viewBox="0 0 900 600"
-                    className="h-16 w-16 rounded-full border-2 border-[#39FF14]/40 shadow-[0_0_20px_rgba(57,255,20,0.22)]"
+                    className="h-14 w-20 rounded-md"
                     role="img"
                     aria-label="Flag of Rwanda"
-                    style={{ clipPath: 'circle(50% at 50% 50%)' }}
                   >
                     <rect width="900" height="600" fill="#20603D" />
                     <rect width="900" height="400" fill="#00A1DE" />
@@ -448,8 +448,8 @@ export const LandingPage: React.FC = () => {
                     <UserRound className="h-6 w-6" />
                   </div>
                   <div className="border-b border-white/20 pb-3">
-                    <p className="text-xs font-medium uppercase text-neutral-400">Name</p>
-                    <p className="text-2xl font-black text-[#39FF14] sm:text-3xl">shemalucin</p>
+                    <p className="text-xs font-medium uppercase text-neutral-400">CEO</p>
+                    <p className="text-2xl font-black text-[#39FF14] sm:text-3xl">Shema lucin</p>
                   </div>
                 </div>
 
@@ -467,19 +467,19 @@ export const LandingPage: React.FC = () => {
                   <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-[#39FF14]/70 text-[#39FF14] shadow-[0_0_14px_rgba(57,255,20,0.16)]">
                     <Globe2 className="h-7 w-7" />
                   </div>
-                  <p className="text-lg font-semibold text-neutral-300 sm:text-xl">
-                    Website developed by <span className="font-black text-[#39FF14]">shemalucin</span>, Location:{" "}
-                    <span className="font-black text-white">Rwanda</span>
-                  </p>
+                  <div className="pb-3">
+                    <p className="text-xs font-medium uppercase text-neutral-400">Site</p>
+                    <p className="text-2xl font-black text-[#39FF14] sm:text-3xl">cinemaxmovie</p>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="relative mx-auto aspect-[3/4] w-full max-w-[72px] overflow-hidden rounded-lg border border-[#39FF14] bg-black shadow-[0_0_18px_rgba(57,255,20,0.22)] sm:max-w-[88px]">
+            <div className="relative mx-auto w-full max-w-[220px] sm:max-w-[280px]">
               <img
                 src="/branding/developer-profile.jpg"
-                alt="shemalucin"
-                className="h-full w-full object-cover"
+                alt="Shema lucin"
+                className="h-full w-full object-contain drop-shadow-[0_8px_24px_rgba(57,255,20,0.25)]"
               />
             </div>
           </div>
