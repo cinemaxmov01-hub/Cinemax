@@ -31,7 +31,7 @@ services:
       - key: GROQ_API_KEY
         sync: false
       - key: EMAIL_USER
-        value: allkikisweb@gmail.com
+        value: cinemaxmov01@gmail.com
       - key: EMAIL_APP_PASSWORD
         sync: false
       # Optional extra CORS origins (comma-separated). WEBSITE_URL and

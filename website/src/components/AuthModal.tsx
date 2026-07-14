@@ -1,56 +1,16 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useApp } from "../context/AppContext";
-import { X, Mail, Lock, User, ArrowRight, Loader2, KeyRound, ArrowLeft } from "lucide-react";
-import { OnboardingPreferences, UserOnboardingData } from "./OnboardingPreferences";
+import { X, Mail, Lock, User, ArrowRight, Loader2, KeyRound, ArrowLeft, UserRound } from "lucide-react";
 
-/**
- * Kicks off the backend-hosted Google OAuth flow. The Express server exposes
- * GET /api/auth/google which redirects to Google's consent screen and then
- * returns to /api/auth/google/callback, where the session cookie is set and
- * the user is bounced back to the website. Using a full-page redirect (not
- * fetch) is intentional — OAuth requires the browser to leave the app.
- */
-const startGoogleOAuth = () => {
-  const base = (typeof import.meta === "object" && (import.meta as any).env?.VITE_API_BASE_URL)
-    ? String((import.meta as any).env.VITE_API_BASE_URL).replace(/\/+$/, "")
-    : "";
-  const returnTo = typeof window !== "undefined" ? window.location.origin : "";
-  const qs = returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : "";
-  
-  console.log("Starting Google OAuth...");
-  console.log("API Base URL:", base);
-  console.log("Return URL:", returnTo);
-  console.log("Full OAuth URL:", `${base}/api/auth/google${qs}`);
-  
-  if (!base) {
-    console.error("API Base URL is not configured. Google OAuth cannot work.");
-    alert("Google OAuth is not configured. Please contact support.");
-    return;
-  }
-  
-  window.location.href = `${base}/api/auth/google${qs}`;
-};
-
-/** Google "G" logo — inline SVG so no extra asset request is needed. */
-const GoogleGlyph: React.FC<{ className?: string }> = ({ className }) => (
-  <svg viewBox="0 0 48 48" className={className} aria-hidden="true">
-    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-    <path fill="none" d="M0 0h48v48H0z"/>
-  </svg>
-);
-
-const GoogleContinueButton: React.FC<{ label?: string }> = ({ label = "Continue with Google" }) => (
+const GuestContinueButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
   <button
     type="button"
-    id="continue-with-google-btn"
-    onClick={startGoogleOAuth}
-    className="w-full flex items-center justify-center gap-2.5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-bold bg-white text-neutral-900 hover:bg-neutral-100 transition-colors cursor-pointer border border-white/10"
+    id="continue-as-guest-btn"
+    onClick={onClick}
+    className="w-full flex items-center justify-center gap-2.5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-bold bg-white/5 text-white hover:bg-white/10 transition-colors cursor-pointer border border-white/10"
   >
-    <GoogleGlyph className="h-4 w-4" />
-    <span>{label}</span>
+    <UserRound className="h-4 w-4" />
+    <span>Continue as Guest</span>
   </button>
 );
 
@@ -74,7 +34,7 @@ interface AuthModalProps {
 type AuthView = "signin" | "signup" | "forgot";
 type SignInStep = "email" | "password" | "otp";
 type ForgotStep = "email" | "reset";
-type SignupStep = "form" | "verify" | "password" | "onboarding" | "redirect";
+type SignupStep = "form" | "verify";
 
 const inputClass =
   "w-full surface-input rounded-xl pl-11 pr-4 py-3 text-sm placeholder:text-neutral-500 transition-colors focus:outline-none";
@@ -89,7 +49,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 }) => {
   const {
     signIn,
-    signUp,
     verifySignup,
     requestSignupVerification,
     checkEmailForReset,
@@ -98,7 +57,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     getLoginMethod,
     requestOtp,
     verifyOtp,
-    completeOnboarding,
     enterAsGuest,
     authModalError,
     siteConfig,
@@ -119,10 +77,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const otpInputRef = useRef<HTMLInputElement>(null);
-  // Tracks whether the account was already created (and the session already
-  // established) during the sign-up form step, so the onboarding step never
-  // tries to create the account a second time.
-  const signupAccountCreatedRef = useRef(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -137,7 +91,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setOtp("");
     setError(authModalError || "");
     setInfo("");
-    signupAccountCreatedRef.current = false;
     if (initialEmail) {
       setEmail(initialEmail);
       // Skip straight past the "enter your email" step — whether that lands
@@ -289,19 +242,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     const result = await requestSignupVerification(email, password, name);
     setSubmitting(false);
     if (!result.ok) {
-      setError(result.error || "Couldn't create your account. Please try again.");
+      setError(result.error || "Couldn't send a verification code. Please try again.");
       return;
     }
-    if (result.autoVerified) {
-      // Account created and the person is already signed in — go straight
-      // to the age/genre onboarding step for both email and Google sign-up.
-      signupAccountCreatedRef.current = true;
-      setInfo("");
-      setSignupStep("onboarding");
-      return;
-    }
-    // Fallback path for a server configuration that still requires an
-    // emailed verification code before the account is created.
+    // Nothing is saved yet — the account is only created once the OTP below
+    // is confirmed. The password already entered on this form is what gets
+    // saved at that point, so there's no need to ask for it again.
     setInfo(`We've sent a 6-digit code to ${email}. Enter it below to verify your email.`);
     setSignupStep("verify");
     setOtp("");
@@ -315,65 +261,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       return;
     }
     setSubmitting(true);
-    console.log("Verifying signup OTP for:", email);
     const result = await verifySignup(email, otp);
     setSubmitting(false);
-    console.log("Signup verification result:", result);
     if (!result.ok) {
       setError(result.error || "Verification failed.");
       return;
     }
-    // Show password entry after successful verification
-    setInfo("Email verified! Please create a password to complete your profile.");
-    setSignupStep("password");
+    // Account is now saved in the database. Per the intended flow, land the
+    // person on Sign In (with their email pre-filled) rather than signing
+    // them in automatically.
     setPassword("");
     setConfirmPassword("");
-  };
-
-  const handleSignupPasswordSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    if (!isStrongPassword(password)) {
-      setError("Password must be 8+ characters with uppercase, lowercase, and a number.");
-      return;
-    }
-    if (password !== confirmPassword) {
-      setError("Passwords do not match.");
-      return;
-    }
-    // Show onboarding (age and categories) after password is set
-    setInfo("Password set! Please tell us about your preferences.");
-    setSignupStep("onboarding");
-  };
-
-  const handleOnboardingComplete = async (preferences: UserOnboardingData) => {
-    setSubmitting(true);
-    setError("");
-
-    // Normally the account was already created (and the session already
-    // established) back in handleSignUpSubmit, so this just attaches the
-    // chosen preferences to it. The signUp fallback only runs for the rare
-    // legacy path where the server still required a separate verify+password
-    // step and the account genuinely doesn't exist yet.
-    if (!signupAccountCreatedRef.current) {
-      const result = await signUp(email, password, name);
-      if (!result.ok) {
-        setSubmitting(false);
-        setError(result.error || "Sign up failed.");
-        return;
-      }
-    }
-
-    const onboardingResult = await completeOnboarding(preferences);
-    setSubmitting(false);
-    if (!onboardingResult.ok) {
-      setError(onboardingResult.error || "Failed to save preferences.");
-      return;
-    }
-
-    // Already signed in with preferences saved — close straight into the app.
-    setInfo("");
-    onClose();
+    setOtp("");
+    setAuthView("signin");
+    setSignInStep("email");
+    setInfo("Account created! Please sign in.");
   };
 
   /** Step 1 of forgot flow — an existing account gets an emailed OTP; an
@@ -493,10 +395,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       : authView === "signup"
       ? signupStep === "verify"
         ? "Enter the 6-digit code sent to your email"
-        : signupStep === "password"
-        ? "Create a secure password for your account"
-        : signupStep === "onboarding"
- ? "Tell us about your preferences"
         : "Sign up to save your watchlist and preferences"
       : signInStep === "otp"
       ? "Check your inbox for a 6-digit code"
@@ -512,8 +410,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       : authView === "signup"
       ? signupStep === "verify"
         ? handleSignupVerifySubmit
-        : signupStep === "password"
-        ? handleSignupPasswordSubmit
         : handleSignUpSubmit
       : signInStep === "email"
       ? handleContinue
@@ -529,8 +425,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       : authView === "signup"
       ? signupStep === "verify"
         ? "Verify Email"
-        : signupStep === "password"
-        ? "Set Password"
         : "Create Account"
       : signInStep === "email"
       ? "Continue"
@@ -737,14 +631,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
         </form>
 
-        {/* Google OAuth — offered on Sign In (email step) and Sign Up (form step). */}
+        {/* Guest access — offered on Sign In (email step) and Sign Up (form step),
+           in the spot Continue with Google used to occupy. */}
         {((authView === "signin" && signInStep === "email") ||
           (authView === "signup" && signupStep === "form")) && (
             <>
               <AuthDivider />
-              <GoogleContinueButton
-                label={authView === "signup" ? "Sign up with Google" : "Continue with Google"}
-              />
+              <GuestContinueButton onClick={() => { enterAsGuest(); onClose(); }} />
             </>
         )}
 
@@ -772,24 +665,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         )}
 
         {authView === "signup" && (
-          <div className="flex items-center justify-between mt-5 border-t border-neutral-800 pt-4 text-xs">
+          <div className="text-center mt-5 border-t border-neutral-800 pt-4 text-xs text-neutral-500">
+            <span>Already have an account?</span>
             <button
               type="button"
-              onClick={() => { enterAsGuest(); onClose(); }}
-              className="text-neutral-400 hover:text-white font-semibold cursor-pointer transition-colors"
+              onClick={goToSignIn}
+              className="ml-1.5 text-[#39FF14] hover:underline font-bold cursor-pointer"
             >
-              Login as Guest
+              Sign In
             </button>
-            <div className="text-neutral-500">
-              <span>Already have an account?</span>
-              <button
-                type="button"
-                onClick={goToSignIn}
-                className="ml-1.5 text-[#39FF14] hover:underline font-bold cursor-pointer"
-              >
-                Sign In
-              </button>
-            </div>
           </div>
         )}
 
@@ -802,13 +686,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </div>
         )}
       </div>
-
-      {/* Onboarding Preferences Modal */}
-      <OnboardingPreferences
-        isOpen={authView === "signup" && signupStep === "onboarding"}
-        onComplete={handleOnboardingComplete}
-        onSkip={() => onClose()}
-      />
     </div>
   );
 };

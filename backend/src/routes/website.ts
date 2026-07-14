@@ -32,7 +32,7 @@ import {
   canSendPasswordReset,
   rateLimit,
 } from "../lib/auth";
-import { sendOtpEmail, isMailerConfigured, sendSignupVerificationEmail, sendPasswordResetEmail } from "../lib/mailer";
+import { sendOtpEmail, isMailerConfigured, sendSignupVerificationEmail, sendPasswordResetEmail, getMailerStatus } from "../lib/mailer";
 
 const LIST_STORAGE_LIMIT_BYTES = 2 * 1024 * 1024 * 1024; // 2GB
 const DOWNLOAD_STORAGE_LIMIT_BYTES = 2 * 1024 * 1024 * 1024; // 2GB
@@ -103,34 +103,28 @@ authRouter.post("/api/auth/signup/request", rateLimit({ name: "signup-request", 
     return;
   }
 
-  const displayName = (name && String(name).trim()) || email.split("@")[0];
-  const user = createUser(email, password, displayName);
-  const token = signToken(user.id);
-  setSessionCookie(res, token);
-  db.data.notifications.push({
-    id: crypto.randomUUID(),
-    user_id: user.id,
-    type: "account",
-    title: "Welcome to Cinemax",
-    message: "Your account is ready. Complete your preferences to personalize your experience.",
-    read: 0,
-    created_at: new Date().toISOString(),
-  });
-  db.save();
-
-  // Keep the verification email as a helpful follow-up, but do not block the
-  // onboarding experience. The frontend can immediately open the preference
-  // card once it receives the signed-in user payload below.
-  if (isMailerConfigured()) {
-    const otp = issueSignupVerification(email, displayName, password);
-    try {
-      await sendSignupVerificationEmail(email.toLowerCase().trim(), otp);
-    } catch (err) {
-      console.error("[auth] Failed to send signup verification:", err);
-    }
+  if (!isMailerConfigured()) {
+    res.status(503).json({ error: "Email delivery isn't configured on this server yet, so verification codes can't be sent. Please contact support." });
+    return;
   }
 
-  res.status(201).json({ ok: true, autoVerified: true, user: userWithExtras(user), token });
+  const displayName = (name && String(name).trim()) || email.split("@")[0];
+
+  // Nothing is written to the database yet. The username/email/password are
+  // held only in the short-lived, in-memory signup-verification store
+  // (hashed password included) until the correct OTP comes back — see
+  // verifySignupCode / the /api/auth/signup/verify route below, which is the
+  // only place createUser() is called for a brand-new sign-up.
+  const otp = issueSignupVerification(email, displayName, password);
+  try {
+    await sendSignupVerificationEmail(email.toLowerCase().trim(), otp);
+  } catch (err) {
+    console.error("[auth] Failed to send signup verification:", err);
+    res.status(502).json({ error: "Couldn't send the verification code right now. Please try again in a moment." });
+    return;
+  }
+
+  res.status(200).json({ ok: true, message: "A 6-digit verification code has been sent to your email." });
 });
 
 authRouter.post("/api/auth/signup/verify", rateLimit({ name: "signup-verify", max: 8, windowMs: 15 * 60 * 1000 }), (req, res) => {
@@ -162,29 +156,30 @@ authRouter.post("/api/auth/signup/verify", rateLimit({ name: "signup-verify", ma
     return;
   }
 
+  // The OTP was correct — this is the only moment the account is actually
+  // written to the database. No session cookie is issued here on purpose:
+  // per the requested flow, a freshly verified user lands on the Sign In
+  // screen and logs in with the credentials they just created, rather than
+  // being auto-signed-in.
   const existing = getUserByEmail(email);
   if (existing) {
-    const token = signToken(existing.id);
-    setSessionCookie(res, token);
-    res.status(201).json({ ok: true, user: userWithExtras(existing), token });
+    res.status(200).json({ ok: true, alreadyExists: true });
     return;
   }
 
   const user = createUser(email, "", result.name, result.passwordHash);
-  const token = signToken(user.id);
-  setSessionCookie(res, token);
-  res.status(201).json({ ok: true, user: userWithExtras(user), token });
-
   db.data.notifications.push({
     id: crypto.randomUUID(),
     user_id: user.id,
     type: "account",
     title: "Welcome to Cinemax",
-    message: "Your account is verified and ready. Explore trending titles and build your lists.",
+    message: "Your account is verified and ready. Sign in to explore trending titles and build your lists.",
     read: 0,
     created_at: new Date().toISOString(),
   });
   db.save();
+
+  res.status(201).json({ ok: true, message: "Account created. You can now sign in." });
 });
 
 authRouter.post("/api/auth/signup", (req, res) => {
@@ -1022,8 +1017,6 @@ authRouter.get("/api/config/public", (_req, res) => {
     homepageSections: settings.homepageSections || [],
     contentPages: settings.contentPages || {},
     mailerEnabled: getMailerStatus().configured,
-    googleAuthEnabled:
-      Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_REDIRECT_URI),
   });
 });
 
@@ -1731,190 +1724,3 @@ authRouter.post("/api/chat/dm/:id/like", requireAuth, (req: AuthedRequest, res) 
   res.json({ message: toPublicDirectMessage(message, myId) });
 });
 
-// ---------------------------------------------------------------------------
-// GOOGLE OAUTH — "Continue with Google"
-//
-// Standard OAuth 2.0 Authorization Code flow implemented against Google's
-// endpoints directly (no passport dependency). Configure three env vars on
-// the backend:
-//   GOOGLE_CLIENT_ID       – from Google Cloud Console → OAuth client
-//   GOOGLE_CLIENT_SECRET   – same
-//   GOOGLE_REDIRECT_URI    – https://<backend-domain>/api/auth/google/callback
-//
-// The public website's origin is provided as ?return_to=<origin> when the
-// user clicks the button, and is remembered in a short-lived signed state
-// cookie so we can send them back after Google completes the handshake.
-// The user account is created on first login with the email Google returns.
-// ---------------------------------------------------------------------------
-
-const GOOGLE_STATE_COOKIE = "cinemax_g_state";
-const GOOGLE_STATE_TTL_MS = 10 * 60 * 1000; // 10 minutes
-
-function buildGoogleAuthUrl(state: string): string | null {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const redirectUri = process.env.GOOGLE_REDIRECT_URI;
-  if (!clientId || !redirectUri) return null;
-  const params = new URLSearchParams({
-    client_id: clientId,
-    redirect_uri: redirectUri,
-    response_type: "code",
-    scope: "openid email profile",
-    access_type: "online",
-    prompt: "select_account",
-    state,
-  });
-  return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
-}
-
-authRouter.get("/api/auth/google", (req, res) => {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const redirectUri = process.env.GOOGLE_REDIRECT_URI;
-  const returnTo = typeof req.query.return_to === "string" ? req.query.return_to : "";
-  const safeReturnTo = /^https?:\/\//i.test(returnTo) ? returnTo.replace(/\/+$/, "") : "";
-  if (!clientId || !redirectUri) {
-    const message = "Google sign-in isn't set up yet on this site. Please try email sign-in, or contact the site admin.";
-    if (safeReturnTo) {
-      res.redirect(`${safeReturnTo}/?google_error=${encodeURIComponent(message)}`);
-    } else {
-      res.status(503).send(
-        "Google sign-in is not configured. Set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REDIRECT_URI on the backend.",
-      );
-    }
-    return;
-  }
-  const state = crypto.randomBytes(16).toString("hex");
-  const payload = JSON.stringify({ state, returnTo, exp: Date.now() + GOOGLE_STATE_TTL_MS });
-  const isProd = process.env.NODE_ENV === "production";
-  res.cookie(GOOGLE_STATE_COOKIE, Buffer.from(payload).toString("base64"), {
-    httpOnly: true,
-    sameSite: isProd ? "none" : "lax",
-    secure: isProd,
-    maxAge: GOOGLE_STATE_TTL_MS,
-    path: "/",
-  });
-  const authUrl = buildGoogleAuthUrl(state);
-  res.redirect(authUrl!);
-});
-
-function sendGoogleAuthError(res: any, returnTo: string | undefined, message: string) {
-  const safeReturnTo = returnTo && /^https?:\/\//i.test(returnTo) ? returnTo.replace(/\/+$/, "") : "";
-  if (safeReturnTo) {
-    res.redirect(`${safeReturnTo}/?google_error=${encodeURIComponent(message)}`);
-  } else {
-    res.status(400).send(message);
-  }
-}
-
-authRouter.get("/api/auth/google/callback", async (req, res) => {
-  const code = typeof req.query.code === "string" ? req.query.code : null;
-  const state = typeof req.query.state === "string" ? req.query.state : null;
-  const rawCookie = req.cookies?.[GOOGLE_STATE_COOKIE];
-  res.clearCookie(GOOGLE_STATE_COOKIE, { path: "/" });
-
-  let saved: { state: string; returnTo: string; exp: number } | null = null;
-  try {
-    saved = rawCookie ? JSON.parse(Buffer.from(rawCookie, "base64").toString("utf8")) : null;
-  } catch {
-    saved = null;
-  }
-
-  if (!code || !state || !rawCookie) {
-    sendGoogleAuthError(res, saved?.returnTo, "Google sign-in was interrupted. Please try again.");
-    return;
-  }
-  if (!saved || saved.state !== state || Date.now() > saved.exp) {
-    sendGoogleAuthError(res, saved?.returnTo, "Google sign-in session expired. Please try again.");
-    return;
-  }
-
-  const clientId = process.env.GOOGLE_CLIENT_ID!;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET!;
-  const redirectUri = process.env.GOOGLE_REDIRECT_URI!;
-
-  try {
-    const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        code,
-        client_id: clientId,
-        client_secret: clientSecret,
-        redirect_uri: redirectUri,
-        grant_type: "authorization_code",
-      }).toString(),
-    });
-    if (!tokenRes.ok) {
-      const err = await tokenRes.text();
-      console.error("[google-oauth] token exchange failed:", err);
-      sendGoogleAuthError(res, saved.returnTo, "Google didn't accept the sign-in code. Please try again.");
-      return;
-    }
-    const tokenJson: any = await tokenRes.json();
-    const accessToken: string = tokenJson.access_token;
-    if (!accessToken) {
-      sendGoogleAuthError(res, saved.returnTo, "Google returned no access token. Please try again.");
-      return;
-    }
-
-    const userRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-    if (!userRes.ok) {
-      sendGoogleAuthError(res, saved.returnTo, "Couldn't read your Google profile. Please try again.");
-      return;
-    }
-    const profile: any = await userRes.json();
-    const email: string = (profile.email || "").toLowerCase().trim();
-    const emailVerified: boolean = !!profile.email_verified;
-    const name: string = profile.name || (email ? email.split("@")[0] : "Cinemax User");
-    const googleId: string = profile.sub; // Google's unique user ID
-    const googleAvatar: string = profile.picture || ""; // Google profile picture URL
-
-    if (!email || !emailVerified) {
-      sendGoogleAuthError(res, saved.returnTo, "Your Google account has no verified email. Please try a different account.");
-      return;
-    }
-
-    // Reuse or create the account, then issue the normal Cinemax session
-    // cookie — from this point on the user is signed in exactly like a
-    // password login. Google-provisioned accounts get a random password
-    // hash (never used) so the record shape matches every other user.
-    let user = getUserByEmail(email);
-    const isNewUser = !user;
-    if (!user) {
-      const randomPassword = crypto.randomBytes(24).toString("hex");
-      const bcrypt = await import("bcryptjs");
-      const passwordHash = bcrypt.default.hashSync(randomPassword, 12);
-      user = createUser(email, randomPassword, name, passwordHash, googleId, googleAvatar);
-    } else if (!user.google_id && googleId) {
-      // Link existing account to Google if not already linked
-      user.google_id = googleId;
-      if (googleAvatar && !user.avatar || user.avatar === "anim:aurora") {
-        user.avatar = googleAvatar;
-      }
-      db.save();
-    }
-    if (user.status === "banned" || user.status === "suspended") {
-      sendGoogleAuthError(res, saved.returnTo, "This account isn't allowed to sign in. Please contact support.");
-      return;
-    }
-
-    const sessionToken = signToken(user.id);
-    setSessionCookie(res, sessionToken);
-
-    const returnTo = saved.returnTo && /^https?:\/\//i.test(saved.returnTo)
-      ? saved.returnTo.replace(/\/+$/, "")
-      : "";
-    // Encode success + token in the URL fragment so cross-site cookies aren't
-    // required for the frontend to know the login succeeded. The session
-    // cookie above is what actually authenticates future API calls.
-    const newUserFlag = isNewUser ? "&new_user=1" : "";
-    const redirectUrl = returnTo
-      ? `${returnTo}/?google=1#google_auth=1${newUserFlag}`
-      : "/";
-    res.redirect(redirectUrl);
-  } catch (err) {
-    console.error("[google-oauth] callback error:", err);
-    sendGoogleAuthError(res, saved.returnTo, "Something went wrong signing you in with Google. Please try again.");
-  }
-});

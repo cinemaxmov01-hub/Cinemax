@@ -21,7 +21,6 @@ import {
   fetchPublicSiteConfig,
   PublicSiteConfig,
 } from "../utils/siteConfig";
-import { PROVIDERS_CONFIG, buildEmbedUrl } from "../utils/streamingConfig";
 
 interface AppContextType {
   currentView: string;
@@ -170,9 +169,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [authModalError, setAuthModalError] = useState<string | undefined>(undefined);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
   const [authError, setAuthError] = useState<string | null>(null);
-  // Drives the standalone onboarding card for users who land back on the
-  // site already signed in (Google OAuth's full-page redirect can't stay
-  // inside the AuthModal's own step machine, so it's tracked here instead).
+  // Drives a standalone onboarding card for a user who is already signed in
+  // but has no saved preferences yet (kept as a safety-net path in case the
+  // inline onboarding step inside AuthModal is ever skipped or interrupted).
   const [needsOnboarding, setNeedsOnboarding] = useState<boolean>(false);
   const [rememberChoice, setRememberChoice] = useState<boolean>(false);
   const [defaultWatchChoice, setDefaultWatchChoice] = useState<"full" | "trailer" | null>(null);
@@ -388,20 +387,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Check for an existing session on load
   useEffect(() => {
-    // "Continue with Google" failures (e.g. missing backend config, an
-    // interrupted/expired handshake) redirect back here with a
-    // `google_error` query param instead of stranding the user on a bare
-    // text response — surface that message in the normal sign-in modal.
-    const errParams = new URLSearchParams(window.location.search);
-    const googleError = errParams.get("google_error");
-    if (googleError) {
-      setAuthModalError(googleError);
-      setAuthModalMode("signin");
-      setAuthModalInitialStep("signin");
-      setAuthModalOpen(true);
-      window.history.replaceState({}, "", window.location.pathname);
-    }
-
     (async () => {
       try {
         const res = await fetch(`${API_BASE}/api/auth/me`, { credentials: "include" });
@@ -412,24 +397,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           syncDownloadState(data.user);
           sessionExpiredRef.current = false;
           fetchNotifications();
-
-          // "Continue with Google" is a full-page redirect, so it can't
-          // stay inside AuthModal's own step machine like the email flow
-          // does. The backend marks brand-new Google accounts with
-          // `new_user=1` on the way back — use that (plus the account
-          // genuinely having no saved preferences yet) to pop the same
-          // onboarding card the email signup flow uses.
-          const params = new URLSearchParams(window.location.search);
-          const isGoogleReturn = params.get("google") === "1";
-          const isNewGoogleUser = window.location.hash.includes("new_user=1");
-          if (isGoogleReturn && isNewGoogleUser && !mapped.onboarding) {
-            setNeedsOnboarding(true);
-          }
-          if (isGoogleReturn) {
-            // Strip the OAuth markers so refreshing/sharing the URL doesn't
-            // re-trigger this logic.
-            window.history.replaceState({}, "", window.location.pathname);
-          }
         } else {
           setUser(null);
         }
@@ -457,7 +424,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   /**
    * Saves the age + favorite-genre preferences collected right after
-   * signup (email/password or Google) and immediately updates the local
+   * signup and immediately updates the local
    * user object so the homepage can personalize on the very next render —
    * no extra reload or re-login required.
    */
@@ -487,7 +454,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setNeedsOnboarding(false);
   };
 
-  const requestSignupVerification = async (email: string, password: string, name: string): Promise<{ ok: boolean; error?: string; autoVerified?: boolean }> => {
+  const requestSignupVerification = async (email: string, password: string, name: string): Promise<{ ok: boolean; error?: string }> => {
     setAuthError(null);
     try {
       const res = await fetch(`${API_BASE}/api/auth/signup/request`, {
@@ -500,18 +467,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!res.ok) {
         setAuthError(data.error || "Something went wrong.");
         return { ok: false, error: data.error };
-      }
-      // If the server auto-created the account (email verification disabled),
-      // hydrate the session immediately just like a successful login.
-      if (data.autoVerified && data.user) {
-        const mapped = mapServerUser(data.user);
-        setUser(mapped);
-        syncDownloadState(data.user);
-        sessionExpiredRef.current = false;
-        setIsGuest(false);
-        fetchNotifications();
-        maybeShowAdminDestination(mapped);
-        return { ok: true, autoVerified: true };
       }
       return { ok: true };
     } catch (err: any) {
@@ -535,13 +490,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setAuthError(data.error || "Verification failed.");
         return { ok: false, error: data.error };
       }
-      const mapped = mapServerUser(data.user);
-      setUser(mapped);
-      syncDownloadState(data.user);
-      sessionExpiredRef.current = false;
-      setIsGuest(false);
-      fetchNotifications();
-      maybeShowAdminDestination(mapped);
+      // Deliberately no session hydration here — the account now exists in
+      // the database, but the person is routed to Sign In to log in with the
+      // credentials they just created, rather than being auto-signed-in.
       return { ok: true };
     } catch (err: any) {
       const error = err?.message || "Couldn't reach the server.";
@@ -1052,97 +1003,58 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const safeName = title.replace(/[^\w\s-]/g, "").trim().slice(0, 60) || "cinemax-title";
       if (mode === "device") {
         const targetDirectory = await pickDirectoryForDownloads();
+        // Only a title with an explicit, admin-provided direct file URL
+        // (rights-cleared content attached to the title in your own catalog)
+        // can be saved as an actual video file. We deliberately do NOT try to
+        // extract a video stream out of the third-party embed players — those
+        // are unlicensed sources and scraping/downloading from them isn't
+        // something this app does.
         const dlUrl = (movie as any).download_url as string | undefined | null;
-        
-        // Try explicit download URL first
+
         if (dlUrl) {
           try {
-            console.log("Attempting download from explicit URL:", dlUrl);
-            await downloadRemoteFile(dlUrl, `${safeName}.mp4`, (loaded, total) => {
-              const progress = total ? Math.round((loaded / total) * 100) : 0;
-              console.log(`Download progress: ${progress}%`);
-            }, { saveToDevice: true, targetDirectory });
-            
-            // Save metadata files after successful video download
+            await downloadRemoteFile(dlUrl, `${safeName}.mp4`, undefined, {
+              saveToDevice: true,
+              targetDirectory,
+            });
+
             await saveBlobToDevice(jsonBlob, `${safeName}.cinemax.json`, targetDirectory);
             if (posterBlob) await saveBlobToDevice(posterBlob, `${safeName}-poster.jpg`, targetDirectory);
             if (backdropBlob) await saveBlobToDevice(backdropBlob, `${safeName}-backdrop.jpg`, targetDirectory);
-            
+
             addNotification({
               type: "system",
               title: "Download complete",
               message: `"${title}" has been saved to your device storage.`,
             });
-            return { ok: true };
           } catch (err: any) {
-            console.error("Explicit URL download failed:", err);
-            // Continue to provider resolution
+            console.error("Device video download failed:", err);
+            return {
+              ok: false,
+              error: err?.message || "Unable to save the video file to your device. Please try again.",
+            };
           }
-        }
-        
-        // If no explicit download URL or it failed, try provider resolution
-        console.log("Attempting provider resolution for full movie download...");
-        let videoDownloaded = false;
-        
-        for (const provider of PROVIDERS_CONFIG) {
+        } else {
+          // No rights-cleared file is attached to this title. Save an honest
+          // offline info package (poster, backdrop, details) instead of
+          // silently failing — and tell the user exactly what happened.
           try {
-            console.log(`Trying provider: ${provider.name} (${provider.id})`);
-            const embed = buildEmbedUrl(provider, mediaType, movie.id as number, 1, 1);
-            
-            const resolveRes = await fetch(`${API_BASE}/api/stream/full`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              credentials: "include",
-              body: JSON.stringify({ url: embed }),
-            });
-            
-            if (!resolveRes.ok) {
-              console.log(`Provider ${provider.name} returned status: ${resolveRes.status}`);
-              continue;
-            }
-            
-            const j = await resolveRes.json();
-            console.log(`Provider ${provider.name} response:`, j);
-            
-            if (j && j.sourceUrl) {
-              console.log(`Found video source from ${provider.name}:`, j.sourceUrl);
-              const proxied = `${API_BASE}/api/proxy?url=${encodeURIComponent(j.sourceUrl)}`;
-              
-              try {
-                await downloadRemoteFile(proxied, `${safeName}.mp4`, (loaded, total) => {
-                  const progress = total ? Math.round((loaded / total) * 100) : 0;
-                  console.log(`Video download progress: ${progress}%`);
-                }, { saveToDevice: true, targetDirectory });
-                
-                // Save metadata files after successful video download
-                await saveBlobToDevice(jsonBlob, `${safeName}.cinemax.json`, targetDirectory);
-                if (posterBlob) await saveBlobToDevice(posterBlob, `${safeName}-poster.jpg`, targetDirectory);
-                if (backdropBlob) await saveBlobToDevice(backdropBlob, `${safeName}-backdrop.jpg`, targetDirectory);
-                
-                addNotification({
-                  type: "system",
-                  title: "Download complete",
-                  message: `"${title}" has been saved to your device storage using ${provider.name}.`,
-                });
-                
-                videoDownloaded = true;
-                return { ok: true };
-              } catch (downloadErr: any) {
-                console.error(`Video download failed for ${provider.name}:`, downloadErr);
-                continue; // Try next provider
-              }
-            }
-          } catch (e) {
-            console.error(`Provider ${provider.name} resolution failed:`, e);
-            continue; // Try next provider
-          }
-        }
+            await saveBlobToDevice(jsonBlob, `${safeName}.cinemax.json`, targetDirectory);
+            if (posterBlob) await saveBlobToDevice(posterBlob, `${safeName}-poster.jpg`, targetDirectory);
+            if (backdropBlob) await saveBlobToDevice(backdropBlob, `${safeName}-backdrop.jpg`, targetDirectory);
 
-        if (!videoDownloaded) {
-          return {
-            ok: false,
-            error: "Unable to download the full movie file. The video source could not be resolved from any streaming server. Please try again later or contact support if this issue persists.",
-          };
+            addNotification({
+              type: "system",
+              title: "Saved title info to device",
+              message: `A downloadable movie file isn't available for "${title}", so we saved its details and artwork to your device instead. Playback still streams from the player.`,
+            });
+          } catch (err: any) {
+            console.error("Device info package save failed:", err);
+            return {
+              ok: false,
+              error: err?.message || "Unable to save this title to your device. Please try again.",
+            };
+          }
         }
       }
 

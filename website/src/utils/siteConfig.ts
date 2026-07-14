@@ -23,7 +23,6 @@ export interface PublicSiteConfig {
   contentPages: Record<string, ContentPageConfig>;
   tmdbApiKey?: string;
   mailerEnabled: boolean;
-  googleAuthEnabled: boolean;
 }
 
 export interface PublicAd {
@@ -53,7 +52,6 @@ export const DEFAULT_PUBLIC_CONFIG: PublicSiteConfig = {
   homepageSections: DEFAULT_SECTIONS,
   contentPages: {},
   mailerEnabled: false,
-  googleAuthEnabled: false,
 };
 
 let cachedConfig: PublicSiteConfig | null = null;
@@ -77,7 +75,6 @@ export async function fetchPublicSiteConfig(force = false): Promise<PublicSiteCo
       contentPages: data.contentPages || {},
       tmdbApiKey: data.tmdbApiKey,
       mailerEnabled: Boolean(data.mailerEnabled),
-      googleAuthEnabled: Boolean(data.googleAuthEnabled),
     };
     return cachedConfig;
   } catch {
