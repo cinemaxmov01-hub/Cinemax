@@ -93,11 +93,13 @@ app.use(cookieParser());
 // Render healthcheck target (declared in render.yaml). Kept intentionally
 // tiny so it always responds even when the DB is degraded.
 app.get("/api/health", (_req, res) => {
+  const mailerStatus = getMailerStatus();
   res.json({
     status: "ok",
     uptime: process.uptime(),
     db: process.env.MONGO_URI ? "mongo" : "file",
-    mailer: getMailerStatus().configured ? "configured" : "missing",
+    mailer: mailerStatus.configured ? "configured" : "missing",
+    mailerUser: mailerStatus.user ? mailerStatus.user.substring(0, 3) + "***" : "not_set",
     time: new Date().toISOString(),
   });
 });

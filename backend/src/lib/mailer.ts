@@ -13,6 +13,10 @@ const EMAIL_USER = (process.env.EMAIL_USER || process.env.GMAIL_USER || process.
 // requiring the Render dashboard value to be typed perfectly.
 const EMAIL_APP_PASSWORD = (process.env.EMAIL_APP_PASSWORD || process.env.GMAIL_APP_PASSWORD || "").replace(/\s+/g, "").trim();
 
+// Debug logging to help identify configuration issues
+console.log("[mailer] EMAIL_USER configured:", !!EMAIL_USER, EMAIL_USER ? EMAIL_USER.substring(0, 3) + "***" : "missing");
+console.log("[mailer] EMAIL_APP_PASSWORD configured:", !!EMAIL_APP_PASSWORD, EMAIL_APP_PASSWORD ? EMAIL_APP_PASSWORD.substring(0, 3) + "***" : "missing");
+
 let transporter: ReturnType<typeof nodemailer.createTransport> | null = null;
 
 if (EMAIL_USER && EMAIL_APP_PASSWORD) {
@@ -29,7 +33,9 @@ if (EMAIL_USER && EMAIL_APP_PASSWORD) {
     greetingTimeout: 10_000,
     socketTimeout: 10_000,
   });
+  console.log("[mailer] Transporter created successfully");
 } else {
+  console.log("[mailer] Transporter NOT created - missing EMAIL_USER or EMAIL_APP_PASSWORD");
   // Avoid noisy terminal output in dev when mailer isn't configured.
   // OTP endpoints will still return a clear 503 when used.
 }
