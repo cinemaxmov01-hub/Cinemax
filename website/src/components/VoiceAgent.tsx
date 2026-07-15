@@ -150,6 +150,13 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({ onNavigate, onSearch, on
       });
 
       if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        if (errorData.error?.includes('OPENAI_API_KEY')) {
+          console.warn('Voice features require OPENAI_API_KEY to be configured');
+          // Silently fail without showing error to user
+          setIsSpeaking(false);
+          return;
+        }
         throw new Error('TTS request failed');
       }
 
@@ -187,12 +194,12 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({ onNavigate, onSearch, on
     // Play welcome message on first click
     if (!hasPlayedWelcome) {
       setHasPlayedWelcome(true);
-      speakResponse("Welcome to CinemaXMovie. Ask me anything regarding this website.", "en");
+      speakResponse("Welcome to Cinemax. What do you want?", "en");
       // Start listening after welcome message
       setTimeout(() => {
         recognitionRef.current.lang = detectedLanguage;
         recognitionRef.current.start();
-      }, 2500);
+      }, 3000);
       return;
     }
 

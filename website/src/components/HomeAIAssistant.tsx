@@ -225,6 +225,12 @@ export const HomeAIAssistant: React.FC<HomeAIAssistantProps> = ({ onSelectMovie,
       });
 
       if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        if (errorData.error?.includes('OPENAI_API_KEY')) {
+          console.warn('Voice features require OPENAI_API_KEY to be configured');
+          setVoiceEnabled(false); // Disable voice if API key is missing
+          return;
+        }
         throw new Error('TTS request failed');
       }
 
@@ -352,11 +358,19 @@ export const HomeAIAssistant: React.FC<HomeAIAssistantProps> = ({ onSelectMovie,
         await speakText(cleanText);
       }
     } catch (err: any) {
+      const errorMessage = err?.message || "Sorry — please try again in a moment.";
+      
+      // Provide specific guidance for visual search configuration issues
+      let userFriendlyMessage = errorMessage;
+      if (errorMessage.includes("Visual search is not configured") || errorMessage.includes("GEMINI_API_KEY")) {
+        userFriendlyMessage = "Visual search requires the Gemini API key to be configured. Please add GEMINI_API_KEY to your backend environment variables to enable this feature.";
+      }
+      
       setMessages((prev) => [
         ...prev,
         {
           role: "model",
-          text: err?.message ? `I couldn't complete that: ${err.message}` : "Sorry — please try again in a moment.",
+          text: userFriendlyMessage,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         },
       ]);

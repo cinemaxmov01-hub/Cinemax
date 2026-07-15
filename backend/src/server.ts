@@ -349,27 +349,27 @@ async function openaiGenerateImage(prompt: string, size: string = "1024x1024"): 
 async function openaiTextToSpeech(text: string, language: string = "en"): Promise<Buffer> {
   const openai = getOpenAIClient();
   
-  // Map language codes to OpenAI TTS voices
+  // Map language codes to OpenAI TTS voices - using female voices for Siri-like experience
   const voiceMap: Record<string, string> = {
-    'en': 'alloy',
-    'es': 'nova',
-    'fr': 'echo',
-    'de': 'fable',
-    'it': 'onyx',
-    'pt': 'shimmer',
-    'ru': 'alloy',
-    'ja': 'nova',
-    'ko': 'echo',
-    'zh': 'fable',
-    'ar': 'onyx',
-    'hi': 'shimmer',
-    'rw': 'alloy', // Kinyarwanda fallback
+    'en': 'nova', // Female voice, clear and Siri-like
+    'es': 'nova', // Female voice
+    'fr': 'shimmer', // Female voice
+    'de': 'nova', // Female voice
+    'it': 'nova', // Female voice
+    'pt': 'shimmer', // Female voice
+    'ru': 'shimmer', // Female voice
+    'ja': 'nova', // Female voice
+    'ko': 'nova', // Female voice
+    'zh': 'nova', // Female voice
+    'ar': 'shimmer', // Female voice
+    'hi': 'shimmer', // Female voice
+    'rw': 'nova', // Kinyarwanda fallback - female voice
   };
   
-  const voice = voiceMap[language.split('-')[0]] || 'alloy';
+  const voice = voiceMap[language.split('-')[0]] || 'nova';
   
   const response = await openai.audio.speech.create({
-    model: "tts-1",
+    model: "tts-1-hd", // Higher quality model for clearer voice
     voice: voice as "alloy" | "echo" | "fable" | "onyx" | "nova" | "shimmer",
     input: text,
     speed: 1.0,
