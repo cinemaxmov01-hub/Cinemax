@@ -433,11 +433,11 @@ const CinemaxDashboard: React.FC = () => {
     // Play welcome message on first click
     if (!hasPlayedSearchWelcome) {
       setHasPlayedSearchWelcome(true);
-      speakSearchResponse("Search for any movie you want.", "en");
+      speakSearchResponse("Welcome to Cinemax", "en");
       // Start listening after welcome message
       setTimeout(() => {
         searchRecognitionRef.current.start();
-      }, 2000);
+      }, 2500);
       return;
     }
 
@@ -964,8 +964,8 @@ const CinemaxDashboard: React.FC = () => {
         {/* Top Header Navbar with frosted blur */}
         <header id="top-navbar" className="h-20 glass-navbar sticky top-0 z-40 px-4 lg:px-8 flex items-center justify-between gap-2 sm:gap-4">
           
-          {/* Mobile Hamburguer & Search bar */}
-          <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0 sm:max-w-lg">
+          {/* Left Section: Mobile menu, Search, Voice Agent, Download App */}
+          <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
             <button
               id="mobile-menu-trigger"
               aria-label="Open navigation menu"
@@ -976,7 +976,7 @@ const CinemaxDashboard: React.FC = () => {
             </button>
 
             {/* Instant Search input — permanently visible across all devices */}
-            <div className="relative flex-1 min-w-0 sm:w-full sm:flex-none">
+            <div className="relative w-64 sm:w-80 lg:w-96">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500 pointer-events-none" aria-hidden="true" />
               <input
                 id="header-search-input"
@@ -992,7 +992,7 @@ const CinemaxDashboard: React.FC = () => {
                 onClick={toggleSearchListening}
                 className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg transition-colors cursor-pointer ${
                   isSearchListening 
-                    ? 'bg-red-500/20 text-red-400 animate-pulse' 
+                    ? 'voice-button-active text-[#39FF14]' 
                     : 'hover:bg-white/10 text-neutral-400 hover:text-[#39FF14]'
                 }`}
                 title={isSearchListening ? "Listening..." : "Voice Search"}
@@ -1003,7 +1003,7 @@ const CinemaxDashboard: React.FC = () => {
             </div>
 
             {/* Voice Agent - integrated next to search bar */}
-            <div className="hidden lg:block">
+            <div className="hidden lg:block flex-shrink-0">
               <VoiceAgent 
                 onNavigate={setCurrentView}
                 onSearch={setSearchQuery}
@@ -1021,7 +1021,7 @@ const CinemaxDashboard: React.FC = () => {
             </div>
 
             {/* Download App Button - desktop only */}
-            <div className="hidden lg:block">
+            <div className="hidden lg:block flex-shrink-0">
               <InstallAppButton variant="header" label="Download App" />
             </div>
           </div>
