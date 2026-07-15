@@ -280,7 +280,12 @@ function defaultSiteSettings(): DbSiteSettings {
       { id: "now_playing", label: "Now Playing in Theaters", visible: true },
     ],
     apiKeys: {
-      
+      tmdb: process.env.TMDB_API_KEY || "",
+      gemini: process.env.GEMINI_API_KEY || "",
+      groq: process.env.GROQ_API_KEY || "",
+      openai: process.env.OPENAI_API_KEY || "",
+      grok: process.env.GROK_API_KEY || "",
+    },
     contentPages: {
       home: { enabled: true, label: "Home" },
       movies: { enabled: true, label: "Movies" },
