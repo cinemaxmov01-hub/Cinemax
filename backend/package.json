@@ -23,7 +23,8 @@
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^9.7.4",
-    "nodemailer": "^9.0.3"
+    "nodemailer": "^9.0.3",
+    "openai": "^4.79.1"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

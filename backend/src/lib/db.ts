@@ -280,12 +280,7 @@ function defaultSiteSettings(): DbSiteSettings {
       { id: "now_playing", label: "Now Playing in Theaters", visible: true },
     ],
     apiKeys: {
-      tmdb: process.env.TMDB_API_KEY || "8e887749d8a5b7a31b807aadd903d25a",
-      gemini: process.env.GEMINI_API_KEY || "AQ.Ab8RN6IuaQBAqHN0X1cO90Fkf_xcUiHQNB7NNhFYUSHHpaWoXg",
-      groq: process.env.GROQ_API_KEY || "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",
-      openai: process.env.OPENAI_API_KEY || "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",
-      grok: process.env.GROK_API_KEY || "",
-    },
+      
     contentPages: {
       home: { enabled: true, label: "Home" },
       movies: { enabled: true, label: "Movies" },

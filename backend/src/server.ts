@@ -261,17 +261,32 @@ app.post("/api/visual-search/match", async (req, res) => {
 });
 
 function getApiKey(name: "tmdb" | "gemini" | "groq" | "openai" | "grok"): string {
-  const fromDb = db.data?.site_settings?.apiKeys?.[name];
-  const fromEnv = name === "tmdb"
-    ? process.env.TMDB_API_KEY
-    : name === "gemini"
-    ? process.env.GEMINI_API_KEY
-    : name === "groq"
-    ? process.env.GROQ_API_KEY
-    : name === "openai"
-    ? process.env.OPENAI_API_KEY
-    : process.env.GROK_API_KEY;
-  return (fromDb || fromEnv || "").trim();
+  // IMPORTANT: Render (and any hosted platform) provides its own environment
+  // variables. Those are the source of truth — always prefer them over
+  // whatever might have been saved into the local db.json (which frequently
+  // holds stale/placeholder values from the admin panel). Fall back to the
+  // db only when the env var is truly missing.
+  const envName =
+    name === "tmdb"   ? "TMDB_API_KEY"   :
+    name === "gemini" ? "GEMINI_API_KEY" :
+    name === "groq"   ? "GROQ_API_KEY"   :
+    name === "openai" ? "OPENAI_API_KEY" :
+                        "GROK_API_KEY";
+  const fromEnv = (process.env[envName] || "").trim();
+  if (fromEnv && !isPlaceholderKey(fromEnv)) return fromEnv;
+  const fromDb = String(db.data?.site_settings?.apiKeys?.[name] || "").trim();
+  if (fromDb && !isPlaceholderKey(fromDb)) return fromDb;
+  return "";
+}
+
+function isPlaceholderKey(value: string): boolean {
+  const v = value.toLowerCase();
+  return (
+    v.startsWith("your_") ||
+    v.includes("_here") ||
+    v === "changeme" ||
+    v === "placeholder"
+  );
 }
 
 function getGeminiClient(): GoogleGenAI {

@@ -23,7 +23,8 @@ import { TVShowsPage } from "./components/TVShowsPage";
 import { ShortsPage } from "./components/ShortsPage";
 import { GensPage } from "./components/GensPage";
 import { HomeAIAssistant } from "./components/HomeAIAssistant";
-import { VoiceAgent } from "./components/VoiceAgent";
+// VoiceAgent removed from the header — the search-bar mic is now the single
+// voice entry point across the app.
 import { MovieDetailsModal } from "./components/MovieDetailsModal";
 import { Footer } from "./components/Footer";
 import { LiveChat } from "./components/LiveChat";
@@ -388,6 +389,13 @@ const CinemaxDashboard: React.FC = () => {
               setSearchResults(combined);
               setSearchHasMore(tmdbBatch.hasMore);
               setSearchNextPage(4);
+
+              // Voice-to-voice deep search: after fetching TMDB results,
+              // ask the assistant for a professional deep-research answer
+              // and speak the reply back to the user (Siri-style).
+              runDeepVoiceSearch(finalTranscript.trim(), combined).catch((e) =>
+                console.error("Deep voice search failed:", e),
+              );
             } catch (err) {
               console.error("Voice search error:", err);
             }
@@ -485,6 +493,71 @@ const CinemaxDashboard: React.FC = () => {
       }
     } catch (error) {
       console.error('Search TTS error:', error);
+      // Fallback so the user still hears a reply even if the backend TTS
+      // key isn't configured — uses the browser's built-in voice.
+      browserSpeak(text, language);
+    }
+  };
+
+  // Browser-native voice fallback (works offline, no API keys required).
+  const browserSpeak = (text: string, language: string) => {
+    try {
+      if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(text.replace(/[*_`#>]/g, ''));
+      utter.lang = language === 'en' ? 'en-US' : language;
+      utter.rate = 1;
+      utter.pitch = 1;
+      window.speechSynthesis.speak(utter);
+    } catch (e) {
+      console.error('browserSpeak failed:', e);
+    }
+  };
+
+  // Professional deep-search: sends the voice query to the assistant with a
+  // deep-research system prompt, then speaks the answer back to the user.
+  const runDeepVoiceSearch = async (query: string, results: Movie[]) => {
+    // Build a short context of the top titles we just matched so the AI
+    // grounds its reply on real catalog results.
+    const topTitles = results
+      .slice(0, 6)
+      .map((m) => m.title || m.name)
+      .filter(Boolean)
+      .join(', ');
+
+    const deepPrompt =
+      `Voice deep-search query: "${query}".\n` +
+      (topTitles ? `Top matching titles in our catalog: ${topTitles}.\n` : '') +
+      `Act as a professional film & TV research assistant. Perform a deep search: ` +
+      `identify what the user most likely means, recommend the single best match ` +
+      `first, then briefly compare 2-3 close alternatives (year, genre, why it fits). ` +
+      `Keep the spoken answer under 60 seconds, natural, and conversational — no ` +
+      `markdown, no bullet symbols, no emojis.`;
+
+    try {
+      const response = await fetch('/api/assistant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ message: deepPrompt, history: [] }),
+      });
+
+      if (!response.ok) throw new Error(`Assistant HTTP ${response.status}`);
+      const data = await response.json();
+      const reply = String(data?.text || '').trim();
+      if (!reply) return;
+      await speakSearchResponse(reply, 'en');
+    } catch (err) {
+      console.error('Deep search assistant error:', err);
+      // Still give the user a spoken confirmation of what we heard + how
+      // many results we found, so the mic never feels "dead".
+      const count = results.length;
+      browserSpeak(
+        count > 0
+          ? `I found ${count} results for ${query}.`
+          : `I couldn't find results for ${query}.`,
+        'en',
+      );
     }
   };
 
@@ -1000,24 +1073,6 @@ const CinemaxDashboard: React.FC = () => {
                 <Mic className="h-4 w-4" />
               </button>
               <audio ref={searchAudioRef} className="hidden" />
-            </div>
-
-            {/* Voice Agent - integrated next to search bar */}
-            <div className="hidden lg:block flex-shrink-0">
-              <VoiceAgent 
-                onNavigate={setCurrentView}
-                onSearch={setSearchQuery}
-                onPlayMovie={(title) => {
-                  // Find and play movie by title
-                  const movie = searchResults.find(m => 
-                    m.title?.toLowerCase() === title.toLowerCase() ||
-                    m.name?.toLowerCase() === title.toLowerCase()
-                  );
-                  if (movie) {
-                    handleMovieClick(movie);
-                  }
-                }}
-              />
             </div>
 
             {/* Download App Button - desktop only */}
