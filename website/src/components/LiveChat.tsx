@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useApp } from "../context/AppContext";
 import { AvatarRenderer } from "./AnimatedAvatar";
-import { ChatMessage, ChatConversation, DirectMessage, ChatDirectoryPerson } from "../types";
+import { ChatMessage, ChatConversation, DirectMessage, ChatDirectoryPerson, Movie } from "../types";
 import {
   MessageCircle,
   Send,
@@ -20,6 +20,9 @@ import {
   ImagePlus,
   Mic,
   Square,
+  Film,
+  Share2,
+  Star,
 } from "lucide-react";
 
 const POPULAR_POLL_MS = 4000;
@@ -850,7 +853,7 @@ const InboxTab: React.FC<{
             ) : (
               <button
                 onClick={() => handleSend(pendingImage || undefined, pendingImage ? "image" : undefined)}
-                disabled={sending}
+                disabled={sending || (!text.trim() && !pendingImage)}
                 className="flex-shrink-0 h-9 w-9 rounded-xl bg-[#39FF14] hover:brightness-110 disabled:opacity-40 flex items-center justify-center text-black transition-all cursor-pointer"
               >
                 {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
@@ -862,3 +865,4 @@ const InboxTab: React.FC<{
     </div>
   );
 };
+

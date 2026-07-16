@@ -23,8 +23,7 @@ import { TVShowsPage } from "./components/TVShowsPage";
 import { ShortsPage } from "./components/ShortsPage";
 import { GensPage } from "./components/GensPage";
 import { HomeAIAssistant } from "./components/HomeAIAssistant";
-// VoiceAgent removed from the header — the search-bar mic is now the single
-// voice entry point across the app.
+import { VoiceAgent } from "./components/VoiceAgent";
 import { MovieDetailsModal } from "./components/MovieDetailsModal";
 import { Footer } from "./components/Footer";
 import { LiveChat } from "./components/LiveChat";
@@ -56,7 +55,8 @@ import {
   Lock,
   Tag,
   X as XIcon,
-  Mic
+  Mic,
+  Shield
 } from "lucide-react";
 
 // Pre-configured "Supergirl" Featured Hero Movie matching references
@@ -300,20 +300,16 @@ const CinemaxDashboard: React.FC = () => {
     };
   }, [currentUser?.onboarding?.favoriteGenres, siteConfig.hiddenMovieIds]);
 
-  // One-time movie-focused splash screen timer
+  // Splash screen shows logo for exactly 2 seconds before entering site
   useEffect(() => {
-    const fadeTimer = setTimeout(() => {
+    const timer = setTimeout(() => {
       setFadeSplash(true);
-    }, 800);
+      setTimeout(() => {
+        setShowSplash(false);
+      }, 100); // Fade out transition
+    }, 2000); // Show for exactly 2 seconds
 
-    const unmountTimer = setTimeout(() => {
-      setShowSplash(false);
-    }, 1200);
-
-    return () => {
-      clearTimeout(fadeTimer);
-      clearTimeout(unmountTimer);
-    };
+    return () => clearTimeout(timer);
   }, []);
 
   // Hero rotation — admin-featured titles, or curated Supergirl + trending fallback
@@ -389,13 +385,6 @@ const CinemaxDashboard: React.FC = () => {
               setSearchResults(combined);
               setSearchHasMore(tmdbBatch.hasMore);
               setSearchNextPage(4);
-
-              // Voice-to-voice deep search: after fetching TMDB results,
-              // ask the assistant for a professional deep-research answer
-              // and speak the reply back to the user (Siri-style).
-              runDeepVoiceSearch(finalTranscript.trim(), combined).catch((e) =>
-                console.error("Deep voice search failed:", e),
-              );
             } catch (err) {
               console.error("Voice search error:", err);
             }
@@ -441,18 +430,22 @@ const CinemaxDashboard: React.FC = () => {
     // Play welcome message on first click
     if (!hasPlayedSearchWelcome) {
       setHasPlayedSearchWelcome(true);
-      speakSearchResponse("Welcome to Cinemax", "en");
+      speakSearchResponse("Welcome to Cinemax. What do you want to look for?", "en");
       // Start listening after welcome message
       setTimeout(() => {
         searchRecognitionRef.current.start();
-      }, 2500);
+      }, 3500);
       return;
     }
 
     if (isSearchListening) {
       searchRecognitionRef.current.stop();
     } else {
-      searchRecognitionRef.current.start();
+      speakSearchResponse("What do you want to look for?", "en");
+      // Start listening after prompt
+      setTimeout(() => {
+        searchRecognitionRef.current.start();
+      }, 2000);
     }
   };
 
@@ -493,71 +486,6 @@ const CinemaxDashboard: React.FC = () => {
       }
     } catch (error) {
       console.error('Search TTS error:', error);
-      // Fallback so the user still hears a reply even if the backend TTS
-      // key isn't configured — uses the browser's built-in voice.
-      browserSpeak(text, language);
-    }
-  };
-
-  // Browser-native voice fallback (works offline, no API keys required).
-  const browserSpeak = (text: string, language: string) => {
-    try {
-      if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
-      window.speechSynthesis.cancel();
-      const utter = new SpeechSynthesisUtterance(text.replace(/[*_`#>]/g, ''));
-      utter.lang = language === 'en' ? 'en-US' : language;
-      utter.rate = 1;
-      utter.pitch = 1;
-      window.speechSynthesis.speak(utter);
-    } catch (e) {
-      console.error('browserSpeak failed:', e);
-    }
-  };
-
-  // Professional deep-search: sends the voice query to the assistant with a
-  // deep-research system prompt, then speaks the answer back to the user.
-  const runDeepVoiceSearch = async (query: string, results: Movie[]) => {
-    // Build a short context of the top titles we just matched so the AI
-    // grounds its reply on real catalog results.
-    const topTitles = results
-      .slice(0, 6)
-      .map((m) => m.title || m.name)
-      .filter(Boolean)
-      .join(', ');
-
-    const deepPrompt =
-      `Voice deep-search query: "${query}".\n` +
-      (topTitles ? `Top matching titles in our catalog: ${topTitles}.\n` : '') +
-      `Act as a professional film & TV research assistant. Perform a deep search: ` +
-      `identify what the user most likely means, recommend the single best match ` +
-      `first, then briefly compare 2-3 close alternatives (year, genre, why it fits). ` +
-      `Keep the spoken answer under 60 seconds, natural, and conversational — no ` +
-      `markdown, no bullet symbols, no emojis.`;
-
-    try {
-      const response = await fetch('/api/assistant', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ message: deepPrompt, history: [] }),
-      });
-
-      if (!response.ok) throw new Error(`Assistant HTTP ${response.status}`);
-      const data = await response.json();
-      const reply = String(data?.text || '').trim();
-      if (!reply) return;
-      await speakSearchResponse(reply, 'en');
-    } catch (err) {
-      console.error('Deep search assistant error:', err);
-      // Still give the user a spoken confirmation of what we heard + how
-      // many results we found, so the mic never feels "dead".
-      const count = results.length;
-      browserSpeak(
-        count > 0
-          ? `I found ${count} results for ${query}.`
-          : `I couldn't find results for ${query}.`,
-        'en',
-      );
     }
   };
 
@@ -731,14 +659,9 @@ const CinemaxDashboard: React.FC = () => {
     setPreparingPlayKey(playKey);
     try {
       const ready = await prepareForPlayback(movie);
-      if (rememberChoice && defaultWatchChoice) {
-        setSelectedMovie(ready);
-        setPlayerMode(defaultWatchChoice);
-        setCurrentView("player");
-      } else {
-        setModalTargetMovie(ready);
-        setChoiceModalOpen(true);
-      }
+      // Always show choice modal to let user choose between Watch Full Movie or Trailer
+      setModalTargetMovie(ready);
+      setChoiceModalOpen(true);
     } catch (err) {
       console.error("Failed to prepare title for playback:", err);
       const fallback: Movie = {
@@ -875,7 +798,7 @@ const CinemaxDashboard: React.FC = () => {
   const splashScreen = (
     <div
       id="splash-loader-screen"
-      className={`fixed inset-0 z-[10000] bg-[#050505] on-dark-bg flex flex-col items-center justify-center transition-opacity duration-500 ease-out ${fadeSplash ? "opacity-0 pointer-events-none" : "opacity-100"}`}
+      className={`fixed inset-0 z-[10000] bg-[#050505] on-dark-bg flex flex-col items-center justify-center transition-opacity duration-100 ease-out ${fadeSplash ? "opacity-0 pointer-events-none" : "opacity-100"}`}
     >
       <div className="flex flex-col items-center gap-6 max-w-sm px-6 text-center">
         <div className="h-20 w-20 rounded-3xl logo-mark flex items-center justify-center">
@@ -917,17 +840,10 @@ const CinemaxDashboard: React.FC = () => {
     <header className="relative z-10 flex items-center justify-between px-6 sm:px-12 py-6">
       <button
         id="public-page-logo-home-btn"
-        onClick={() => setCurrentView("home")}
+        onClick={() => { setSearchQuery(""); setCurrentView("home"); }}
         className="flex items-center gap-2 cursor-pointer"
       >
         <CinemaxLogo compact />
-      </button>
-      <button
-        id="public-page-signin-btn"
-        onClick={() => openAuthModal("signin")}
-        className="text-xs font-bold px-5 py-2.5 rounded-xl border border-white/15 text-white hover:border-[#39FF14]/50 hover:text-[#39FF14] transition-all cursor-pointer"
-      >
-        Sign In
       </button>
     </header>
   );
@@ -1035,9 +951,9 @@ const CinemaxDashboard: React.FC = () => {
       <div id="main-content-panel" className="lg:pl-64 flex flex-col min-h-screen">
         
         {/* Top Header Navbar with frosted blur */}
-        <header id="top-navbar" className="h-20 glass-navbar sticky top-0 z-40 px-4 lg:px-8 flex items-center justify-between gap-2 sm:gap-4">
+        <header id="top-navbar" className="h-16 lg:h-20 glass-navbar sticky top-0 z-40 px-4 lg:px-8 flex items-center justify-between gap-2 sm:gap-4">
           
-          {/* Left Section: Mobile menu, Search, Voice Agent, Download App */}
+          {/* Left Section: Logo, Mobile menu, Search, Voice Search, Categories */}
           <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
             <button
               id="mobile-menu-trigger"
@@ -1047,6 +963,72 @@ const CinemaxDashboard: React.FC = () => {
             >
               <Menu className="h-5 w-5" />
             </button>
+
+            {/* Desktop Logo */}
+            <div className="hidden lg:flex items-center cursor-pointer" onClick={() => { setSearchQuery(""); setCurrentView("home"); }}>
+              <CinemaxLogo compact />
+            </div>
+
+            {/* Mobile 'All' Categories Button */}
+            <div className="relative sm:hidden">
+              <button
+                id="mobile-categories-btn"
+                onClick={() => setCategoriesOpen((v) => !v)}
+                className={`flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border border-white/10 ${
+                  categoriesOpen ? "bg-[#39FF14]/10 text-[#39FF14] border-[#39FF14]/30" : "text-neutral-400 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <span>All</span>
+                <ChevronRight className={`h-3 w-3 transition-transform duration-300 ${categoriesOpen ? "rotate-90" : ""}`} />
+              </button>
+              {categoriesOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setCategoriesOpen(false)} />
+                  <div className="absolute left-0 top-full mt-2 z-50 w-72 animate-dropdown-pop">
+                    <div className="absolute -top-1.5 left-4 h-3 w-3 rotate-45 bg-[#0c0c0c] border-l border-t border-[#39FF14]/20" />
+                    <div className="relative rounded-2xl border border-neutral-800 surface-panel overflow-hidden">
+                      <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-gradient-to-r from-[#39FF14]/10 to-transparent">
+                        <div className="flex items-center gap-2">
+                          <div className="h-6 w-6 rounded-lg bg-[#39FF14]/15 border border-[#39FF14]/30 flex items-center justify-center text-[#39FF14]">
+                            <Tag className="h-3 w-3" />
+                          </div>
+                          <span className="text-xs font-black text-white uppercase tracking-wider">{t("browseCategories")}</span>
+                        </div>
+                        <span className="text-[10px] font-bold text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/20 px-2 py-0.5 rounded-full">
+                          {allGenres.length}
+                        </span>
+                      </div>
+                      <div className="max-h-72 overflow-y-auto p-2 grid grid-cols-2 gap-1 scrollbar-thin scrollbar-thumb-neutral-800 scrollbar-track-transparent">
+                        {allGenres.map((g) => {
+                          const isActive = activeGenre === g.id;
+                          return (
+                            <button
+                              key={g.id}
+                              onClick={() => {
+                                setActiveGenre(g.id);
+                                setActiveGenreName(t(`genre.${g.name}`));
+                                setCurrentView("movies");
+                                setCategoriesOpen(false);
+                              }}
+                              className={`group relative flex items-center gap-2 text-left px-3 py-2 rounded-xl text-[11px] font-semibold transition-all duration-200 cursor-pointer overflow-hidden ${
+                                isActive
+                                  ? "accent-chip"
+                                  : "text-neutral-300 hover:bg-neutral-800 hover:text-white"
+                              }`}
+                            >
+                              <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 transition-all duration-200 ${
+                                isActive ? "bg-[#39FF14]" : "bg-neutral-700 group-hover:bg-neutral-600"
+                              }`} />
+                              <span className="truncate">{t(`genre.${g.name}`)}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
 
             {/* Instant Search input — permanently visible across all devices */}
             <div className="relative w-64 sm:w-80 lg:w-96">
@@ -1063,21 +1045,16 @@ const CinemaxDashboard: React.FC = () => {
               {/* Voice Search Button */}
               <button
                 onClick={toggleSearchListening}
-                className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg transition-colors cursor-pointer ${
+                className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg transition-all cursor-pointer ${
                   isSearchListening 
-                    ? 'voice-button-active text-[#39FF14]' 
-                    : 'hover:bg-white/10 text-neutral-400 hover:text-[#39FF14]'
+                    ? 'text-white bg-gradient-to-br from-purple-500 via-pink-500 to-blue-500 animate-gemini-shine' 
+                    : 'hover:bg-white/10 text-neutral-400 hover:text-white'
                 }`}
                 title={isSearchListening ? "Listening..." : "Voice Search"}
               >
                 <Mic className="h-4 w-4" />
               </button>
               <audio ref={searchAudioRef} className="hidden" />
-            </div>
-
-            {/* Download App Button - desktop only */}
-            <div className="hidden lg:block flex-shrink-0">
-              <InstallAppButton variant="header" label="Download App" />
             </div>
           </div>
 
@@ -1087,7 +1064,7 @@ const CinemaxDashboard: React.FC = () => {
           <nav className="hidden sm:flex items-center gap-1 flex-shrink-0 overflow-x-auto scrollbar-thin scrollbar-thumb-neutral-800 scrollbar-track-transparent">
             <button
               id="nav-movies-btn"
-              onClick={() => { setActiveGenre(null); setActiveGenreName(null); setCurrentView("movies"); }}
+              onClick={() => { setSearchQuery(""); setActiveGenre(null); setActiveGenreName(null); setCurrentView("movies"); }}
               className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 currentView === "movies" ? "bg-[#39FF14]/10 text-[#39FF14]" : "text-neutral-400 hover:text-white hover:bg-white/5"
               }`}
@@ -1096,7 +1073,7 @@ const CinemaxDashboard: React.FC = () => {
             </button>
             <button
               id="nav-tv-btn"
-              onClick={() => setCurrentView("tv")}
+              onClick={() => { setSearchQuery(""); setCurrentView("tv"); }}
               className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 currentView === "tv" ? "bg-[#39FF14]/10 text-[#39FF14]" : "text-neutral-400 hover:text-white hover:bg-white/5"
               }`}
@@ -1105,7 +1082,7 @@ const CinemaxDashboard: React.FC = () => {
             </button>
             <button
               id="nav-gens-btn"
-              onClick={() => setCurrentView("gens")}
+              onClick={() => { setSearchQuery(""); setCurrentView("gens"); }}
               className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 currentView === "gens" ? "bg-[#39FF14]/10 text-[#39FF14]" : "text-neutral-400 hover:text-white hover:bg-white/5"
               }`}
@@ -1121,7 +1098,7 @@ const CinemaxDashboard: React.FC = () => {
                 }`}
               >
                 <Tag className="h-3.5 w-3.5" />
-                {t("allCategories")}
+                <span>All</span>
                 <ChevronRight className={`h-3.5 w-3.5 transition-transform duration-300 ${categoriesOpen ? "rotate-90" : ""}`} />
               </button>
               {categoriesOpen && (
@@ -1214,17 +1191,7 @@ const CinemaxDashboard: React.FC = () => {
               >
                 <AvatarRenderer value={currentUser.avatar} size={36} initials={currentUser.name?.[0]?.toUpperCase() || "C"} />
               </button>
-            ) : (
-              <button
-                id="header-login-btn"
-                onClick={() => requireSignInPrompt()}
-                title="Sign in to access your profile"
-                className="neon-btn text-[10px] sm:text-xs px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition-all cursor-pointer shadow-md flex items-center gap-1.5"
-              >
-                <Lock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                <span className="hidden sm:inline">Sign In</span>
-              </button>
-            )}
+            ) : null}
           </div>
         </header>
 
@@ -1336,14 +1303,14 @@ const CinemaxDashboard: React.FC = () => {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/40 to-transparent" />
 
-                    {/* Rotation progress dots */}
+                    {/* Rotation progress dots - tiny sharp dots */}
                     {heroMovies.length > 1 && (
-                      <div className="absolute top-6 right-6 lg:right-12 z-10 flex items-center gap-1.5">
+                      <div className="absolute top-6 right-6 lg:right-12 z-10 flex items-center gap-1">
                         {heroMovies.map((_, i) => (
                           <span
                             key={i}
                             className={`h-1 rounded-full transition-all duration-300 ${
-                              i === heroIndex % heroMovies.length ? "w-6 bg-[#39FF14]" : "w-1.5 bg-white/25"
+                              i === heroIndex % heroMovies.length ? "w-1 bg-[#39FF14]" : "w-1 bg-white/25"
                             }`}
                           />
                         ))}
@@ -1454,9 +1421,9 @@ const CinemaxDashboard: React.FC = () => {
                         <h2 className="font-sans font-bold text-xl lg:text-2xl tracking-tight">{t("upNext")}</h2>
                         <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">{t("trendingNow")}</span>
                       </div>
-                      <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
+                      <div className="flex gap-3 sm:gap-4 overflow-x-auto no-scrollbar pb-2 scroll-snap-x-mandatory">
                         {(trendingMovies.length > 0 ? trendingMovies : popularMovies).slice(0, 12).map((movie) => (
-<div key={movie.id} className="flex-shrink-0 w-[110px] sm:w-[130px]">
+<div key={movie.id} className="flex-shrink-0 w-[100px] sm:w-[110px] md:w-[130px] scroll-snap-start">
                             <MovieCard movie={movie} onClick={() => handleMovieClick(movie)} />
                           </div>
                         ))}

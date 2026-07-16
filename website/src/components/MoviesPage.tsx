@@ -162,7 +162,7 @@ export const MoviesPage: React.FC<MoviesPageProps> = ({ onMovieClick, initialGen
   const genreLabel = (name: string) => t(`genre.${name}`);
 
   return (
-    <div id="movies-page" className="p-4 lg:p-8 space-y-8">
+    <div id="movies-page" className="p-4 lg:p-8 space-y-8 min-h-screen bg-[#050505]">
       <div className="flex items-center gap-2">
         <Film className="h-5 w-5 text-[#39FF14]" />
         <h1 className="font-sans font-black text-2xl text-white">

@@ -223,26 +223,46 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({ onNavigate, onSearch, on
 
   return (
     <>
-      <button
-        onClick={toggleListening}
-        disabled={isProcessing}
-        className={`relative h-10 w-10 rounded-full flex items-center justify-center transition-all duration-300 ${
-          isListening 
-            ? 'bg-red-500/20 border-2 border-red-500 text-red-400 animate-pulse' 
-            : isProcessing
-            ? 'bg-[#39FF14]/10 border-2 border-[#39FF14]/30 text-[#39FF14]'
-            : 'bg-white/5 hover:bg-white/10 border border-white/20 text-neutral-400 hover:text-white'
-        }`}
-        title={isListening ? "Listening..." : isProcessing ? "Processing..." : "Voice Assistant"}
-      >
-        {isProcessing ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : isListening ? (
-          <MicOff className="h-4 w-4" />
-        ) : (
-          <Mic className="h-4 w-4" />
+      <div className="relative group">
+        <button
+          onClick={toggleListening}
+          disabled={isProcessing}
+          className={`relative h-12 w-12 rounded-2xl flex items-center justify-center transition-all duration-300 transform group-hover:scale-105 ${
+            isListening 
+              ? 'bg-red-500/10 border-2 border-red-500 text-red-400 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.3)]' 
+              : isProcessing
+              ? 'bg-[#39FF14]/10 border-2 border-[#39FF14] text-[#39FF14] shadow-[0_0_15px_rgba(57,255,20,0.3)]'
+              : 'bg-white/5 border border-white/20 hover:border-[#39FF14] text-neutral-400 hover:text-white shadow-[0_0_10px_rgba(57,255,20,0.2)] hover:shadow-[0_0_15px_rgba(57,255,20,0.4)]'
+          }`}
+          title={isListening ? "Listening..." : isProcessing ? "Processing..." : "Voice Assistant"}
+        >
+          {isProcessing ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : isListening ? (
+            <MicOff className="h-5 w-5" />
+          ) : (
+            <Mic className="h-5 w-5" />
+          )}
+          
+          {/* Ripple effect when listening */}
+          {isListening && (
+            <span className="absolute inset-0 rounded-2xl bg-red-500/20 animate-ping" />
+          )}
+        </button>
+        
+        {/* Tooltip */}
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-black/90 backdrop-blur-sm rounded-lg text-[10px] font-semibold text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-white/10">
+          {isListening ? "Listening..." : isProcessing ? "Processing..." : "Voice Assistant"}
+          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-black/90" />
+        </div>
+        
+        {/* Status indicator */}
+        {(isListening || isProcessing) && (
+          <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full border-2 border-[#0a0a0a] ${
+            isListening ? 'bg-red-500 animate-pulse' : 'bg-[#39FF14] animate-pulse'
+          }" />
         )}
-      </button>
+      </div>
       <audio ref={audioRef} className="hidden" />
     </>
   );

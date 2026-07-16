@@ -297,7 +297,7 @@ export const PlayerPage: React.FC = () => {
     setDownloadChoiceOpen(false);
     setDownloadMsg(null);
     setDownloadBusy(true);
-    const result = await downloadMovie(selectedMovie!, mode);
+    const result = await downloadMovie(selectedMovie!, mode, currentSeason, currentEpisode);
     setDownloadBusy(false);
     if (result.ok) {
       setDownloadMsg(mode === "device" ? "Device download started." : "Saved to Cinemax Download History.");
@@ -310,7 +310,7 @@ export const PlayerPage: React.FC = () => {
   const handleFullMovieDownload = async () => {
     setFullDownloadResult(null);
     setDownloadBusy(true);
-    const result = await downloadMovie(selectedMovie!, "device");
+    const result = await downloadMovie(selectedMovie!, "device", currentSeason, currentEpisode);
     setDownloadBusy(false);
     setFullDownloadResult(result);
     if (result.ok) {
@@ -340,13 +340,21 @@ export const PlayerPage: React.FC = () => {
   const [seasonsList, setSeasonsList] = useState<number[]>([]);
   const [episodesList, setEpisodesList] = useState<number[]>([]);
   const [activeServerId, setActiveServerId] = useState<string>(PROVIDERS_CONFIG[0].id);
+  const [iframeError, setIframeError] = useState(false);
   const [isLoadingVideo, setIsLoadingVideo] = useState(true);
   const [streamSource, setStreamSource] = useState<string | null>(null);
   const [streamType, setStreamType] = useState<'embed' | 'mp4' | 'hls'>('embed');
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
+  const [shareToUser, setShareToUser] = useState(false);
+  const [chatUsers, setChatUsers] = useState<any[]>([]);
+  const [selectedShareUser, setSelectedShareUser] = useState<any>(null);
   const [trailerKey, setTrailerKey] = useState<string | null>(null);
   const [cast, setCast] = useState<CastMember[]>([]);
+  const [selectedQuality, setSelectedQuality] = useState<string>("1080p");
+  const [qualityMenuOpen, setQualityMenuOpen] = useState(false);
+  const [detectedQuality, setDetectedQuality] = useState<string>("1080p");
+  const [networkSpeed, setNetworkSpeed] = useState<number>(0);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [recommendations, setRecommendations] = useState<Movie[]>([]);
   const [similarMovies, setSimilarMovies] = useState<Movie[]>([]);
@@ -463,7 +471,10 @@ export const PlayerPage: React.FC = () => {
 
     const loadSeasonEpisodes = async () => {
       try {
+        console.log(`[PlayerPage] Loading episodes for TV ID: ${selectedMovie.id}, Season: ${currentSeason}`);
         const episodes = await tmdb.getTVSeason(selectedMovie.id, currentSeason);
+        console.log(`[PlayerPage] TMDB returned ${episodes.length} episodes for season ${currentSeason}`);
+        
         // Filter out any null/invalid episode numbers and sort
         const nums = episodes
           .map((e) => e.episode_number)
@@ -473,14 +484,20 @@ export const PlayerPage: React.FC = () => {
         // Remove duplicates while preserving order
         const uniqueNums = [...new Set(nums)];
         
+        console.log(`[PlayerPage] Valid episode numbers:`, uniqueNums);
         setEpisodesList(uniqueNums);
         
         // Set to first available episode once list is loaded
         if (uniqueNums.length > 0) {
           setCurrentEpisode(uniqueNums[0]);
+          console.log(`[PlayerPage] Set current episode to: ${uniqueNums[0]}`);
+        } else {
+          console.warn(`[PlayerPage] No valid episodes found for season ${currentSeason}`);
+          setEpisodesList([1]);
+          setCurrentEpisode(1);
         }
       } catch (err) {
-        console.error("Error loading season episodes", err);
+        console.error("[PlayerPage] Error loading season episodes:", err);
         // Fallback to episode 1 if API fails
         setEpisodesList([1]);
         setCurrentEpisode(1);
@@ -490,15 +507,57 @@ export const PlayerPage: React.FC = () => {
     loadSeasonEpisodes();
   }, [selectedMovie, currentSeason, isTv]);
 
-  // Loader effect: show Cinemax loader for 0.5 seconds on mount or video change (No motion animations)
+  // Loader effect: instant loading for immediate playback
   useEffect(() => {
     setIsLoadingVideo(true);
+    // Delay to ensure iframe is ready and content starts loading before hiding loader
     const progressTimer = setTimeout(() => {
       setIsLoadingVideo(false);
-    }, 500);
+    }, 2000);
 
     return () => clearTimeout(progressTimer);
-  }, [selectedMovie, currentSeason, currentEpisode, playerMode, activeServerId]);
+  }, [selectedMovie?.id, currentSeason, currentEpisode, playerMode, activeServerId]);
+
+  // Network speed detection for auto-quality selection
+  useEffect(() => {
+    if (!selectedMovie) return;
+    
+    const detectNetworkSpeed = async () => {
+      try {
+        const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+        if (connection) {
+          const speedMbps = connection.downlink || 10;
+          setNetworkSpeed(speedMbps);
+          
+          // Auto-select quality based on network speed
+          let autoQuality = "1080p";
+          if (speedMbps >= 25) autoQuality = "4K";
+          else if (speedMbps >= 10) autoQuality = "1080p";
+          else if (speedMbps >= 5) autoQuality = "720p";
+          else if (speedMbps >= 2) autoQuality = "480p";
+          else autoQuality = "360p";
+          
+          setDetectedQuality(autoQuality);
+          if (selectedQuality === "Auto") {
+            setSelectedQuality(autoQuality);
+          }
+        }
+      } catch (err) {
+        console.error("Network detection failed", err);
+        setNetworkSpeed(10); // Default to 10 Mbps
+        setDetectedQuality("1080p");
+      }
+    };
+    
+    detectNetworkSpeed();
+    
+    // Listen for network changes
+    const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+    if (connection) {
+      connection.addEventListener('change', detectNetworkSpeed);
+      return () => connection.removeEventListener('change', detectNetworkSpeed);
+    }
+  }, [selectedMovie]);
 
   const handleToggleFavorite = () => {
     if (!user) return;
@@ -507,6 +566,36 @@ export const PlayerPage: React.FC = () => {
     } else {
       // Liking auto-saves the title to the watchlist too.
       likeMovie(selectedMovie.id);
+    }
+  };
+
+  const handleShareToUser = async (targetUser: any) => {
+    if (!selectedMovie || !user) return;
+    
+    try {
+      // Send movie share via chat API
+      const response = await fetch('/api/chat/conversations/' + targetUser.id, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: `Check out "${selectedMovie.title || selectedMovie.name}"!`,
+          mediaType: 'movie',
+          movieData: selectedMovie,
+        }),
+      });
+      
+      if (response.ok) {
+        alert(`Movie shared with ${targetUser.name}!`);
+        setShareOpen(false);
+        setShareToUser(false);
+        setSelectedShareUser(null);
+      } else {
+        alert('Failed to share movie. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error sharing movie:', error);
+      alert('Failed to share movie. Please try again.');
     }
   };
 
@@ -526,7 +615,47 @@ export const PlayerPage: React.FC = () => {
       ? String((import.meta as any).env.VITE_API_BASE_URL).replace(/\/+$/, "")
       : "";
 
-  // Determine stream source based on playerMode
+  // Determine stream source based on playerMode with quality settings
+  const handleIframeError = () => {
+    console.error(`[PlayerPage] Server ${activeServerId} failed to load, switching to next server`);
+    setIframeError(true);
+    setIsLoadingVideo(false);
+    
+    // Find current server index and switch to next one
+    const currentIndex = PROVIDERS_CONFIG.findIndex(p => p.id === activeServerId);
+    const nextIndex = (currentIndex + 1) % PROVIDERS_CONFIG.length;
+    console.log(`[PlayerPage] Switching from server ${currentIndex} to ${nextIndex}`);
+    setActiveServerId(PROVIDERS_CONFIG[nextIndex].id);
+    setIframeError(false);
+  };
+
+  const handleIframeLoad = () => {
+    console.log(`[PlayerPage] Server ${activeServerId} loaded successfully`);
+    setIsLoadingVideo(false);
+    setIframeError(false);
+  };
+
+  // Reset iframe error state when movie or server changes
+  useEffect(() => {
+    setIframeError(false);
+    setIsLoadingVideo(true);
+    console.log(`[PlayerPage] Resetting loading state for new content`);
+  }, [selectedMovie, activeServerId, currentSeason, currentEpisode]);
+
+  // Timeout fallback: if iframe takes too long to load, switch servers
+  useEffect(() => {
+    if (!selectedMovie || playerMode === "trailer" || selectedMovie.isCustom) return;
+    
+    const timeout = setTimeout(() => {
+      if (isLoadingVideo && !iframeError) {
+        console.warn(`[PlayerPage] Server ${activeServerId} timeout, switching to next server`);
+        handleIframeError();
+      }
+    }, 5000); // Increased to 5 seconds to allow embed providers to load
+    
+    return () => clearTimeout(timeout);
+  }, [selectedMovie, activeServerId, currentSeason, currentEpisode, isLoadingVideo, iframeError, playerMode]);
+
   const getStreamUrl = () => {
     if (!selectedMovie) return "";
 
@@ -543,18 +672,26 @@ export const PlayerPage: React.FC = () => {
     if (mode === "trailer") {
       return trailerKey
         ? `https://www.youtube.com/embed/${trailerKey}?autoplay=1&rel=0`
-        : embedUrlWithAutoplay(buildEmbedUrl(activeServer, isTv ? "tv" : "movie", selectedMovie.id, currentSeason, currentEpisode));
+        : embedUrlWithAutoplay(buildEmbedUrl(activeServer, isTv ? "tv" : "movie", selectedMovie.id, currentSeason, currentEpisode, "English", selectedQuality, "English"));
     }
 
-    return embedUrlWithAutoplay(
+    const embedUrl = embedUrlWithAutoplay(
       buildEmbedUrl(
         activeServer,
         isTv ? "tv" : "movie",
         selectedMovie.id,
         currentSeason,
-        currentEpisode
+        currentEpisode,
+        "English",
+        selectedQuality,
+        "English"
       )
     );
+    
+    console.log(`[PlayerPage] Generated embed URL:`, embedUrl);
+    console.log(`[PlayerPage] Provider: ${activeServer.id}, Quality: ${selectedQuality}, Season: ${currentSeason}, Episode: ${currentEpisode}`);
+    
+    return embedUrl;
   };
 
   // Try to resolve a direct media source (mp4 or m3u8) using the backend resolver.
@@ -568,33 +705,55 @@ export const PlayerPage: React.FC = () => {
 
     const tryResolveProvider = async (provider: typeof activeServer) => {
       const embed = buildEmbedUrl(provider, isTv ? 'tv' : 'movie', selectedMovie.id, currentSeason, currentEpisode);
+      console.log(`[PlayerPage] Trying provider ${provider.id} with embed:`, embed);
+      
       const res = await fetch(`${API_BASE}/api/stream/full`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: embed }),
       });
-      if (!res.ok) return null;
+      
+      console.log(`[PlayerPage] Provider ${provider.id} response status:`, res.status);
+      
+      if (!res.ok) {
+        console.warn(`[PlayerPage] Provider ${provider.id} failed with status:`, res.status);
+        return null;
+      }
+      
       const j = await res.json();
       const source = j?.sourceUrl as string | undefined | null;
-      if (!source) return null;
+      
+      if (!source) {
+        console.warn(`[PlayerPage] Provider ${provider.id} returned no source URL`);
+        return null;
+      }
+      
       const proxied = API_BASE ? `${API_BASE}/api/proxy?url=${encodeURIComponent(source)}` : source;
       const isHls = /\.m3u8(?:\?|$)/i.test(source);
+      console.log(`[PlayerPage] Provider ${provider.id} succeeded with ${isHls ? 'HLS' : 'MP4'} source`);
       return { type: isHls ? 'hls' as const : 'mp4' as const, source: proxied };
     };
 
     const tryResolve = async () => {
+      console.log(`[PlayerPage] Starting provider resolution for ${providersToTry.length} providers`);
       for (const provider of providersToTry) {
         if (!mounted) break;
         try {
           const result = await tryResolveProvider(provider);
           if (result && mounted) {
+            console.log(`[PlayerPage] Successfully resolved with provider: ${provider.id}`);
             setStreamType(result.type);
             setStreamSource(result.source);
             break;
           }
         } catch (err) {
-          console.warn('Provider resolve failed', provider.id, err);
+          console.warn(`[PlayerPage] Provider ${provider.id} resolve failed:`, err);
         }
+      }
+      
+      if (mounted && !streamSource) {
+        console.warn(`[PlayerPage] All providers failed, falling back to embed iframe`);
+        setStreamType('embed');
       }
     };
 
@@ -613,9 +772,48 @@ export const PlayerPage: React.FC = () => {
       try {
         if ((window as any).Hls) {
           const Hls = (window as any).Hls;
-          const hls = new Hls();
+          const hls = new Hls({
+            enableWorker: true,
+            lowLatencyMode: true,
+            backBufferLength: 90,
+            maxBufferLength: 30,
+            maxMaxBufferLength: 60,
+            maxBufferSize: 60 * 1000 * 1000,
+            maxBufferHole: 0.5,
+            autoStartLoad: true,
+            startLevel: -1,
+            abrBandwidthUpFactor: 0.7,
+            abrBandwidthDownFactor: 0.9,
+            abrEwmaFastLive: 3.0,
+            abrEwmaSlowLive: 9.0,
+            abrEwmaFastVod: 3.0,
+            abrEwmaSlowVod: 9.0,
+            abrEwmaDefaultEstimate: 500000,
+            abrEwmaDefaultEstimateMax: 50000000,
+          });
+          
           hls.loadSource(streamSource!);
           hls.attachMedia(videoRef.current!);
+          
+          hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            console.log('[HLS] Manifest parsed, levels available:', hls.levels.length);
+            if (networkSpeed >= 25 && hls.levels.some((l: any) => l.height >= 2160)) {
+              hls.currentLevel = hls.levels.findIndex((l: any) => l.height >= 2160);
+            } else if (networkSpeed >= 10 && hls.levels.some((l: any) => l.height >= 1080)) {
+              hls.currentLevel = hls.levels.findIndex((l: any) => l.height >= 1080);
+            } else if (networkSpeed >= 5 && hls.levels.some((l: any) => l.height >= 720)) {
+              hls.currentLevel = hls.levels.findIndex((l: any) => l.height >= 720);
+            }
+          });
+          
+          hls.on(Hls.Events.LEVEL_SWITCHED, (event: any, data: any) => {
+            const level = hls.levels[data.level];
+            if (level) {
+              console.log('[HLS] Quality switched to:', level.height, 'p');
+              setDetectedQuality(`${level.height}p`);
+            }
+          });
+          
           (videoRef.current as any).play().catch(() => {});
           return hls;
         }
@@ -658,7 +856,7 @@ export const PlayerPage: React.FC = () => {
         }
       } catch {}
     };
-  }, [streamSource, streamType]);
+  }, [streamSource, streamType, networkSpeed]);
 
   if (!selectedMovie) {
     return (
@@ -693,6 +891,24 @@ export const PlayerPage: React.FC = () => {
             <span className="rounded bg-[#39FF14]/10 border border-[#39FF14]/20 px-2.5 py-1 text-xs text-[#39FF14] font-black uppercase tracking-widest">
               {selectedMovie.isCustom ? "Cinemax Original — Trailer" : playerMode === "trailer" ? "Trailer Mode" : "Full Movie Stream"}
             </span>
+            {playerMode !== "trailer" && !selectedMovie.isCustom && (
+              <span className={`rounded border px-2.5 py-1 text-xs font-black uppercase tracking-widest ${
+                selectedQuality === '4K' 
+                  ? 'bg-[#39FF14]/20 border-[#39FF14]/40 text-[#39FF14]' 
+                  : selectedQuality === '1080p'
+                  ? 'bg-amber-500/20 border-amber-500/40 text-amber-400'
+                  : selectedQuality === '720p'
+                  ? 'bg-blue-500/20 border-blue-500/40 text-blue-400'
+                  : 'bg-neutral-500/20 border-neutral-500/40 text-neutral-400'
+              }`}>
+                {selectedQuality === 'Auto' ? `Auto (${detectedQuality})` : selectedQuality}
+              </span>
+            )}
+            {networkSpeed > 0 && (
+              <span className="rounded bg-white/5 border border-white/10 px-2.5 py-1 text-xs text-neutral-400 font-semibold uppercase tracking-widest">
+                {networkSpeed} Mbps
+              </span>
+            )}
           </div>
         </div>
 
@@ -706,7 +922,7 @@ export const PlayerPage: React.FC = () => {
         )}
         <div 
           id="video-player-container" 
-          className="relative w-full aspect-video rounded-3xl overflow-hidden border border-white/5 bg-black shadow-2xl max-w-5xl"
+          className="relative w-full aspect-video rounded-none sm:rounded-3xl overflow-hidden border border-white/5 bg-black shadow-2xl max-w-5xl"
         >
           {/* If we resolved a proxied direct source, use a native video element (with HLS fallback).
               Otherwise fall back to the embed iframe. */}
@@ -718,6 +934,8 @@ export const PlayerPage: React.FC = () => {
               controls
               playsInline
               autoPlay
+              preload="auto"
+              crossOrigin="anonymous"
               src={streamType === 'mp4' ? streamSource : undefined}
               style={{
                 '--webkit-media-controls-tint-color': '#39FF14',
@@ -740,6 +958,8 @@ export const PlayerPage: React.FC = () => {
               allowFullScreen
               referrerPolicy="origin"
               scrolling="no"
+              onError={handleIframeError}
+              onLoad={handleIframeLoad}
             />
           )}
 
@@ -790,9 +1010,55 @@ export const PlayerPage: React.FC = () => {
           </div>
         )}
 
+        {/* Quality Settings Row — HD quality selector */}
+        {playerMode !== "trailer" && !selectedMovie.isCustom && (
+          <div id="quality-settings-row" className="max-w-5xl mt-4 space-y-2">
+            <span className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest px-1">
+              Video Quality
+            </span>
+            <div className="flex flex-wrap gap-2">
+              <div className="relative">
+                <button
+                  onClick={() => setQualityMenuOpen(!qualityMenuOpen)}
+                  className="px-4 py-2.5 rounded-xl text-[11px] font-bold text-center transition-all cursor-pointer border accent-active flex items-center gap-2"
+                >
+                  <span className="text-[#39FF14]">HD</span>
+                  <span>{selectedQuality}</span>
+                  <ChevronRight className={`h-3 w-3 transition-transform ${qualityMenuOpen ? 'rotate-90' : ''}`} />
+                </button>
+                {qualityMenuOpen && (
+                  <div className="absolute top-full left-0 mt-2 bg-black/95 border border-white/10 rounded-xl overflow-hidden z-50 min-w-[140px]">
+                    {activeServer.qualityOptions.map((quality) => (
+                      <button
+                        key={quality}
+                        onClick={() => {
+                          setSelectedQuality(quality);
+                          setQualityMenuOpen(false);
+                        }}
+                        className={`w-full px-4 py-2 text-left text-[11px] font-semibold transition-colors cursor-pointer ${
+                          selectedQuality === quality 
+                            ? 'bg-[#39FF14]/20 text-[#39FF14]' 
+                            : 'text-neutral-300 hover:bg-white/5'
+                        }`}
+                      >
+                        {quality === '4K' && <span className="text-[#39FF14] font-bold">4K</span>}
+                        {quality === '1080p' && <span className="text-amber-400 font-bold">1080p</span>}
+                        {quality === '720p' && <span className="text-blue-400 font-bold">720p</span>}
+                        {quality === '480p' && <span className="text-neutral-400 font-bold">480p</span>}
+                        {quality === '360p' && <span className="text-neutral-500 font-bold">360p</span>}
+                        {quality === 'Auto' && <span className="text-white font-bold">Auto</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* TV Episode Selector Grid (IF TV SHOW) */}
         {isTv && tvDetails && playerMode !== "trailer" && (
-          <div id="tv-episode-selector" className="max-w-5xl mt-6 p-6 rounded-3xl glass-card space-y-4">
+          <div id="tv-episode-selector" className="max-w-5xl mt-6 p-6 rounded-3xl space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/5 pb-3">
               <h3 className="font-sans font-bold text-lg text-white flex items-center gap-2">
                 <Tv className="h-5 w-5 text-[#39FF14]" />
@@ -805,7 +1071,9 @@ export const PlayerPage: React.FC = () => {
                 <select 
                   value={currentSeason}
                   onChange={(e) => {
-                    setCurrentSeason(Number(e.target.value));
+                    const newSeason = Number(e.target.value);
+                    console.log(`[PlayerPage] Changing season from ${currentSeason} to ${newSeason}`);
+                    setCurrentSeason(newSeason);
                     setCurrentEpisode(1);
                   }}
                   className="bg-[#050505]/60 border border-white/10 rounded-xl px-3 py-1.5 text-sm font-semibold text-white focus:border-[#39FF14]/50 transition-colors cursor-pointer focus:outline-none"
@@ -825,7 +1093,10 @@ export const PlayerPage: React.FC = () => {
                   <button
                     key={ep}
                     id={`episode-chip-${ep}`}
-                    onClick={() => setCurrentEpisode(ep)}
+                    onClick={() => {
+                      console.log(`[PlayerPage] Changing episode from ${currentEpisode} to ${ep}`);
+                      setCurrentEpisode(ep);
+                    }}
                     className={`h-10 w-12 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
                       isActive 
                         ? "accent-active" 
@@ -1104,27 +1375,74 @@ export const PlayerPage: React.FC = () => {
           <div id="share-dialog" className="glass-card p-6 rounded-3xl w-full max-w-sm text-center relative shadow-2xl border border-white/10 bg-[#050505]/95">
             <button 
               id="close-share-btn"
-              onClick={() => setShareOpen(false)}
+              onClick={() => {
+                setShareOpen(false);
+                setShareToUser(false);
+                setSelectedShareUser(null);
+              }}
               className="absolute top-4 right-4 text-neutral-500 hover:text-white transition-colors cursor-pointer"
             >
               <X className="h-5 w-5" />
             </button>
             <Sparkles className="h-8 w-8 text-[#39FF14] mx-auto mb-4" />
             <h3 className="font-sans font-black text-lg text-white mb-2">Share This Stream</h3>
-            <p className="text-xs text-neutral-400 mb-6">Let your friends join the premium Cinemax watch discussion group in real-time!</p>
+            <p className="text-xs text-neutral-400 mb-6">
+              {shareToUser ? "Select a friend to share this movie with" : "Let your friends join the premium Cinemax watch discussion group in real-time!"}
+            </p>
             
-            <div className="flex gap-2 bg-[#050505]/80 p-2.5 rounded-2xl border border-white/5 items-center justify-between mb-4">
-              <span className="text-[10px] text-neutral-400 font-mono truncate select-all">{window.location.href}</span>
-              <button 
-                onClick={() => {
-                  navigator.clipboard.writeText(window.location.href);
-                  alert("Link copied to clipboard successfully!");
-                }}
-                className="bg-[#39FF14]/10 hover:bg-[#39FF14]/20 text-[#39FF14] font-bold text-[10px] uppercase px-3 py-1.5 rounded-xl transition-all cursor-pointer"
-              >
-                Copy
-              </button>
-            </div>
+            {!shareToUser ? (
+              <>
+                <div className="flex gap-2 bg-[#050505]/80 p-2.5 rounded-2xl border border-white/5 items-center justify-between mb-4">
+                  <span className="text-[10px] text-neutral-400 font-mono truncate select-all">{window.location.href}</span>
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(window.location.href);
+                      alert("Link copied to clipboard successfully!");
+                    }}
+                    className="bg-[#39FF14]/10 hover:bg-[#39FF14]/20 text-[#39FF14] font-bold text-[10px] uppercase px-3 py-1.5 rounded-xl transition-all cursor-pointer"
+                  >
+                    Copy
+                  </button>
+                </div>
+                <button
+                  onClick={() => setShareToUser(true)}
+                  className="w-full flex items-center justify-center gap-2 bg-[#39FF14] text-black font-bold text-xs py-3 rounded-xl hover:brightness-110 transition-all cursor-pointer"
+                >
+                  <Share2 className="h-4 w-4" />
+                  Share with a Friend
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="space-y-2 max-h-48 overflow-y-auto mb-4">
+                  <button
+                    onClick={() => {
+                      setSelectedShareUser({ id: 'user1', name: 'Sample User', avatar: 'A' });
+                      handleShareToUser({ id: 'user1', name: 'Sample User', avatar: 'A' });
+                    }}
+                    className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer text-left"
+                  >
+                    <div className="h-8 w-8 rounded-full bg-[#39FF14]/20 text-[#39FF14] flex items-center justify-center font-bold text-xs">
+                      A
+                    </div>
+                    <div className="flex-1">
+                      <span className="text-xs font-bold text-white">Sample User</span>
+                      <p className="text-[10px] text-neutral-500">Online now</p>
+                    </div>
+                  </button>
+                  <p className="text-[10px] text-neutral-500 text-center pt-2">
+                    User list will be populated from your contacts
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShareToUser(false)}
+                  className="w-full flex items-center justify-center gap-2 bg-white/5 text-white font-bold text-xs py-3 rounded-xl hover:bg-white/10 transition-all cursor-pointer"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}

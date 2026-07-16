@@ -50,10 +50,10 @@ export const HomeAIAssistant: React.FC<HomeAIAssistantProps> = ({ onSelectMovie,
   const [pendingImage, setPendingImage] = useState<{ previewUrl: string; base64: string; mimeType: string } | null>(null);
   const visualContextRef = useRef<VisualContextPayload | null>(null);
   
-  // Voice states
+  // Voice states - voice enabled by default for auto TTS
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [voiceEnabled, setVoiceEnabled] = useState(true); // Voice ON by default
   const [detectedLanguage, setDetectedLanguage] = useState<string>("en");
   const recognitionRef = useRef<any>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -332,6 +332,9 @@ export const HomeAIAssistant: React.FC<HomeAIAssistantProps> = ({ onSelectMovie,
             visualContext: ctx,
           },
         ]);
+        
+        // Speak the visual search response if voice is enabled
+        await speakText(replyText);
       } else {
         const { text, action } = await askAssistant({
           message: prompt,
@@ -360,17 +363,11 @@ export const HomeAIAssistant: React.FC<HomeAIAssistantProps> = ({ onSelectMovie,
     } catch (err: any) {
       const errorMessage = err?.message || "Sorry — please try again in a moment.";
       
-      // Provide specific guidance for visual search configuration issues
-      let userFriendlyMessage = errorMessage;
-      if (errorMessage.includes("Visual search is not configured") || errorMessage.includes("GEMINI_API_KEY")) {
-        userFriendlyMessage = "Visual search requires the Gemini API key to be configured. Please add GEMINI_API_KEY to your backend environment variables to enable this feature.";
-      }
-      
       setMessages((prev) => [
         ...prev,
         {
           role: "model",
-          text: userFriendlyMessage,
+          text: errorMessage,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         },
       ]);
@@ -385,7 +382,7 @@ export const HomeAIAssistant: React.FC<HomeAIAssistantProps> = ({ onSelectMovie,
         <button
           id="home-ai-launcher"
           onClick={() => setOpen(true)}
-          className="fixed right-5 bottom-6 z-50 flex items-center gap-2 h-14 pl-4 pr-5 rounded-full bg-[#39FF14] text-black shadow-[0_0_25px_rgba(57,255,20,0.55)] border border-white/10 hover:scale-105 active:scale-95 transition-all cursor-pointer group"
+          className="fixed right-5 bottom-6 z-50 flex items-center gap-2 h-14 pl-4 pr-5 rounded-full bg-[#39FF14] text-black border border-white/10 hover:scale-105 active:scale-95 transition-all cursor-pointer group"
           title="Ask the Homepage AI Assistant"
         >
           <Sparkles className="h-5 w-5" />
@@ -486,8 +483,8 @@ export const HomeAIAssistant: React.FC<HomeAIAssistantProps> = ({ onSelectMovie,
               disabled={loading}
               className={`flex-shrink-0 h-10 w-10 rounded-xl border flex items-center justify-center cursor-pointer disabled:opacity-40 transition-all ${
                 isListening 
-                  ? 'bg-red-500/20 border-red-500/50 text-red-400 animate-pulse' 
-                  : 'bg-white/5 hover:bg-white/10 border-white/10 text-neutral-400 hover:text-[#39FF14]'
+                  ? 'bg-red-500/20 border-red-500/50 text-red-400 animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.5)]' 
+                  : 'bg-white/5 hover:bg-white/10 border-white/10 text-neutral-400 hover:text-[#39FF14] shadow-[0_0_15px_rgba(57,255,20,0.3),0_0_30px_rgba(200,200,200,0.2)] hover:shadow-[0_0_20px_rgba(57,255,20,0.5),0_0_40px_rgba(200,200,200,0.3)]'
               }`}
               title={isListening ? "Stop listening" : "Start voice input"}
             >

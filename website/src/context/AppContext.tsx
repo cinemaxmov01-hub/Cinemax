@@ -21,6 +21,7 @@ import {
   fetchPublicSiteConfig,
   PublicSiteConfig,
 } from "../utils/siteConfig";
+import { PROVIDERS_CONFIG, buildEmbedUrl } from "../utils/streamingConfig";
 
 interface AppContextType {
   currentView: string;
@@ -93,7 +94,7 @@ interface AppContextType {
   downloads: DownloadItem[];
   downloadStorageUsed: number;
   downloadStorageLimit: number;
-  downloadMovie: (movie: Movie, mode?: "device" | "library") => Promise<{ ok: boolean; error?: string }>;
+  downloadMovie: (movie: Movie, mode?: "device" | "cinemax", season?: number, episode?: number) => Promise<{ ok: boolean; error?: string }>;
   removeDownload: (movieId: number) => Promise<{ ok: boolean; error?: string }>;
   fetchDownloads: () => Promise<void>;
   pipMovie: Movie | null;
@@ -180,7 +181,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Picture in Picture states
   const [pipMovie, setPipMovie] = useState<Movie | null>(null);
-  const [pipProviderId, setPipProviderId] = useState<string | null>("vidsrc-pm");
+  const [pipProviderId, setPipProviderId] = useState<string | null>("vidlink");
   const [pipProgress, setPipProgress] = useState<number>(0);
   const [pipSeason, setPipSeason] = useState<number>(1);
   const [pipEpisode, setPipEpisode] = useState<number>(1);
@@ -958,8 +959,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const downloadMovie = async (movie: Movie, mode: "device" | "cinemax" = "cinemax"): Promise<{ ok: boolean; error?: string }> => {
+  const downloadMovie = async (movie: Movie, mode: "device" | "cinemax" = "cinemax", season: number = 1, episode: number = 1): Promise<{ ok: boolean; error?: string }> => {
+    console.log("[downloadMovie] Starting download for:", movie.title || movie.name, "mode:", mode, "season:", season, "episode:", episode);
+    
     if (mode === "cinemax" && (!user || isGuest)) {
+      console.log("[downloadMovie] Authentication required for cinemax mode");
       requireSignInPrompt();
       return { ok: false, error: "Sign in to download." };
     }
@@ -967,47 +971,101 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const mediaType: "movie" | "tv" = movie.title ? "movie" : "tv";
 
     if (mode === "cinemax" && downloads.some((d) => d.movie_id === movie.id)) {
+      console.log("[downloadMovie] Movie already in downloads");
       return { ok: false, error: "This title is already in your Download History." };
     }
 
     const safeName = title.replace(/[^\w\s-]/g, "").trim().slice(0, 60) || "cinemax-title";
     
     if (mode === "device") {
-      // Direct video download only - no local storage, no images/JSON
-      const dlUrl = (movie as any).download_url as string | undefined | null;
+      // Try to resolve video source from embed providers for download
+      console.log("[downloadMovie] Device mode - attempting to resolve video source from embed providers");
+      
+      const API_BASE = (typeof import.meta === "object" && (import.meta as any).env?.VITE_API_BASE_URL)
+        ? String((import.meta as any).env.VITE_API_BASE_URL).replace(/\/+$/, "")
+        : "";
 
-      if (dlUrl) {
-        try {
-          await downloadRemoteFile(dlUrl, `${safeName}.mp4`);
+      try {
+        // Try to resolve direct video source from embed providers using new config
+        let videoSource: string | null = null;
+        
+        for (const provider of PROVIDERS_CONFIG) {
+          const embedUrl = buildEmbedUrl(
+            provider,
+            mediaType,
+            movie.id,
+            season, // use provided season
+            episode  // use provided episode
+          );
+
+          console.log(`[downloadMovie] Trying provider ${provider.id} with embed:`, embedUrl);
+          
+          try {
+            const res = await fetch(`${API_BASE}/api/stream/full`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ url: embedUrl }),
+            });
+
+            if (res.ok) {
+              const data = await res.json();
+              const source = data?.sourceUrl as string | undefined | null;
+              
+              if (source) {
+                console.log(`[downloadMovie] Provider ${provider.id} returned source:`, source);
+                videoSource = source;
+                break;
+              }
+            }
+          } catch (err) {
+            console.warn(`[downloadMovie] Provider ${provider.id} failed:`, err);
+          }
+        }
+
+        if (videoSource) {
+          const filename = mediaType === "tv" 
+            ? `${safeName}_S${season}E${episode}.mp4` 
+            : `${safeName}.mp4`;
+          console.log("[downloadMovie] Starting device download to:", filename);
+          await downloadRemoteFile(videoSource, filename);
           addNotification({
             type: "system",
             title: "Download complete",
-            message: `"${title}" has been downloaded to your device.`,
+            message: mediaType === "tv" 
+              ? `"${title}" (S${season}E${episode}) has been downloaded to your device.`
+              : `"${title}" has been downloaded to your device.`,
           });
+          console.log("[downloadMovie] Device download completed successfully");
           return { ok: true };
-        } catch (err: any) {
-          console.error("Device video download failed:", err);
+        } else {
+          console.log("[downloadMovie] No video source could be resolved from any provider");
           return {
             ok: false,
-            error: err?.message || "Unable to download the video file. Please try again.",
+            error: mediaType === "tv"
+              ? "Unable to download this episode. The streaming providers may not support direct downloads for this TV series content."
+              : "Unable to download this movie. The streaming providers may not support direct downloads for this content. Try using the built-in download button in the video player if available.",
           };
         }
-      } else {
+      } catch (err: any) {
+        console.error("[downloadMovie] Device video download failed:", err);
         return {
           ok: false,
-          error: "No direct download URL available for this title.",
+          error: err?.message || "Unable to download the video file. Please try again.",
         };
       }
     }
 
     // Cinemax mode - save to local IndexedDB storage
     try {
+      console.log("[downloadMovie] Cinemax mode - starting local storage download");
       const posterUrl = movie.poster_path ? getImageUrl(movie.poster_path, "w780") : "";
       const backdropUrl = movie.backdrop_path ? getImageUrl(movie.backdrop_path, "w780") : "";
+      console.log("[downloadMovie] Fetching poster and backdrop blobs");
       const [posterBlob, backdropBlob] = await Promise.all([
         posterUrl ? fetchPosterBlob(posterUrl) : Promise.resolve(null),
         backdropUrl ? fetchPosterBlob(backdropUrl) : Promise.resolve(null),
       ]);
+      console.log("[downloadMovie] Blobs fetched - poster:", posterBlob?.size, "backdrop:", backdropBlob?.size);
 
       const packageData = {
         id: movie.id,
@@ -1025,14 +1083,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       const jsonBlob = new Blob([JSON.stringify(packageData, null, 2)], { type: "application/json" });
       const sizeBytes = computeDownloadSize(jsonBlob.size, posterBlob?.size || 0, backdropBlob?.size || 0);
+      console.log("[downloadMovie] Total download size:", sizeBytes, "bytes");
 
       if (downloadStorageUsed + sizeBytes > downloadStorageLimit) {
+        console.log("[downloadMovie] Storage limit exceeded");
         return {
           ok: false,
           error: "Download storage is full (2 GB limit). Delete items from Download History to free space.",
         };
       }
 
+      console.log("[downloadMovie] Saving to local IndexedDB");
       await saveLocalDownload({
         movieId: movie.id,
         title,
@@ -1049,6 +1110,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         storageType: "cinemax",
       });
 
+      console.log("[downloadMovie] Syncing with server");
       const res = await fetch(`${API_BASE}/api/downloads`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1062,7 +1124,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }),
       });
       const data = await parseApiResponse(res);
+      console.log("[downloadMovie] Server response status:", res.status, "ok:", res.ok);
       if (!res.ok) {
+        console.error("[downloadMovie] Server sync failed:", data.error);
         await removeLocalDownload(movie.id);
         return { ok: false, error: data.error || "Download failed." };
       }

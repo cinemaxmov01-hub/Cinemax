@@ -49,7 +49,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, rank, onClick, isPr
         </div>
       )}
 
-      <div id={`poster-container-${movie.id}`} className="relative aspect-[2/3] w-full overflow-hidden bg-neutral-800">
+      <div id={`poster-container-${movie.id}`} className="relative aspect-[2/3] w-full overflow-hidden bg-neutral-800 rounded-lg sm:rounded-2xl">
         <img
           src={getImageUrl(movie.poster_path, "w500")}
           alt={titleText}
@@ -72,13 +72,13 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, rank, onClick, isPr
           <button
             id={`watchlist-toggle-${movie.id}`}
             onClick={handleWatchlistClick}
-            className={`self-end p-1.5 sm:p-2 rounded-full border transition-all duration-200 cursor-pointer ${
+            className={`self-end p-2 sm:p-2.5 rounded-full border transition-all duration-200 cursor-pointer min-w-[44px] min-h-[44px] flex items-center justify-center ${
               isWatchlisted
                 ? "logo-mark border-[#39FF14]"
                 : "surface-elevated border-neutral-700 text-neutral-300 hover:text-white"
             }`}
           >
-            {isWatchlisted ? <Check className="h-3 w-3 sm:h-4 sm:w-4 stroke-[3px]" /> : <Plus className="h-3 w-3 sm:h-4 sm:w-4" />}
+            {isWatchlisted ? <Check className="h-4 w-4 sm:h-4 sm:w-4 stroke-[3px]" /> : <Plus className="h-4 w-4 sm:h-4 sm:w-4" />}
           </button>
 
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
