@@ -617,7 +617,7 @@ export const PlayerPage: React.FC = () => {
 
   // Determine stream source based on playerMode with quality settings
   const handleIframeError = () => {
-    console.warn(`[PlayerPage] Server ${activeServerId} failed to load, switching to next server`);
+    console.error(`[PlayerPage] Server ${activeServerId} failed to load, switching to next server`);
     setIframeError(true);
     setIsLoadingVideo(false);
     
@@ -651,7 +651,7 @@ export const PlayerPage: React.FC = () => {
         console.warn(`[PlayerPage] Server ${activeServerId} timeout, switching to next server`);
         handleIframeError();
       }
-    }, 1500); // Reduced to 1.5 seconds for faster fallback and instant playback experience
+    }, 5000); // Increased to 5 seconds to allow embed providers to load
     
     return () => clearTimeout(timeout);
   }, [selectedMovie, activeServerId, currentSeason, currentEpisode, isLoadingVideo, iframeError, playerMode]);

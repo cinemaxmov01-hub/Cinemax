@@ -1039,10 +1039,10 @@ const CinemaxDashboard: React.FC = () => {
               {/* Voice Search Button */}
               <button
                 onClick={toggleSearchListening}
-                className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg transition-colors cursor-pointer ${
+                className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg transition-all cursor-pointer ${
                   isSearchListening 
-                    ? 'voice-button-active text-[#39FF14] shadow-[0_0_20px_rgba(239,68,68,0.5)]' 
-                    : 'hover:bg-white/10 text-neutral-400 hover:text-[#39FF14] shadow-[0_0_15px_rgba(57,255,20,0.3),0_0_30px_rgba(200,200,200,0.2)] hover:shadow-[0_0_20px_rgba(57,255,20,0.5),0_0_40px_rgba(200,200,200,0.3)]'
+                    ? 'text-white bg-gradient-to-br from-purple-500 via-pink-500 to-blue-500 animate-gemini-shine' 
+                    : 'hover:bg-white/10 text-neutral-400 hover:text-white'
                 }`}
                 title={isSearchListening ? "Listening..." : "Voice Search"}
               >
@@ -1092,7 +1092,7 @@ const CinemaxDashboard: React.FC = () => {
                 }`}
               >
                 <Tag className="h-3.5 w-3.5" />
-                {t("allCategories")}
+                <span>All</span>
                 <ChevronRight className={`h-3.5 w-3.5 transition-transform duration-300 ${categoriesOpen ? "rotate-90" : ""}`} />
               </button>
               {categoriesOpen && (

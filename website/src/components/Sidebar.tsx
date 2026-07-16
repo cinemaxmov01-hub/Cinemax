@@ -148,7 +148,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
       {/* Sidebar Container */}
       <aside 
         id="sidebar"
-        className={`fixed top-0 bottom-0 left-0 z-50 flex w-64 flex-col border-r border-neutral-800 surface-panel text-neutral-400 transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+        className={`fixed top-0 left-0 z-50 flex w-64 flex-col border-r border-neutral-800 surface-panel text-neutral-400 transition-transform duration-300 ease-in-out lg:translate-x-0 h-screen overflow-hidden ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >

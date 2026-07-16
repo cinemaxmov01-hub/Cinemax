@@ -22,8 +22,8 @@ export const PROVIDERS_CONFIG: StreamingProvider[] = [
     id: "vidlink",
     name: "VidLink",
     homepage: "https://vidlink.pro",
-    moviePattern: "https://vidlink.pro/{id}?primaryColor=ff0000",
-    tvPattern: "https://vidlink.pro/{id}/{season}/{episode}?primaryColor=ff0000",
+    moviePattern: "https://vidlink.pro/{id}",
+    tvPattern: "https://vidlink.pro/{id}/{season}/{episode}",
     qualityOptions: ["4K", "1080p", "720p", "480p", "360p", "Auto"],
     audioOptions: ["Original", "English", "Spanish", "French"],
     subtitlesOptions: ["Embedded", "English", "Spanish", "French", "Auto"],
@@ -35,8 +35,8 @@ export const PROVIDERS_CONFIG: StreamingProvider[] = [
     id: "vidsrc-pro",
     name: "VidSrc Pro",
     homepage: "https://vidsrc.pro",
-    moviePattern: "https://vidsrc.pro/{id}",
-    tvPattern: "https://vidsrc.pro/{id}/{season}/{episode}",
+    moviePattern: "https://vidsrc.pro/embed/movie/{id}",
+    tvPattern: "https://vidsrc.pro/embed/tv/{id}/{season}/{episode}",
     qualityOptions: ["4K", "1080p", "720p", "480p", "360p", "Auto"],
     audioOptions: ["Original", "English", "Spanish", "French"],
     subtitlesOptions: ["Embedded", "English", "Spanish", "French", "Auto"],
@@ -48,8 +48,8 @@ export const PROVIDERS_CONFIG: StreamingProvider[] = [
     id: "embed-su",
     name: "Embed.su",
     homepage: "https://embed.su",
-    moviePattern: "https://embed.su/{id}",
-    tvPattern: "https://embed.su/{id}/{season}/{episode}",
+    moviePattern: "https://embed.su/movie/{id}",
+    tvPattern: "https://embed.su/tv/{id}/{season}/{episode}",
     qualityOptions: ["4K", "1080p", "720p", "480p", "360p", "Auto"],
     audioOptions: ["Original", "English", "Spanish", "French"],
     subtitlesOptions: ["Embedded", "English", "Spanish", "French", "Auto"],
@@ -93,8 +93,13 @@ export const buildEmbedUrl = (
 /** Append autoplay hint for embed providers that support it. */
 export function embedUrlWithAutoplay(url: string): string {
   if (!url) return url;
-  // Skip autoplay check for instant playback - most providers already have autoplay enabled
-  // This reduces regex check time for faster URL construction
+  
+  // Add autoplay parameter if not already present
+  if (!url.includes('autoplay=')) {
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}autoplay=1`;
+  }
+  
   return url;
 }
 

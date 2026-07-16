@@ -224,6 +224,24 @@ body {
   transform: scale(0.98);
 }
 
+/* Gemini-like shine animation for voice search */
+@keyframes gemini-shine {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-gemini-shine {
+  background-size: 200% 200%;
+  animation: gemini-shine 3s ease infinite;
+}
+
 .logo-mark {
   background: var(--accent);
   color: #000000;
