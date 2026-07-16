@@ -914,7 +914,7 @@ const CinemaxDashboard: React.FC = () => {
               {/* Voice Search Button */}
               <button
                 onClick={toggleConversationalAI}
-                className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg transition-colors cursor-pointer lg:hidden ${
+                className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg transition-colors cursor-pointer ${
                   isConversationalAIActive 
                     ? 'voice-button-active text-[#39FF14]' 
                     : 'hover:bg-white/10 text-neutral-400 hover:text-[#39FF14]'

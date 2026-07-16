@@ -14,16 +14,16 @@ export interface StreamingProvider {
 
 /**
  * Streaming sources for the Multi-Server Movie Player.
- * Configured with automated failover: Vidsrc.to (primary), Embed.su (secondary), Smashystream (tertiary).
+ * Configured with automated failover: Vidsrc.xyz (primary), 2embed.cc (secondary), Vidlink.pro (tertiary).
  */
 export const PROVIDERS_CONFIG: StreamingProvider[] = [
   {
-    // Vidsrc.to — Primary high-speed, HD stream provider
-    id: "vidsrc-to",
+    // Vidsrc.xyz — Primary high-speed, HD stream provider
+    id: "vidsrc-xyz",
     name: "P1",
-    homepage: "https://vidsrc.to",
-    moviePattern: "https://vidsrc.to/embed/movie/{id}",
-    tvPattern: "https://vidsrc.to/embed/tv/{id}/{season}/{episode}",
+    homepage: "https://vidsrc.xyz",
+    moviePattern: "https://vidsrc.xyz/embed/movie/{id}",
+    tvPattern: "https://vidsrc.xyz/embed/tv/{id}/{season}/{episode}",
     qualityOptions: ["1080p", "720p", "Auto"],
     audioOptions: ["Original", "English"],
     subtitlesOptions: ["Embedded", "English"],
@@ -31,12 +31,12 @@ export const PROVIDERS_CONFIG: StreamingProvider[] = [
     status: "Online",
   },
   {
-    // Embed.su — Secondary high-reliability backup server cluster with built-in redundancy
-    id: "embed-su",
+    // 2embed.cc — Secondary high-reliability backup server cluster with built-in redundancy
+    id: "2embed-cc",
     name: "P2",
-    homepage: "https://embed.su",
-    moviePattern: "https://embed.su/embed/movie/{id}",
-    tvPattern: "https://embed.su/embed/tv/{id}/{season}/{episode}",
+    homepage: "https://www.2embed.cc",
+    moviePattern: "https://www.2embed.cc/embed/{id}",
+    tvPattern: "https://www.2embed.cc/embedtv/{id}&s={season}&e={episode}",
     qualityOptions: ["1080p", "720p", "Auto"],
     audioOptions: ["Original", "English"],
     subtitlesOptions: ["Embedded", "English"],
@@ -44,12 +44,12 @@ export const PROVIDERS_CONFIG: StreamingProvider[] = [
     status: "Online",
   },
   {
-    // Smashystream.xyz — Tertiary optimized mobile player with multi-language auto-subtitle injection
-    id: "smashystream",
+    // Vidlink.pro — Tertiary clean player with brand-color theming
+    id: "vidlink-pro",
     name: "P3",
-    homepage: "https://embed.smashystream.com",
-    moviePattern: "https://embed.smashystream.com/playere.php?tmdb={id}",
-    tvPattern: "https://embed.smashystream.com/playere.php?tmdb={id}&season={season}&episode={episode}",
+    homepage: "https://vidlink.pro",
+    moviePattern: "https://vidlink.pro/movie/{id}",
+    tvPattern: "https://vidlink.pro/tv/{id}/{season}/{episode}",
     qualityOptions: ["1080p", "720p", "Auto"],
     audioOptions: ["Original", "English"],
     subtitlesOptions: ["Embedded", "English"],
