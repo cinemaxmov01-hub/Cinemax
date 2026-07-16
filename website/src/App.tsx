@@ -30,7 +30,7 @@ import { LiveChat } from "./components/LiveChat";
 import { AdminDestinationModal } from "./components/AdminDestinationModal";
 import { OnboardingPreferences } from "./components/OnboardingPreferences";
 import { tmdb, getImageUrl, isTvShow, prepareForPlayback } from "./utils/tmdb";
-import { getConversationalAgent, ConversationalResponse } from "./lib/conversationalAIAgent";
+import { getConversationalAgent, ConversationalResponse, SUPPORTED_LANGUAGES } from "./lib/conversationalAIAgent";
 import {
   filterHiddenMovies,
   applyTrendingOverride,
@@ -141,6 +141,10 @@ const CinemaxDashboard: React.FC = () => {
   const [mobileSearchExpanded, setMobileSearchExpanded] = useState(false);
   const [isConversationalAIActive, setIsConversationalAIActive] = useState(false);
   const [aiResponse, setAIResponse] = useState<string | null>(null);
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('english');
+  const [showLanguageSelector, setShowLanguageSelector] = useState(false);
+  const [interimTranscript, setInterimTranscript] = useState<string>('');
+  const [showTranscriptPopup, setShowTranscriptPopup] = useState(false);
   
   // Initialize conversational AI agent
   const conversationalAgent = useRef(getConversationalAgent());
@@ -340,6 +344,16 @@ const CinemaxDashboard: React.FC = () => {
     // Set up transcript callback
     agent.onTranscript((text: string, language: string) => {
       console.log(`AI Transcript (${language}):`, text);
+      setInterimTranscript('');
+      setShowTranscriptPopup(false);
+    });
+
+    // Set up interim transcript callback for real-time display
+    agent.onInterimTranscript((text: string) => {
+      setInterimTranscript(text);
+      if (text.length > 10) { // Show popup when user speaks more than 10 characters
+        setShowTranscriptPopup(true);
+      }
     });
 
     // Set up response callback
@@ -397,8 +411,9 @@ const CinemaxDashboard: React.FC = () => {
       const success = agent.startListening();
       if (success) {
         setIsConversationalAIActive(true);
-        // Speak welcome message in English by default
-        agent.speak("Welcome to Cinemax. I am your AI voice assistant. How can I help you today?", "en");
+        // Speak welcome message in selected language
+        const langCode = SUPPORTED_LANGUAGES[selectedLanguage as keyof typeof SUPPORTED_LANGUAGES]?.code || 'en';
+        agent.speak("Welcome to Cinemax. I am your AI voice assistant. How can I help you today?", langCode);
       } else {
         alert('Voice assistant is not supported in your browser. Please use Chrome or Edge.');
       }
@@ -923,12 +938,58 @@ const CinemaxDashboard: React.FC = () => {
               >
                 <Mic className="h-4 w-4" />
               </button>
+              
+              {/* Language Selector Button */}
+              <button
+                onClick={() => setShowLanguageSelector(!showLanguageSelector)}
+                className="absolute right-10 top-1/2 -translate-y-1/2 p-1 rounded-lg transition-colors cursor-pointer hover:bg-white/10 text-neutral-400 hover:text-[#39FF14]"
+                title="Select Language"
+              >
+                <Globe className="h-4 w-4" />
+              </button>
+              
+              {/* Language Selector Dropdown */}
+              {showLanguageSelector && (
+                <div className="absolute right-0 top-full mt-2 w-48 bg-[#0a0a0a] border border-white/10 rounded-xl shadow-2xl z-50 max-h-80 overflow-y-auto">
+                  <div className="p-2">
+                    {Object.entries(SUPPORTED_LANGUAGES).map(([key, lang]) => (
+                      <button
+                        key={key}
+                        onClick={() => {
+                          setSelectedLanguage(key);
+                          setShowLanguageSelector(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-colors ${
+                          selectedLanguage === key
+                            ? 'bg-[#39FF14]/20 text-[#39FF14]'
+                            : 'text-neutral-300 hover:bg-white/5'
+                        }`}
+                      >
+                        {lang.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* AI Response Display */}
             {aiResponse && (
               <div className="mt-2 px-3 py-2 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/30 text-xs text-[#39FF14] animate-pulse">
                 <span className="font-semibold">AI:</span> {aiResponse}
+              </div>
+            )}
+
+            {/* Real-time Transcript Popup */}
+            {showTranscriptPopup && interimTranscript && (
+              <div className="fixed bottom-4 right-4 w-64 bg-[#0a0a0a]/95 backdrop-blur-sm border border-white/10 rounded-xl shadow-2xl z-50 p-3 animate-in fade-in slide-in-from-bottom-4">
+                <div className="flex items-start gap-2">
+                  <div className="w-2 h-2 rounded-full bg-[#39FF14] animate-pulse mt-1.5" />
+                  <div className="flex-1">
+                    <p className="text-xs text-neutral-400 mb-1">Speaking...</p>
+                    <p className="text-sm text-white leading-relaxed">{interimTranscript}</p>
+                  </div>
+                </div>
               </div>
             )}
 

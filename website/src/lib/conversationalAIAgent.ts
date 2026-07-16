@@ -9,6 +9,8 @@ export interface ConversationContext {
   lastResults: any[];
   conversationHistory: Array<{ role: 'user' | 'assistant'; content: string; timestamp: number }>;
   currentTopic: string | null;
+  isStorytelling: boolean;
+  storyContext: string | null;
 }
 
 export interface LanguageDetectionResult {
@@ -26,17 +28,44 @@ export interface ConversationalResponse {
 }
 
 /**
- * Supported languages with their ISO codes and TTS voices
+ * Supported languages with their ISO codes and TTS voices - Expanded to 25+ languages
  */
 export const SUPPORTED_LANGUAGES = {
   kinyarwanda: { code: 'rw', name: 'Kinyarwanda', ttsVoice: 'rw-RW' },
   english: { code: 'en', name: 'English', ttsVoice: 'en-US' },
   french: { code: 'fr', name: 'French', ttsVoice: 'fr-FR' },
   spanish: { code: 'es', name: 'Spanish', ttsVoice: 'es-ES' },
+  german: { code: 'de', name: 'German', ttsVoice: 'de-DE' },
+  italian: { code: 'it', name: 'Italian', ttsVoice: 'it-IT' },
+  portuguese: { code: 'pt', name: 'Portuguese', ttsVoice: 'pt-PT' },
+  russian: { code: 'ru', name: 'Russian', ttsVoice: 'ru-RU' },
+  japanese: { code: 'ja', name: 'Japanese', ttsVoice: 'ja-JP' },
+  korean: { code: 'ko', name: 'Korean', ttsVoice: 'ko-KR' },
+  chinese: { code: 'zh', name: 'Chinese', ttsVoice: 'zh-CN' },
+  arabic: { code: 'ar', name: 'Arabic', ttsVoice: 'ar-SA' },
+  hindi: { code: 'hi', name: 'Hindi', ttsVoice: 'hi-IN' },
+  dutch: { code: 'nl', name: 'Dutch', ttsVoice: 'nl-NL' },
+  polish: { code: 'pl', name: 'Polish', ttsVoice: 'pl-PL' },
+  turkish: { code: 'tr', name: 'Turkish', ttsVoice: 'tr-TR' },
+  vietnamese: { code: 'vi', name: 'Vietnamese', ttsVoice: 'vi-VN' },
+  thai: { code: 'th', name: 'Thai', ttsVoice: 'th-TH' },
+  swedish: { code: 'sv', name: 'Swedish', ttsVoice: 'sv-SE' },
+  norwegian: { code: 'no', name: 'Norwegian', ttsVoice: 'no-NO' },
+  danish: { code: 'da', name: 'Danish', ttsVoice: 'da-DK' },
+  finnish: { code: 'fi', name: 'Finnish', ttsVoice: 'fi-FI' },
+  greek: { code: 'el', name: 'Greek', ttsVoice: 'el-GR' },
+  hebrew: { code: 'he', name: 'Hebrew', ttsVoice: 'he-IL' },
+  ukrainian: { code: 'uk', name: 'Ukrainian', ttsVoice: 'uk-UA' },
+  czech: { code: 'cs', name: 'Czech', ttsVoice: 'cs-CZ' },
+  romanian: { code: 'ro', name: 'Romanian', ttsVoice: 'ro-RO' },
+  hungarian: { code: 'hu', name: 'Hungarian', ttsVoice: 'hu-HU' },
+  indonesian: { code: 'id', name: 'Indonesian', ttsVoice: 'id-ID' },
+  malay: { code: 'ms', name: 'Malay', ttsVoice: 'ms-MY' },
+  bengali: { code: 'bn', name: 'Bengali', ttsVoice: 'bn-BD' },
 } as const;
 
 /**
- * Language detection patterns for common phrases
+ * Language detection patterns for common phrases - Expanded for 30+ languages
  */
 const LANGUAGE_PATTERNS = {
   kinyarwanda: [
@@ -55,10 +84,118 @@ const LANGUAGE_PATTERNS = {
     /\b(hola|gracias|por favor|busca|encuentra|reproduce)\b/i,
     /\b(el|la|los|las|un|una|es|son|era)\b/i,
   ],
+  german: [
+    /\b(hallo|danke|bitte|suche|finde|spiele)\b/i,
+    /\b(der|die|das|ein|eine|ist|sind|war)\b/i,
+  ],
+  italian: [
+    /\b(ciao|grazie|per favore|cerca|trova|gioca)\b/i,
+    /\b(il|la|lo|un|una|è|sono|era)\b/i,
+  ],
+  portuguese: [
+    /\b(olá|obrigado|por favor|procure|encontre|reproduza)\b/i,
+    /\b(o|a|os|as|um|uma|é|são|era)\b/i,
+  ],
+  russian: [
+    /\b(привет|спасибо|пожалуйста|поиск|найди|воспроизведи)\b/i,
+    /\b(это|это|в|на|и|или)\b/i,
+  ],
+  japanese: [
+    /\b(こんにちは|ありがとう|お願いします|検索|見つけて|再生)\b/i,
+    /\b(は|が|を|に|の|です)\b/i,
+  ],
+  korean: [
+    /\b(안녕하세요|감사합니다|부탁합니다|검색|찾아|재생)\b/i,
+    /\b(이|가|을|를|에|의|입니다)\b/i,
+  ],
+  chinese: [
+    /\b(你好|谢谢|请|搜索|找|播放)\b/i,
+    /\b(的|了|是|在|和|或)\b/i,
+  ],
+  arabic: [
+    /\b(مرحبا|شكرا|من فضلك|بحث|جد|تشغيل)\b/i,
+    /\b(في|على|من|إلى|و|أو)\b/i,
+  ],
+  hindi: [
+    /\b(नमस्ते|धन्यवाद|कृपया|खोजें|खोजें|चलाएं)\b/i,
+    /\b(का|की|के|में|पर|और)\b/i,
+  ],
+  dutch: [
+    /\b(hallo|dank je|alsjeblieft|zoek|vind|speel)\b/i,
+    /\b(de|het|een|is|zijn|was)\b/i,
+  ],
+  polish: [
+    /\b(cześć|dziękuję|proszę|szukaj|znajdź|odtwórz)\b/i,
+    /\b(ten|ta|to|jest|są|był)\b/i,
+  ],
+  turkish: [
+    /\b(merhaba|teşekkürler|lütfen|ara|bul|oynat)\b/i,
+    /\b(bu|bu|bir|var|vardı|ve)\b/i,
+  ],
+  vietnamese: [
+    /\b(xin chào|cảm ơn|làm ơn|tìm kiếm|tìm|phát)\b/i,
+    /\b(của|là|ở|và|hoặc)\b/i,
+  ],
+  thai: [
+    /\b(สวัสดี|ขอบคุณ|กรุณา|ค้นหา|หา|เล่น)\b/i,
+    /\b(ของ|เป็น|ที่|และ|หรือ)\b/i,
+  ],
+  swedish: [
+    /\b(hej|tack|vänligen|sök|hitta|spela)\b/i,
+    /\b(det|det|en|är|var|och)\b/i,
+  ],
+  norwegian: [
+    /\b(hei|takk|vennligst|søk|finn|spill)\b/i,
+    /\b(det|det|en|er|var|og)\b/i,
+  ],
+  danish: [
+    /\b(hej|tak|venligst|søg|find|afspil)\b/i,
+    /\b(det|det|en|er|var|og)\b/i,
+  ],
+  finnish: [
+    /\b(hei|kiitos|ole hyvä|etsi|löydä|toista)\b/i,
+    /\b(se|on|oli|ja|tai)\b/i,
+  ],
+  greek: [
+    /\b(γεια|ευχαριστώ|παρακαλώ|αναζήτηση|βρες|παίξε)\b/i,
+    /\b(το|το|ένας|είναι|ήταν|και)\b/i,
+  ],
+  hebrew: [
+    /\b(שלום|תודה|בבקשה|חפש|מצא|נגן)\b/i,
+    /\b(של|ב|על|ואו)\b/i,
+  ],
+  ukrainian: [
+    /\b(привіт|дякую|будь ласка|пошук|знайди|відтворити)\b/i,
+    /\b(це|в|на|і|або)\b/i,
+  ],
+  czech: [
+    /\b(ahoj|děkuji|prosím|hledej|najdi|přehrát)\b/i,
+    /\b(ten|to|je|byl|a|nebo)\b/i,
+  ],
+  romanian: [
+    /\b(salut|mulțumesc|te rog|caută|găsește|redă)\b/i,
+    /\b(acel|acea|este|era|și|sau)\b/i,
+  ],
+  hungarian: [
+    /\b(szia|köszönöm|kérem|keress|találd|lejátsz)\b/i,
+    /\b(az|az|egy|van|volt|és)\b/i,
+  ],
+  indonesian: [
+    /\b(halo|terima kasih|tolong|cari|temukan|putar)\b/i,
+    /\b(itu|itu|sebuah|adalah|adalah|dan)\b/i,
+  ],
+  malay: [
+    /\b(halo|terima kasih|sila|cari|cari|main)\b/i,
+    /\b(itu|itu|sebuah|adalah|adalah|dan)\b/i,
+  ],
+  bengali: [
+    /\b(হ্যালো|ধন্যবাদ|অনুগ্রহ করে|অনুসন্ধান|খুঁজুন|চালান)\b/i,
+    /\b(এর|একটি|হয়|ছিল|এবং)\b/i,
+  ],
 };
 
 /**
- * Conversational responses for different scenarios
+ * Conversational responses for different scenarios - Expanded for 30+ languages
  */
 const CONVERSATIONAL_RESPONSES = {
   kinyarwanda: {
@@ -93,6 +230,222 @@ const CONVERSATIONAL_RESPONSES = {
     notFound: "No pude encontrar lo que buscas. ¿Quieres que busque algo más?",
     error: "Hubo un error. Por favor inténtalo de nuevo.",
   },
+  german: {
+    welcome: "Willkommen bei Cinemax. Ich bin Ihr KI-Sprachassistent. Ich kann Ihnen helfen, Filme, TV-Serien zu finden oder den Inhalt zu erklären. Was soll ich für Sie suchen?",
+    unknown: "Ich erkenne, dass Sie Deutsch sprechen, aber ich habe noch keine Daten zu diesem Thema. Lassen Sie mich etwas Ähnliches für Sie finden.",
+    searching: "Ich suche...",
+    found: "Ich habe mehrere Ergebnisse gefunden. Hier sind sie:",
+    notFound: "Ich konnte nicht finden, was Sie suchen. Soll ich nach etwas anderem suchen?",
+    error: "Es gab einen Fehler. Bitte versuchen Sie es erneut.",
+  },
+  italian: {
+    welcome: "Benvenuto su Cinemax. Sono il tuo assistente vocale AI. Posso aiutarti a trovare film, serie TV o spiegare il contenuto. Cosa vorresti che cerchi?",
+    unknown: "Riconosco che stai parlando italiano, ma non ho ancora dati su questo argomento. Lasciami trovare qualcosa di simile per te.",
+    searching: "Sto cercando...",
+    found: "Ho trovato diversi risultati. Eccoli qui:",
+    notFound: "Non ho trovato quello che cerchi. Vuoi che cerchi qualcos'altro?",
+    error: "C'è stato un errore. Per favore riprova.",
+  },
+  portuguese: {
+    welcome: "Bem-vindo ao Cinemax. Sou seu assistente de voz AI. Posso ajudá-lo a encontrar filmes, séries de TV ou explicar o conteúdo. O que você gostaria que eu pesquisasse?",
+    unknown: "Reconheço que você está falando português, mas ainda não tenho dados sobre esse tópico. Deixe-me encontrar algo semelhante para você.",
+    searching: "Estou pesquisando...",
+    found: "Encontrei vários resultados. Aqui estão eles:",
+    notFound: "Não consegui encontrar o que você está procurando. Gostaria que eu pesquisasse algo mais?",
+    error: "Houve um erro. Por favor, tente novamente.",
+  },
+  russian: {
+    welcome: "Добро пожаловать в Cinemax. Я ваш голосовой ИИ-ассистент. Я могу помочь вам найти фильмы, телешоу или объяснить содержание. Что вы хотите, чтобы я искал?",
+    unknown: "Я узнаю, что вы говорите по-русски, но у меня еще нет данных по этой теме. Позвольте мне найти что-то похожее для вас.",
+    searching: "Я ищу...",
+    found: "Я нашел несколько результатов. Вот они:",
+    notFound: "Я не смог найти то, что вы ищете. Хотите, чтобы я искал что-то еще?",
+    error: "Произошла ошибка. Пожалуйста, попробуйте снова.",
+  },
+  japanese: {
+    welcome: "Cinemaxへようこそ。私はAI音声アシスタントです。映画、TV番組を見つけたり、コンテンツを説明したりできます。何を検索すればよいですか？",
+    unknown: "日本語を話していることがわかりますが、このトピックについてはまだデータがありません。似たようなものを見つけてみましょう。",
+    searching: "検索中...",
+    found: "複数の結果が見つかりました。こちらです:",
+    notFound: "お探しのものが見つかりませんでした。他に何か検索しましょうか？",
+    error: "エラーが発生しました。もう一度お試しください。",
+  },
+  korean: {
+    welcome: "Cinemax에 오신 것을 환영합니다. 저는 AI 음성 어시스턴트입니다. 영화, TV 프로그램을 찾거나 콘텐츠를 설명할 수 있습니다. 무엇을 검색하시겠습니까?",
+    unknown: "한국어를 사용하고 계신 것으로 인식되지만, 이 주제에 대한 데이터가 아직 없습니다. 비슷한 것을 찾아보겠습니다.",
+    searching: "검색 중...",
+    found: "여러 결과를 찾았습니다. 여기 있습니다:",
+    notFound: "찾으시는 것을 찾을 수 없었습니다. 다른 것을 검색하시겠습니까?",
+    error: "오류가 발생했습니다. 다시 시도해 주세요.",
+  },
+  chinese: {
+    welcome: "欢迎来到Cinemax。我是您的AI语音助手。我可以帮您找电影、电视节目或解释内容。您想让我搜索什么？",
+    unknown: "我识别出您在说中文，但我还没有关于这个主题的数据。让我为您找一些类似的内容。",
+    searching: "正在搜索...",
+    found: "我找到了几个结果。在这里:",
+    notFound: "我找不到您要找的内容。您想让我搜索其他内容吗？",
+    error: "出现错误。请再试一次。",
+  },
+  arabic: {
+    welcome: "مرحباً بك في Cinemax. أنا مساعدك الصوتي بالذكاء الاصطناعي. يمكنني مساعدتك في العثور على الأفلام أو البرامج التلفزيونية أو شرح المحتوى. ماذا تريد مني أن أبحث؟",
+    unknown: "أدرك أنك تتحدث العربية، لكن ليس لدي بيانات حول هذا الموضوع بعد. دعني أجد شيئًا مشابهًا لك.",
+    searching: "أنا أبحث...",
+    found: "وجدت عدة نتائج. إليك:",
+    notFound: "لم أتمكن من العثور على ما تبحث عنه. هل تريد مني البحث عن شيء آخر؟",
+    error: "حدث خطأ. يرجى المحاولة مرة أخرى.",
+  },
+  hindi: {
+    welcome: "Cinemax में आपका स्वागत है। मैं आपका AI वॉइस असिस्टेंट हूं। मैं आपको फिल्में, टीवी शो खोजने या सामग्री की व्याख्या करने में मदद कर सकता हूं। आप चाहेंगे कि मैं क्या खोजूं?",
+    unknown: "मैं पहचानता हूं कि आप हिंदी बोल रहे हैं, लेकिन मेरे पास इस विषय पर अभी तक डेटा नहीं है। आइए आपके लिए कुछ समान खोजें।",
+    searching: "मैं खोज रहा हूं...",
+    found: "मुझे कई परिणाम मिले। यहाँ हैं:",
+    notFound: "मैं वह नहीं ढूंढ पाया जो आप ढूंढ रहे हैं। क्या आप चाहेंगे कि मैं कुछ और खोजूं?",
+    error: "एक त्रुटि हुई। कृपया पुनः प्रयास करें।",
+  },
+  dutch: {
+    welcome: "Welkom bij Cinemax. Ik ben uw AI-spraakassistent. Ik kan u helpen bij het vinden van films, tv-programma's of het uitleggen van de inhoud. Wat wilt u dat ik zoek?",
+    unknown: "Ik herken dat u Nederlands spreekt, maar ik heb nog geen gegevens over dit onderwerp. Laat mij iets soortgelijks voor u vinden.",
+    searching: "Ik ben aan het zoeken...",
+    found: "Ik heb meerdere resultaten gevonden. Hier zijn ze:",
+    notFound: "Ik kon niet vinden wat u zocht. Wilt u dat ik naar iets anders zoek?",
+    error: "Er is een fout opgetreden. Probeer het opnieuw.",
+  },
+  polish: {
+    welcome: "Witamy w Cinemax. Jestem Twoim asystentem głosowym AI. Mogę pomóc Ci znaleźć filmy, programy telewizyjne lub wyjaśnić treść. Co mam dla Ciebie wyszukać?",
+    unknown: "Rozpoznaję, że mówisz po polsku, ale nie mam jeszcze danych na ten temat. Pozwól mi znaleźć coś podobnego dla Ciebie.",
+    searching: "Wyszukuję...",
+    found: "Znalazłem kilka wyników. Oto one:",
+    notFound: "Nie mogłem znaleźć tego, czego szukasz. Czy chcesz, abym wyszukał coś innego?",
+    error: "Wystąpił błąd. Spróbuj ponownie.",
+  },
+  turkish: {
+    welcome: "Cinemax'a hoş geldiniz. Ben AI sesli asistanınızım. Filmleri, TV programlarını bulmanıza veya içeriği açıklamanıza yardımcı olabilirim. Ne aramamı istersiniz?",
+    unknown: "Türkçe konuştuğunuzu tanıyorum, ancak bu konuda henüz verim yok. Sizin için benzer bir şey bulayım.",
+    searching: "Arıyorum...",
+    found: "Birkaç sonuç buldum. İşte burada:",
+    notFound: "Aradığınızı bulamadım. Başka bir şey aramamı ister misiniz?",
+    error: "Bir hata oluştu. Lütfen tekrar deneyin.",
+  },
+  vietnamese: {
+    welcome: "Chào mừng đến với Cinemax. Tôi là trợ lý giọng nói AI của bạn. Tôi có thể giúp bạn tìm phim, chương trình TV hoặc giải thích nội dung. Bạn muốn tôi tìm kiếm gì?",
+    unknown: "Tôi nhận ra bạn đang nói tiếng Việt, nhưng tôi chưa có dữ liệu về chủ đề này. Để tôi tìm một cái gì đó tương tự cho bạn.",
+    searching: "Tôi đang tìm kiếm...",
+    found: "Tôi đã tìm thấy một số kết quả. Đây là chúng:",
+    notFound: "Tôi không thể tìm thấy những gì bạn đang tìm kiếm. Bạn có muốn tôi tìm kiếm cái gì khác không?",
+    error: "Đã xảy ra lỗi. Vui lòng thử lại.",
+  },
+  thai: {
+    welcome: "ยินดีต้อนรับสู่ Cinemax ฉันเป็นผู้ช่วยเสียง AI ของคุณ ฉันสามารถช่วยคุณค้นหาภาพยนตร์ รายการทีวี หรืออธิบายเนื้อหาได้ คุณต้องการให้ฉันค้นหาอะไร?",
+    unknown: "ฉันรู้ว่าคุณพูดภาษาไทย แต่ฉันยังไม่มีข้อมูลเกี่ยวกับหัวข้อนี้ ให้ฉันค้นหาสิ่งที่คล้ายกันสำหรับคุณ",
+    searching: "ฉันกำลังค้นหา...",
+    found: "ฉันพบผลลัพธ์หลายรายการ นี่คือพวกมัน:",
+    notFound: "ฉันไม่พบสิ่งที่คุณกำลังมองหา คุณต้องการให้ฉันค้นหาสิ่งอื่นหรือไม่?",
+    error: "เกิดข้อผิดพลาด โปรดลองอีกครั้ง",
+  },
+  swedish: {
+    welcome: "Välkommen till Cinemax. Jag är din AI-röstassistent. Jag kan hjälpa dig att hitta filmer, TV-program eller förklara innehållet. Vad vill du att jag söker efter?",
+    unknown: "Jag känner igen att du talar svenska, men jag har inga data om detta ämne än. Låt mig hitta något liknande för dig.",
+    searching: "Jag söker...",
+    found: "Jag hittade flera resultat. Här är de:",
+    notFound: "Jag kunde inte hitta det du letar efter. Vill du att jag söker efter något annat?",
+    error: "Det uppstod ett fel. Försök igen.",
+  },
+  norwegian: {
+    welcome: "Velkommen til Cinemax. Jeg er din AI-stemmeassistent. Jeg kan hjelpe deg med å finne filmer, TV-programmer eller forklare innholdet. Hva vil du at jeg skal søke etter?",
+    unknown: "Jeg kjenner igjen at du snakker norsk, men jeg har ingen data om dette emnet ennå. La meg finne noe lignende for deg.",
+    searching: "Jeg søker...",
+    found: "Jeg fant flere resultater. Her er de:",
+    notFound: "Jeg kunne ikke finne det du lette etter. Vil du at jeg skal søke etter noe annet?",
+    error: "Det oppstod en feil. Prøv igjen.",
+  },
+  danish: {
+    welcome: "Velkommen til Cinemax. Jeg er din AI-stemmeassistent. Jeg kan hjælpe dig med at finde film, TV-programmer eller forklare indholdet. Hvad vil du have, at jeg søger efter?",
+    unknown: "Jeg genkender, at du taler dansk, men jeg har ingen data om dette emne endnu. Lad mig finde noget lignende for dig.",
+    searching: "Jeg søger...",
+    found: "Jeg fandt flere resultater. Her er de:",
+    notFound: "Jeg kunne ikke finde det, du ledte efter. Vil du have, at jeg søger efter noget andet?",
+    error: "Der opstod en fejl. Prøv igen.",
+  },
+  finnish: {
+    welcome: "Tervetuloa Cinemaxiin. Olen tekoälyääniasiavustajasi. Voin auttaa sinua löytämään elokuvia, TV-ohjelmia tai selittämään sisältöä. Mitä haluat minun etsivän?",
+    unknown: "Tunnistan, että puhut suomea, mutta minulla ei ole vielä tietoja tästä aiheesta. Anna minun löytää sinulle jotain vastaavaa.",
+    searching: "Etsin...",
+    found: "Löysin useita tuloksia. Tässä ne ovat:",
+    notFound: "En löytänyt etsimääsi. Haluatko, että etsin jotain muuta?",
+    error: "Tapahtui virhe. Yritä uudelleen.",
+  },
+  greek: {
+    welcome: "Καλώς ήρθατε στο Cinemax. Είμαι ο βοηθός φωνής AI σας. Μπορώ να σας βοηθήσω να βρείτε ταινίες, τηλεσπαιχνίδια ή να εξηγήσω το περιεχόμενο. Τι θέλετε να αναζητήσω;",
+    unknown: "Αναγνωρίζω ότι μιλάτε ελληνικά, αλλά δεν έχω ακόμη δεδομένα για αυτό το θέμα. Αφήστε με να βρω κάτι παρόμοιο για εσάς.",
+    searching: "Αναζητώ...",
+    found: "Βρήκα πολλά αποτελέσματα. Εδώ είναι:",
+    notFound: "Δεν μπόρεσα να βρω αυτό που ψάχνετε. Θέλετε να αναζητήσω κάτι άλλο;",
+    error: "Παρουσιάστηκε σφάλμα. Παρακαλώ προσπαθήστε ξανά.",
+  },
+  hebrew: {
+    welcome: "ברוכים הבאים ל-Cinemax. אני העוזר הקולי שלך בבינה מלאכותית. אני יכול לעזור לך למצוא סרטים, תוכניות טלוויזיה או להסביר את התוכן. מה תרצה שאחפש?",
+    unknown: "אני מזהה שאתה מדבר עברית, אבל אין לי עדיין נתונים על נושא זה. תן לי למצוא משהו דומה עבורך.",
+    searching: "אני מחפש...",
+    found: "מצאתי מספר תוצאות. הנה הן:",
+    notFound: "לא הצלחתי למצוא את מה שאתה מחפש. אתה רוצה שאחפש משהו אחר?",
+    error: "אירעה שגיאה. אנא נסה שוב.",
+  },
+  ukrainian: {
+    welcome: "Ласкаво просимо до Cinemax. Я ваш голосовий AI-асистент. Я можу допомогти вам знайти фільми, телешоу або пояснити зміст. Що ви хочете, щоб я шукав?",
+    unknown: "Я розпізнаю, що ви говорите українською, але у мене ще немає даних з цієї теми. Дозвольте мені знайти щось подібне для вас.",
+    searching: "Я шукаю...",
+    found: "Я знайшов кілька результатів. Ось вони:",
+    notFound: "Я не зміг знайти те, що ви шукаєте. Хочете, щоб я шукав щось інше?",
+    error: "Сталася помилка. Будь ласка, спробуйте ще раз.",
+  },
+  czech: {
+    welcome: "Vítejte v Cinemaxu. Jsem váš AI hlasový asistent. Mohu vám pomoci najít filmy, TV pořady nebo vysvětlit obsah. Co chcete, abych hledal?",
+    unknown: "Rozpoznávám, že mluvíte česky, ale ještě nemám data o tomto tématu. Nechte mě najít něco podobného pro vás.",
+    searching: "Hledám...",
+    found: "Našel jsem několik výsledků. Zde jsou:",
+    notFound: "Nepodařilo se mi najít to, co hledáte. Chcete, abych hledal něco jiného?",
+    error: "Došlo k chybě. Zkuste to prosím znovu.",
+  },
+  romanian: {
+    welcome: "Bine ați venit la Cinemax. Sunt asistentul tău vocal AI. Te pot ajuta să găsești filme, emisiuni TV sau să explic conținutul. Ce dorești să caut?",
+    unknown: "Recunosc că vorbești românește, dar nu am încă date despre acest subiect. Lasă-mă să găsesc ceva similar pentru tine.",
+    searching: "Caut...",
+    found: "Am găsit mai multe rezultate. Iată-le:",
+    notFound: "Nu am reușit să găsesc ceea ce cauți. Dorești să caut altceva?",
+    error: "A apărut o eroare. Vă rugăm să încercați din nou.",
+  },
+  hungarian: {
+    welcome: "Üdvözöljük a Cinemaxban. Én az AI hangasszisztens vagyok. Segíthetek filmeket, TV műsorokat találni vagy tartalmat magyarázni. Mit szeretne, hogy keressek?",
+    unknown: "Felismerem, hogy magyarul beszél, de még nincsenek adataim erről a témáról. Hadd találjak hasonlót az Ön számára.",
+    searching: "Keresek...",
+    found: "Több találatot találtam. Itt vannak:",
+    notFound: "Nem találtam meg, amit keres. Szeretné, hogy mást keressek?",
+    error: "Hiba történt. Kérem, próbálja újra.",
+  },
+  indonesian: {
+    welcome: "Selamat datang di Cinemax. Saya adalah asisten suara AI Anda. Saya dapat membantu Anda menemukan film, acara TV, atau menjelaskan konten. Apa yang ingin saya cari?",
+    unknown: "Saya mengenali bahwa Anda berbicara bahasa Indonesia, tetapi saya belum memiliki data tentang topik ini. Biarkan saya menemukan sesuatu yang serupa untuk Anda.",
+    searching: "Saya sedang mencari...",
+    found: "Saya menemukan beberapa hasil. Inilah mereka:",
+    notFound: "Saya tidak dapat menemukan yang Anda cari. Apakah Anda ingin saya mencari yang lain?",
+    error: "Terjadi kesalahan. Silakan coba lagi.",
+  },
+  malay: {
+    welcome: "Selamat datang ke Cinemax. Saya adalah pembantu suara AI anda. Saya boleh membantu anda mencari filem, rancangan TV atau menerangkan kandungan. Apa yang anda mahu saya cari?",
+    unknown: "Saya mengesan bahawa anda bercakap bahasa Melayu, tetapi saya belum mempunyai data tentang topik ini. Biarkan saya mencari sesuatu yang serupa untuk anda.",
+    searching: "Saya sedang mencari...",
+    found: "Saya menemui beberapa keputusan. Inilah mereka:",
+    notFound: "Saya tidak dapat menemui apa yang anda cari. Adakah anda mahu saya mencari yang lain?",
+    error: "Berlaku ralat. Sila cuba lagi.",
+  },
+  bengali: {
+    welcome: "Cinemax-এ স্বাগতম. আমি আপনার AI ভয়েস অ্যাসিস্ট্যান্ট। আমি আপনাকে সিনেমা, টিভি শো খুঁজে পেতে বা বিষয়বস্তু ব্যাখ্যা করতে সাহায্য করতে পারি। আপনি কী খুঁজতে চান?",
+    unknown: "আমি বুঝতে পারছি আপনি বাংলায় কথা বলছেন, কিন্তু এই বিষয়ে আমার কাছে এখনও কোনো তথ্য নেই। আমাকে আপনার জন্য কিছু অনুরূপ খুঁজে বের করতে দিন।",
+    searching: "আমি খুঁজছি...",
+    found: "আমি বেশ কয়েকটি ফলাফল পেয়েছি। এগুলি এখানে:",
+    notFound: "আমি আপনি যা খুঁজছেন তা খুঁজে পাইনি। আপনি কি চান আমি অন্য কিছু খুঁজি?",
+    error: "একটি ত্রুটি হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।",
+  },
 };
 
 /**
@@ -103,6 +456,7 @@ export class ConversationalAIAgent {
   private recognition: any = null;
   private isListening: boolean = false;
   private onTranscriptCallback?: (text: string, language: string) => void;
+  private onInterimTranscriptCallback?: (text: string) => void;
   private onResponseCallback?: (response: ConversationalResponse) => void;
 
   constructor() {
@@ -112,6 +466,8 @@ export class ConversationalAIAgent {
       lastResults: [],
       conversationHistory: [],
       currentTopic: null,
+      isStorytelling: false,
+      storyContext: null,
     };
   }
 
@@ -173,6 +529,11 @@ export class ConversationalAIAgent {
         }
       }
 
+      // Call interim transcript callback for real-time display
+      if (interimTranscript && this.onInterimTranscriptCallback) {
+        this.onInterimTranscriptCallback(interimTranscript);
+      }
+
       if (finalTranscript) {
         const detection = this.detectLanguage(finalTranscript);
         this.context.language = detection.language;
@@ -208,52 +569,85 @@ export class ConversationalAIAgent {
   }
 
   /**
-   * Process user input and generate conversational response
+   * Process user input and generate conversational response with natural human-like interaction
    */
   private processUserInput(input: string, language: string): ConversationalResponse {
     const responses = CONVERSATIONAL_RESPONSES[language as keyof typeof CONVERSATIONAL_RESPONSES] || CONVERSATIONAL_RESPONSES.english;
     
-    // Analyze intent
+    // Analyze intent with more natural language understanding
     const lowerInput = input.toLowerCase();
     let response: ConversationalResponse;
-
-    if (lowerInput.includes('search') || lowerInput.includes('find') || lowerInput.includes('look for') ||
-        lowerInput.includes('gushakisha') || lowerInput.includes('shakisha') ||
-        lowerInput.includes('recherche') || lowerInput.includes('trouve') ||
-        lowerInput.includes('busca') || lowerInput.includes('encuentra')) {
+    
+    // Check for storytelling requests
+    if (lowerInput.includes('tell me') || lowerInput.includes('story') || lowerInput.includes('about') ||
+        lowerInput.includes('tell me a story') || lowerInput.includes('what\'s the story')) {
+      this.context.isStorytelling = true;
+      this.context.storyContext = input;
       
       response = {
-        text: responses.searching,
-        language,
-        shouldSearch: true,
-        searchQuery: input,
-        action: 'search',
-      };
-    } else if (lowerInput.includes('play') || lowerInput.includes('watch') ||
-               lowerInput.includes('reproduce') || lowerInput.includes('joue')) {
-      
-      response = {
-        text: responses.searching,
-        language,
-        shouldSearch: true,
-        searchQuery: input,
-        action: 'play',
-      };
-    } else if (lowerInput.includes('explain') || lowerInput.includes('what is') ||
-               lowerInput.includes('explain') || lowerInput.includes('qu\'est-ce que') ||
-               lowerInput.includes('explica') || lowerInput.includes('qué es')) {
-      
-      response = {
-        text: responses.searching,
+        text: this.generateStorytellingResponse(input, language),
         language,
         shouldSearch: true,
         searchQuery: input,
         action: 'explain',
       };
-    } else {
-      // Default to search
+    }
+    // Check for search intent with natural language
+    else if (lowerInput.includes('search') || lowerInput.includes('find') || lowerInput.includes('look for') ||
+        lowerInput.includes('gushakisha') || lowerInput.includes('shakisha') ||
+        lowerInput.includes('recherche') || lowerInput.includes('trouve') ||
+        lowerInput.includes('busca') || lowerInput.includes('encuentra') ||
+        lowerInput.includes('i want to watch') || lowerInput.includes('show me')) {
+      
       response = {
-        text: responses.searching,
+        text: this.generateNaturalResponse(input, 'search', language),
+        language,
+        shouldSearch: true,
+        searchQuery: input,
+        action: 'search',
+      };
+    } 
+    // Check for play intent
+    else if (lowerInput.includes('play') || lowerInput.includes('watch') ||
+               lowerInput.includes('reproduce') || lowerInput.includes('joue') ||
+               lowerInput.includes('let\'s watch') || lowerInput.includes('i\'d like to see')) {
+      
+      response = {
+        text: this.generateNaturalResponse(input, 'play', language),
+        language,
+        shouldSearch: true,
+        searchQuery: input,
+        action: 'play',
+      };
+    } 
+    // Check for explanation intent
+    else if (lowerInput.includes('explain') || lowerInput.includes('what is') ||
+               lowerInput.includes('tell me about') || lowerInput.includes('qu\'est-ce que') ||
+               lowerInput.includes('explica') || lowerInput.includes('qué es')) {
+      
+      response = {
+        text: this.generateNaturalResponse(input, 'explain', language),
+        language,
+        shouldSearch: true,
+        searchQuery: input,
+        action: 'explain',
+      };
+    } 
+    // Check for conversational responses
+    else if (lowerInput.includes('hello') || lowerInput.includes('hi') || lowerInput.includes('hey') ||
+             lowerInput.includes('how are you') || lowerInput.includes('what\'s up')) {
+      
+      response = {
+        text: this.generateGreetingResponse(language),
+        language,
+        shouldSearch: false,
+        action: 'explain',
+      };
+    }
+    // Default to search with natural response
+    else {
+      response = {
+        text: this.generateNaturalResponse(input, 'search', language),
         language,
         shouldSearch: true,
         searchQuery: input,
@@ -272,6 +666,77 @@ export class ConversationalAIAgent {
     }
 
     return response;
+  }
+
+  /**
+   * Generate natural human-like responses based on context
+   */
+  private generateNaturalResponse(input: string, intent: string, language: string): string {
+    const responses = CONVERSATIONAL_RESPONSES[language as keyof typeof CONVERSATIONAL_RESPONSES] || CONVERSATIONAL_RESPONSES.english;
+    
+    // Add conversational fillers and natural transitions
+    const fillers = [
+      "Let me see...",
+      "I'll look that up for you.",
+      "Searching now...",
+      "One moment...",
+      "Let me find that...",
+    ];
+    
+    const randomFiller = fillers[Math.floor(Math.random() * fillers.length)];
+    
+    if (intent === 'search') {
+      return `${randomFiller} ${responses.searching}`;
+    } else if (intent === 'play') {
+      return `${randomFiller} I'll get that ready for you.`;
+    } else if (intent === 'explain') {
+      return `${randomFiller} Let me tell you about that.`;
+    }
+    
+    return responses.searching;
+  }
+
+  /**
+   * Generate storytelling responses for narrative requests
+   */
+  private generateStorytellingResponse(input: string, language: string): string {
+    const responses = CONVERSATIONAL_RESPONSES[language as keyof typeof CONVERSATIONAL_RESPONSES] || CONVERSATIONAL_RESPONSES.english;
+    
+    const storytellingOpeners = [
+      "That's a great question! Let me tell you about it...",
+      "I'd love to share that story with you...",
+      "Here's what I know about that...",
+      "Let me paint you a picture...",
+      "That's an interesting topic! Here's the story...",
+    ];
+    
+    const randomOpener = storytellingOpeners[Math.floor(Math.random() * storytellingOpeners.length)];
+    
+    return `${randomOpener} ${responses.searching}`;
+  }
+
+  /**
+   * Generate natural greeting responses
+   */
+  private generateGreetingResponse(language: string): string {
+    const greetings: Record<string, string[]> = {
+      english: [
+        "Hello! It's great to hear from you. How can I help you today?",
+        "Hi there! I'm here to help you find great content. What would you like to watch?",
+        "Hey! Good to see you. What can I help you find today?",
+      ],
+      spanish: [
+        "¡Hola! Es genial saludarte. ¿Cómo puedo ayudarte hoy?",
+        "¡Hola! Estoy aquí para ayudarte a encontrar contenido increíble. ¿Qué te gustaría ver?",
+      ],
+      french: [
+        "Bonjour! Ravi de vous entendre. Comment puis-je vous aider aujourd'hui?",
+        "Salut! Je suis là pour vous aider à trouver du super contenu. Que voudriez-vous regarder?",
+      ],
+    };
+
+    const langGreetings = greetings[language] || greetings.english;
+    return langGreetings[Math.floor(Math.random() * langGreetings.length)];
   }
 
   /**
@@ -375,6 +840,13 @@ export class ConversationalAIAgent {
   }
 
   /**
+   * Set interim transcript callback for real-time display
+   */
+  onInterimTranscript(callback: (text: string) => void): void {
+    this.onInterimTranscriptCallback = callback;
+  }
+
+  /**
    * Set response callback
    */
   onResponse(callback: (response: ConversationalResponse) => void): void {
@@ -398,6 +870,8 @@ export class ConversationalAIAgent {
       lastResults: [],
       conversationHistory: [],
       currentTopic: null,
+      isStorytelling: false,
+      storyContext: null,
     };
   }
 
