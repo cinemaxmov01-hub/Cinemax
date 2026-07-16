@@ -120,7 +120,7 @@ export const FullMovieDownloadModal: React.FC<FullMovieDownloadModalProps> = ({
             {downloadResult?.ok && onDelete && (
               <button
                 onClick={handleDelete}
-                className="w-full mt-3 flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 font-bold py-2.5 rounded-xl transition-colors cursor-pointer"
+                className="w-full mt-3 flex items-center justify-center gap-2 bg-[#39FF14]/10 hover:bg-[#39FF14]/20 text-[#39FF14] border border-[#39FF14]/30 font-bold py-2.5 rounded-xl transition-colors cursor-pointer"
               >
                 <Trash2 className="h-4 w-4" />
                 <span>Delete from {storageType === "device" ? "Device" : "Cinemax"}</span>

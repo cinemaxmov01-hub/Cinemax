@@ -9,7 +9,7 @@ import mongoose from "mongoose";
 export const connectDB = async (): Promise<boolean> => {
   const connString = process.env.MONGO_URI;
   if (!connString) {
-    console.warn("⚠️  MONGO_URI is not set — falling back to file-backed JSON store. Data will NOT persist across restarts on Render.");
+    console.log("ℹ️  MONGO_URI is not set — using file-backed JSON store. Data will persist locally but not across deployments.");
     return false;
   }
   try {
@@ -25,7 +25,7 @@ export const connectDB = async (): Promise<boolean> => {
     });
     return true;
   } catch (error) {
-    console.error("❌ MongoDB connection failed — server will start in degraded mode:", error);
+    console.log("ℹ️  MongoDB connection failed — using file-backed JSON store as fallback:", (error as Error).message);
     return false;
   }
 };

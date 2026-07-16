@@ -52,6 +52,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
     appLanguage,
     setAppLanguage,
     siteConfig,
+    setSearchQuery,
   } = useApp();
 
   const [sidebarAds, setSidebarAds] = useState<PublicAd[]>([]);
@@ -120,6 +121,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
       setIsOpen(false);
       return;
     }
+    // Clear search query when navigating to a different page
+    setSearchQuery("");
     setActiveGenre(null);
     setActiveGenreName(null);
     setCurrentView(viewId);
@@ -150,7 +153,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
         }`}
       >
         {/* Logo Section */}
-        <div id="logo-section" className="flex h-20 items-center justify-between px-6 border-b border-white/5">
+        <div id="logo-section" className="flex h-16 sm:h-20 items-center justify-between px-4 sm:px-6 border-b border-white/5">
           <div 
             className="flex items-center gap-3 cursor-pointer select-none"
             onClick={() => handleNavClick("home")}

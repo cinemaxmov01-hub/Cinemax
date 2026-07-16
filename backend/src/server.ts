@@ -275,12 +275,23 @@ function getApiKey(name: "tmdb" | "gemini" | "groq" | "openai" | "grok"): string
   // Fall back to database if environment variable is not set
   const fromDb = db.data?.site_settings?.apiKeys?.[name];
   
-  return (fromEnv || fromDb || "").trim();
+  const result = (fromEnv || fromDb || "").trim();
+  
+  // Debug logging for API key loading
+  if (name === "gemini") {
+    console.log(`[getApiKey] ${name}: fromEnv=${fromEnv ? 'SET' : 'NOT_SET'}, fromDb=${fromDb ? 'SET' : 'NOT_SET'}, result=${result ? 'HAS_VALUE' : 'EMPTY'}`);
+  }
+  
+  return result;
 }
 
 function getGeminiClient(): GoogleGenAI {
   const key = getApiKey("gemini");
-  if (!key) throw new Error("Gemini API key not configured");
+  if (!key) {
+    console.error("[Gemini] API key not configured");
+    throw new Error("Gemini API key not configured");
+  }
+  console.log("[Gemini] Client initialized with API key:", key.substring(0, 10) + "...");
   return new GoogleGenAI({
     apiKey: key,
     httpOptions: { headers: { "User-Agent": "aistudio-build" } },
@@ -519,43 +530,52 @@ Respond with ONLY raw JSON (no markdown fences):
   "isKnownPoster": true or false
 }`;
 
-  const ai = getGeminiClient();
-  const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash-exp",
-    contents: [
-      {
-        role: "user",
-        parts: [
-          { text: prompt },
-          { inlineData: { mimeType: mimeType || "image/jpeg", data: imageBase64 } },
-        ],
-      },
-    ],
-  });
-
-  const rawText = (response as any).text ?? (response as any).candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-  const cleaned = rawText.replace(/```json|```/g, "").trim();
   try {
-    const parsed = JSON.parse(cleaned);
-    return {
-      description: parsed.description || "A visually distinct image.",
-      genres: parsed.genres || [],
-      keywords: parsed.keywords || [],
-      moodTags: parsed.moodTags || [],
-      exactTitle: parsed.exactTitle || null,
-      exactYear: parsed.exactYear || null,
-      isKnownPoster: !!parsed.isKnownPoster,
-    };
-  } catch {
-    return {
-      description: "A visually distinct image with cinematic qualities.",
-      genres: [],
-      keywords: [],
-      moodTags: [],
-      exactTitle: null,
-      exactYear: null,
-      isKnownPoster: false,
-    };
+    const ai = getGeminiClient();
+    console.log("[Gemini] Starting image analysis with model: gemini-1.5-flash");
+    const response = await ai.models.generateContent({
+      model: "gemini-1.5-flash",
+      contents: [
+        {
+          role: "user",
+          parts: [
+            { text: prompt },
+            { inlineData: { mimeType: mimeType || "image/jpeg", data: imageBase64 } },
+          ],
+        },
+      ],
+    });
+
+    const rawText = (response as any).text ?? (response as any).candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+    console.log("[Gemini] Raw response length:", rawText.length);
+    const cleaned = rawText.replace(/```json|```/g, "").trim();
+    try {
+      const parsed = JSON.parse(cleaned);
+      console.log("[Gemini] Successfully parsed analysis");
+      return {
+        description: parsed.description || "A visually distinct image.",
+        genres: parsed.genres || [],
+        keywords: parsed.keywords || [],
+        moodTags: parsed.moodTags || [],
+        exactTitle: parsed.exactTitle || null,
+        exactYear: parsed.exactYear || null,
+        isKnownPoster: !!parsed.isKnownPoster,
+      };
+    } catch (parseError) {
+      console.error("[Gemini] JSON parse error:", parseError);
+      return {
+        description: "A visually distinct image with cinematic qualities.",
+        genres: [],
+        keywords: [],
+        moodTags: [],
+        exactTitle: null,
+        exactYear: null,
+        isKnownPoster: false,
+      };
+    }
+  } catch (error) {
+    console.error("[Gemini] Image analysis error:", error);
+    throw error;
   }
 }
 

@@ -959,7 +959,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const downloadMovie = async (movie: Movie, mode: "device" | "cinemax" = "cinemax"): Promise<{ ok: boolean; error?: string }> => {
+    console.log("[downloadMovie] Starting download for:", movie.title || movie.name, "mode:", mode);
+    
     if (mode === "cinemax" && (!user || isGuest)) {
+      console.log("[downloadMovie] Authentication required for cinemax mode");
       requireSignInPrompt();
       return { ok: false, error: "Sign in to download." };
     }
@@ -967,6 +970,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const mediaType: "movie" | "tv" = movie.title ? "movie" : "tv";
 
     if (mode === "cinemax" && downloads.some((d) => d.movie_id === movie.id)) {
+      console.log("[downloadMovie] Movie already in downloads");
       return { ok: false, error: "This title is already in your Download History." };
     }
 
@@ -975,24 +979,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (mode === "device") {
       // Direct video download only - no local storage, no images/JSON
       const dlUrl = (movie as any).download_url as string | undefined | null;
+      console.log("[downloadMovie] Device mode - download URL:", dlUrl ? "available" : "not available");
 
       if (dlUrl) {
         try {
+          console.log("[downloadMovie] Starting device download to:", `${safeName}.mp4`);
           await downloadRemoteFile(dlUrl, `${safeName}.mp4`);
           addNotification({
             type: "system",
             title: "Download complete",
             message: `"${title}" has been downloaded to your device.`,
           });
+          console.log("[downloadMovie] Device download completed successfully");
           return { ok: true };
         } catch (err: any) {
-          console.error("Device video download failed:", err);
+          console.error("[downloadMovie] Device video download failed:", err);
           return {
             ok: false,
             error: err?.message || "Unable to download the video file. Please try again.",
           };
         }
       } else {
+        console.log("[downloadMovie] No download URL available");
         return {
           ok: false,
           error: "No direct download URL available for this title.",
@@ -1002,12 +1010,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Cinemax mode - save to local IndexedDB storage
     try {
+      console.log("[downloadMovie] Cinemax mode - starting local storage download");
       const posterUrl = movie.poster_path ? getImageUrl(movie.poster_path, "w780") : "";
       const backdropUrl = movie.backdrop_path ? getImageUrl(movie.backdrop_path, "w780") : "";
+      console.log("[downloadMovie] Fetching poster and backdrop blobs");
       const [posterBlob, backdropBlob] = await Promise.all([
         posterUrl ? fetchPosterBlob(posterUrl) : Promise.resolve(null),
         backdropUrl ? fetchPosterBlob(backdropUrl) : Promise.resolve(null),
       ]);
+      console.log("[downloadMovie] Blobs fetched - poster:", posterBlob?.size, "backdrop:", backdropBlob?.size);
 
       const packageData = {
         id: movie.id,
@@ -1025,14 +1036,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       const jsonBlob = new Blob([JSON.stringify(packageData, null, 2)], { type: "application/json" });
       const sizeBytes = computeDownloadSize(jsonBlob.size, posterBlob?.size || 0, backdropBlob?.size || 0);
+      console.log("[downloadMovie] Total download size:", sizeBytes, "bytes");
 
       if (downloadStorageUsed + sizeBytes > downloadStorageLimit) {
+        console.log("[downloadMovie] Storage limit exceeded");
         return {
           ok: false,
           error: "Download storage is full (2 GB limit). Delete items from Download History to free space.",
         };
       }
 
+      console.log("[downloadMovie] Saving to local IndexedDB");
       await saveLocalDownload({
         movieId: movie.id,
         title,
@@ -1049,6 +1063,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         storageType: "cinemax",
       });
 
+      console.log("[downloadMovie] Syncing with server");
       const res = await fetch(`${API_BASE}/api/downloads`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1062,7 +1077,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }),
       });
       const data = await parseApiResponse(res);
+      console.log("[downloadMovie] Server response status:", res.status, "ok:", res.ok);
       if (!res.ok) {
+        console.error("[downloadMovie] Server sync failed:", data.error);
         await removeLocalDownload(movie.id);
         return { ok: false, error: data.error || "Download failed." };
       }

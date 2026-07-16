@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useApp } from "../context/AppContext";
 import { AvatarRenderer } from "./AnimatedAvatar";
-import { ChatMessage, ChatConversation, DirectMessage, ChatDirectoryPerson } from "../types";
+import { ChatMessage, ChatConversation, DirectMessage, ChatDirectoryPerson, Movie } from "../types";
 import {
   MessageCircle,
   Send,
@@ -20,6 +20,9 @@ import {
   ImagePlus,
   Mic,
   Square,
+  Film,
+  Share2,
+  Star,
 } from "lucide-react";
 
 const POPULAR_POLL_MS = 4000;
@@ -58,9 +61,58 @@ const PendingImageStrip: React.FC<{ url: string; onClear: () => void }> = ({ url
   </div>
 );
 
+/** A pill showing a shared movie before sending. */
+const PendingMovieStrip: React.FC<{ movie: Movie; onClear: () => void }> = ({ movie, onClear }) => (
+  <div className="mx-3 mb-2 flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl p-1.5">
+    <div className="h-10 w-10 rounded-lg overflow-hidden flex-shrink-0">
+      <img 
+        src={`https://image.tmdb.org/t/p/w200${movie.poster_path}`} 
+        alt={movie.title || movie.name} 
+        className="h-full w-full object-cover"
+      />
+    </div>
+    <span className="text-[10px] text-neutral-400 flex-1 truncate">{movie.title || movie.name}</span>
+    <button onClick={onClear} className="text-neutral-500 hover:text-white cursor-pointer p-1">
+      <X className="h-3.5 w-3.5" />
+    </button>
+  </div>
+);
+
 /** Inline audio player used for voice-note bubbles in the Inbox. */
 const VoiceBubble: React.FC<{ src: string }> = ({ src }) => (
   <audio controls src={src} className="w-full max-w-[220px] h-9" />
+);
+
+/** Movie share bubble component for displaying shared movies in chat. */
+const MovieShareBubble: React.FC<{ movie: Movie; onClick?: () => void }> = ({ movie, onClick }) => (
+  <div 
+    onClick={onClick}
+    className="mb-2 flex gap-3 p-3 rounded-2xl bg-white/5 border border-white/10 hover:border-[#39FF14]/30 transition-all cursor-pointer"
+  >
+    <div className="h-16 w-12 rounded-lg overflow-hidden flex-shrink-0 bg-neutral-800">
+      {movie.poster_path ? (
+        <img 
+          src={`https://image.tmdb.org/t/p/w200${movie.poster_path}`} 
+          alt={movie.title || movie.name} 
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <div className="h-full w-full flex items-center justify-center text-neutral-600 text-xs">
+          <Film className="h-6 w-6" />
+        </div>
+      )}
+    </div>
+    <div className="flex-1 min-w-0">
+      <h4 className="text-xs font-bold text-white truncate">{movie.title || movie.name}</h4>
+      {movie.vote_average && (
+        <div className="flex items-center gap-1 mt-1">
+          <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+          <span className="text-[10px] text-yellow-400 font-semibold">{movie.vote_average.toFixed(1)}</span>
+        </div>
+      )}
+      <p className="text-[10px] text-[#39FF14] font-semibold mt-1">Click to watch</p>
+    </div>
+  </div>
 );
 
 function timeAgo(iso: string): string {
@@ -478,8 +530,10 @@ const InboxTab: React.FC<{
   const [error, setError] = useState("");
   const [loadingList, setLoadingList] = useState(true);
   const [pendingImage, setPendingImage] = useState<string | null>(null);
+  const [pendingMovie, setPendingMovie] = useState<Movie | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordSeconds, setRecordSeconds] = useState(0);
+  const [showMovieSelector, setShowMovieSelector] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -561,20 +615,21 @@ const InboxTab: React.FC<{
   const partnerName = activePartner ? ("userName" in activePartner ? activePartner.userName : activePartner.name) : "";
   const partnerAvatar = activePartner ? ("userAvatar" in activePartner ? activePartner.userAvatar : activePartner.avatar) : "";
 
-  const handleSend = async (mediaUrl?: string, mediaType?: "image" | "audio") => {
+  const handleSend = async (mediaUrl?: string, mediaType?: "image" | "audio" | "movie", movieData?: Movie) => {
     const trimmed = text.trim();
-    if (!trimmed && !mediaUrl) return;
+    if (!trimmed && !mediaUrl && !movieData) return;
     if (!partnerId) return;
     setSending(true);
     setError("");
     try {
       const data = await api(`/api/chat/conversations/${partnerId}`, {
         method: "POST",
-        body: JSON.stringify({ text: trimmed, mediaUrl, mediaType }),
+        body: JSON.stringify({ text: trimmed, mediaUrl, mediaType, movieData }),
       });
       setThread((prev) => [...prev, data.message]);
       setText("");
       setPendingImage(null);
+      setPendingMovie(null);
       fetchConversations();
     } catch (err: any) {
       setError(err.message);
@@ -770,6 +825,18 @@ const InboxTab: React.FC<{
                       <VoiceBubble src={m.mediaUrl} />
                     </div>
                   )}
+                  {m.mediaType === "movie" && m.movieData && (
+                    <div className="mb-1">
+                      <MovieShareBubble 
+                        movie={m.movieData} 
+                        onClick={() => {
+                          // Navigate to player with the shared movie
+                          // This would typically trigger navigation to the player page
+                          console.log('Navigate to movie:', m.movieData);
+                        }}
+                      />
+                    </div>
+                  )}
                   {m.text && (
                     <div
                       className={`rounded-2xl px-3 py-2 text-xs leading-relaxed break-words ${
@@ -803,6 +870,7 @@ const InboxTab: React.FC<{
       <div className="flex-none p-3 border-t border-white/5 bg-black/40">
         <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelected} className="hidden" />
         {pendingImage && <PendingImageStrip url={pendingImage} onClear={() => setPendingImage(null)} />}
+        {pendingMovie && <PendingMovieStrip movie={pendingMovie} onClear={() => setPendingMovie(null)} />}
 
         {isRecording ? (
           <div className="flex items-center gap-2 bg-rose-500/10 border border-rose-500/30 rounded-xl px-3 py-2">
@@ -830,16 +898,23 @@ const InboxTab: React.FC<{
             >
               <ImagePlus className="h-4 w-4" />
             </button>
+            <button
+              onClick={() => setShowMovieSelector(!showMovieSelector)}
+              title="Share a movie"
+              className="flex-shrink-0 h-9 w-9 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-neutral-400 hover:text-[#39FF14] transition-all cursor-pointer"
+            >
+              <Film className="h-4 w-4" />
+            </button>
             <input
               type="text"
               value={text}
               onChange={(e) => setText(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && !sending && handleSend(pendingImage || undefined, pendingImage ? "image" : undefined)}
+              onKeyDown={(e) => e.key === "Enter" && !sending && handleSend(pendingImage || undefined, pendingImage ? "image" : (pendingMovie ? "movie" : undefined), pendingMovie || undefined)}
               placeholder="Type a message..."
               maxLength={2000}
               className="flex-1 bg-white/5 border border-white/10 focus:border-[#39FF14]/50 focus:outline-none rounded-xl px-3 py-2 text-xs text-white placeholder:text-neutral-600 transition-colors"
             />
-            {!text.trim() && !pendingImage ? (
+            {!text.trim() && !pendingImage && !pendingMovie ? (
               <button
                 onClick={startRecording}
                 title="Record a voice message"
@@ -849,13 +924,53 @@ const InboxTab: React.FC<{
               </button>
             ) : (
               <button
-                onClick={() => handleSend(pendingImage || undefined, pendingImage ? "image" : undefined)}
-                disabled={sending}
+                onClick={() => handleSend(pendingImage || undefined, pendingImage ? "image" : (pendingMovie ? "movie" : undefined), pendingMovie || undefined)}
+                disabled={sending || (!text.trim() && !pendingImage && !pendingMovie)}
                 className="flex-shrink-0 h-9 w-9 rounded-xl bg-[#39FF14] hover:brightness-110 disabled:opacity-40 flex items-center justify-center text-black transition-all cursor-pointer"
               >
                 {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
               </button>
             )}
+          </div>
+        )}
+
+        {showMovieSelector && (
+          <div className="absolute bottom-full left-0 right-0 mb-2 p-3 bg-black/95 border border-white/10 rounded-xl z-50 max-h-64 overflow-y-auto">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold text-white">Select a movie to share</span>
+              <button onClick={() => setShowMovieSelector(false)} className="text-neutral-500 hover:text-white">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="space-y-2">
+              <button
+                onClick={() => {
+                  const sampleMovie: Movie = {
+                    id: 1,
+                    title: "Sample Movie",
+                    poster_path: "/sample.jpg",
+                    backdrop_path: "/sample-backdrop.jpg",
+                    overview: "This is a sample movie for testing",
+                    vote_average: 8.5,
+                    release_date: "2024-01-01",
+                  };
+                  setPendingMovie(sampleMovie);
+                  setShowMovieSelector(false);
+                }}
+                className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors text-left"
+              >
+                <div className="h-12 w-8 rounded overflow-hidden bg-neutral-800">
+                  <div className="h-full w-full flex items-center justify-center text-neutral-600 text-xs">Sample</div>
+                </div>
+                <div className="flex-1">
+                  <span className="text-xs font-bold text-white">Sample Movie</span>
+                  <p className="text-[10px] text-neutral-500">Click to share this sample</p>
+                </div>
+              </button>
+              <p className="text-[10px] text-neutral-500 text-center pt-2">
+                Movie selection will be integrated with your watch history
+              </p>
+            </div>
           </div>
         )}
       </div>

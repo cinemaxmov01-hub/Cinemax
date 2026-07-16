@@ -268,7 +268,7 @@ video::-webkit-media-controls-panel {
 }
 
 video::-webkit-media-controls-play-button {
-  color: #39FF14;
+  color: #39FF14 !important;
 }
 
 video::-webkit-media-controls-timeline {
@@ -277,7 +277,7 @@ video::-webkit-media-controls-timeline {
 
 video::-webkit-media-controls-current-time-display,
 video::-webkit-media-controls-time-remaining-display {
-  color: #39FF14;
+  color: #39FF14 !important;
 }
 
 video::-webkit-media-controls-volume-slider {
@@ -289,21 +289,38 @@ video::-webkit-media-controls-volume-slider-container {
 }
 
 video::-webkit-media-controls-mute-button {
-  color: #39FF14;
+  color: #39FF14 !important;
 }
 
 video::-webkit-media-controls-timeline-progress {
-  background-color: #39FF14;
+  background-color: #39FF14 !important;
   box-shadow: 0 0 10px rgba(57, 255, 20, 0.5);
 }
 
 video::-webkit-media-controls-fullscreen-button {
-  color: #39FF14;
+  color: #39FF14 !important;
 }
 
 video::-webkit-media-controls-timeline-thumb {
-  background-color: #39FF14;
+  background-color: #39FF14 !important;
   box-shadow: 0 0 10px rgba(57, 255, 20, 0.5);
+}
+
+/* Additional video control elements to ensure green styling */
+video::-webkit-media-controls-toggle-closed-captions-button {
+  color: #39FF14 !important;
+}
+
+video::-webkit-media-controls-cast-button {
+  color: #39FF14 !important;
+}
+
+video::-webkit-media-controls-overlays {
+  background-color: rgba(57, 255, 20, 0.1);
+}
+
+video::-webkit-media-controls-volume-slider-thumb {
+  background-color: #39FF14 !important;
 }
 
 /* Brand wordmark — always readable on dark hero/landing regardless of light mode */
@@ -859,3 +876,121 @@ html.compact-layout #curated-shelves { gap: 1.5rem; }
   100% { transform: scale(1); opacity: 0; }
 }
 .animate-ping-once { animation: ping-once 0.8s ease-out forwards; }
+
+/* Mobile-specific optimizations */
+@media (max-width: 640px) {
+  /* Mobile header optimizations */
+  #top-navbar {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  /* Mobile search input */
+  #header-search-input {
+    font-size: 14px;
+    padding: 0.5rem 0.75rem 0.5rem 2.5rem;
+  }
+  
+  /* Mobile card grid optimizations */
+  .grid-cols-2 {
+    gap: 0.5rem;
+  }
+  
+  /* Mobile video player optimizations */
+  #video-player-container {
+    border-radius: 0;
+  }
+  
+  /* Mobile modal optimizations */
+  #movie-details-modal {
+    border-radius: 1rem 1rem 0 0;
+    max-height: 70vh;
+  }
+  
+  /* Mobile button touch targets */
+  button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Mobile horizontal scroll snap */
+  .scroll-snap-x-mandatory {
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .scroll-snap-start {
+    scroll-snap-align: start;
+  }
+  
+  /* Mobile text sizing */
+  h1, h2, h3 {
+    font-size: clamp(1.25rem, 4vw, 1.5rem);
+  }
+  
+  /* Mobile spacing */
+  .px-4 {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .py-6 {
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+  }
+}
+
+/* HD Video Player Optimizations */
+video {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+video::-webkit-media-controls-panel {
+  background-color: rgba(5, 5, 5, 0.9) !important;
+}
+
+video::-webkit-media-controls-current-time-display,
+video::-webkit-media-controls-time-remaining-display {
+  color: #39FF14 !important;
+  font-family: monospace;
+  font-size: 13px;
+}
+
+video::-webkit-media-controls-timeline {
+  background-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+video::-webkit-media-controls-timeline-progress {
+  background-color: #39FF14 !important;
+}
+
+video::-webkit-media-controls-volume-slider {
+  background-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+video::-webkit-media-controls-volume-slider-value {
+  background-color: #39FF14 !important;
+}
+
+/* Hardware acceleration for video */
+video, iframe {
+  transform: translateZ(0);
+  will-change: transform;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+/* Smooth video loading transitions */
+#video-player-container {
+  transition: opacity 0.3s ease;
+}
+
+#video-player-container.loading {
+  opacity: 0.7;
+}
+
+#video-player-container.loaded {
+  opacity: 1;
+}

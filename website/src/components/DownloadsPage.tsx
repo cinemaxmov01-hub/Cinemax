@@ -156,7 +156,7 @@ export const DownloadsPage: React.FC = () => {
                 <button
                   onClick={() => handleDelete(item)}
                   disabled={busyId === item.movie_id}
-                  className="btn-secondary p-2.5 rounded-xl text-rose-400 hover:text-rose-300 cursor-pointer disabled:opacity-50"
+                  className="btn-secondary p-2.5 rounded-xl text-[#39FF14] hover:text-[#39FF14]/80 cursor-pointer disabled:opacity-50"
                   title="Delete download"
                 >
                   {busyId === item.movie_id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}

@@ -24,9 +24,9 @@ export const PROVIDERS_CONFIG: StreamingProvider[] = [
     homepage: "https://vidsrc.pm",
     moviePattern: "https://vidsrc.pm/embed/movie?tmdb={id}&ds_lang=en&autoplay=1",
     tvPattern: "https://vidsrc.pm/embed/tv?tmdb={id}&season={season}&episode={episode}&ds_lang=en&autoplay=1",
-    qualityOptions: ["1080p", "720p", "Auto"],
-    audioOptions: ["Original", "English"],
-    subtitlesOptions: ["Embedded", "English"],
+    qualityOptions: ["4K", "1080p", "720p", "480p", "360p", "Auto"],
+    audioOptions: ["Original", "English", "Spanish", "French"],
+    subtitlesOptions: ["Embedded", "English", "Spanish", "French", "Auto"],
     defaultLatency: 95,
     status: "Online",
   },
@@ -36,9 +36,9 @@ export const PROVIDERS_CONFIG: StreamingProvider[] = [
     homepage: "https://vidsrc.me",
     moviePattern: "https://vidsrc.me/embed/movie?tmdb={id}&ds_lang=en&autoplay=1",
     tvPattern: "https://vidsrc.me/embed/tv?tmdb={id}&season={season}&episode={episode}&ds_lang=en&autoplay=1",
-    qualityOptions: ["1080p", "720p", "Auto"],
-    audioOptions: ["Original", "English"],
-    subtitlesOptions: ["Embedded", "English"],
+    qualityOptions: ["4K", "1080p", "720p", "480p", "360p", "Auto"],
+    audioOptions: ["Original", "English", "Spanish", "French"],
+    subtitlesOptions: ["Embedded", "English", "Spanish", "French", "Auto"],
     defaultLatency: 100,
     status: "Online",
   },
@@ -50,9 +50,9 @@ export const PROVIDERS_CONFIG: StreamingProvider[] = [
     homepage: "https://vidlink.pro",
     moviePattern: "https://vidlink.pro/movie/{id}?primaryColor=39FF14&secondaryColor=39FF14&iconColor=39FF14&autoplay=true&title=true",
     tvPattern: "https://vidlink.pro/tv/{id}/{season}/{episode}?primaryColor=39FF14&secondaryColor=39FF14&iconColor=39FF14&autoplay=true&nextbutton=true&title=true",
-    qualityOptions: ["1080p", "720p", "Auto"],
-    audioOptions: ["Original", "English"],
-    subtitlesOptions: ["Embedded", "English"],
+    qualityOptions: ["4K", "1080p", "720p", "480p", "360p", "Auto"],
+    audioOptions: ["Original", "English", "Spanish", "French"],
+    subtitlesOptions: ["Embedded", "English", "Spanish", "French", "Auto"],
     defaultLatency: 115,
     status: "Online",
   },
@@ -68,16 +68,30 @@ export const buildEmbedUrl = (
   id: number | string,
   season: number = 1,
   episode: number = 1,
-  _subtitles: string = "English",
-  _quality: string = "Auto",
-  _audio: string = "English"
+  subtitles: string = "English",
+  quality: string = "1080p",
+  audio: string = "English"
 ): string => {
   const pattern = type === "movie" ? provider.moviePattern : provider.tvPattern;
 
-  return pattern
+  let url = pattern
     .replace("{id}", id.toString())
     .replace("{season}", season.toString())
     .replace("{episode}", episode.toString());
+
+  // Add quality parameter for supported providers
+  if (quality && quality !== "Auto") {
+    const separator = url.includes("?") ? "&" : "?";
+    url += `${separator}quality=${quality.toLowerCase()}`;
+  }
+
+  // Add subtitles parameter
+  if (subtitles) {
+    const separator = url.includes("?") ? "&" : "?";
+    url += `${separator}subtitles=${subtitles.toLowerCase()}`;
+  }
+
+  return url;
 };
 
 /** Append autoplay hint for embed providers that support it. */

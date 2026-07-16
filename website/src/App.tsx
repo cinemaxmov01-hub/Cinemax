@@ -23,8 +23,7 @@ import { TVShowsPage } from "./components/TVShowsPage";
 import { ShortsPage } from "./components/ShortsPage";
 import { GensPage } from "./components/GensPage";
 import { HomeAIAssistant } from "./components/HomeAIAssistant";
-// VoiceAgent removed from the header — the search-bar mic is now the single
-// voice entry point across the app.
+import { VoiceAgent } from "./components/VoiceAgent";
 import { MovieDetailsModal } from "./components/MovieDetailsModal";
 import { Footer } from "./components/Footer";
 import { LiveChat } from "./components/LiveChat";
@@ -389,13 +388,6 @@ const CinemaxDashboard: React.FC = () => {
               setSearchResults(combined);
               setSearchHasMore(tmdbBatch.hasMore);
               setSearchNextPage(4);
-
-              // Voice-to-voice deep search: after fetching TMDB results,
-              // ask the assistant for a professional deep-research answer
-              // and speak the reply back to the user (Siri-style).
-              runDeepVoiceSearch(finalTranscript.trim(), combined).catch((e) =>
-                console.error("Deep voice search failed:", e),
-              );
             } catch (err) {
               console.error("Voice search error:", err);
             }
@@ -493,71 +485,6 @@ const CinemaxDashboard: React.FC = () => {
       }
     } catch (error) {
       console.error('Search TTS error:', error);
-      // Fallback so the user still hears a reply even if the backend TTS
-      // key isn't configured — uses the browser's built-in voice.
-      browserSpeak(text, language);
-    }
-  };
-
-  // Browser-native voice fallback (works offline, no API keys required).
-  const browserSpeak = (text: string, language: string) => {
-    try {
-      if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
-      window.speechSynthesis.cancel();
-      const utter = new SpeechSynthesisUtterance(text.replace(/[*_`#>]/g, ''));
-      utter.lang = language === 'en' ? 'en-US' : language;
-      utter.rate = 1;
-      utter.pitch = 1;
-      window.speechSynthesis.speak(utter);
-    } catch (e) {
-      console.error('browserSpeak failed:', e);
-    }
-  };
-
-  // Professional deep-search: sends the voice query to the assistant with a
-  // deep-research system prompt, then speaks the answer back to the user.
-  const runDeepVoiceSearch = async (query: string, results: Movie[]) => {
-    // Build a short context of the top titles we just matched so the AI
-    // grounds its reply on real catalog results.
-    const topTitles = results
-      .slice(0, 6)
-      .map((m) => m.title || m.name)
-      .filter(Boolean)
-      .join(', ');
-
-    const deepPrompt =
-      `Voice deep-search query: "${query}".\n` +
-      (topTitles ? `Top matching titles in our catalog: ${topTitles}.\n` : '') +
-      `Act as a professional film & TV research assistant. Perform a deep search: ` +
-      `identify what the user most likely means, recommend the single best match ` +
-      `first, then briefly compare 2-3 close alternatives (year, genre, why it fits). ` +
-      `Keep the spoken answer under 60 seconds, natural, and conversational — no ` +
-      `markdown, no bullet symbols, no emojis.`;
-
-    try {
-      const response = await fetch('/api/assistant', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ message: deepPrompt, history: [] }),
-      });
-
-      if (!response.ok) throw new Error(`Assistant HTTP ${response.status}`);
-      const data = await response.json();
-      const reply = String(data?.text || '').trim();
-      if (!reply) return;
-      await speakSearchResponse(reply, 'en');
-    } catch (err) {
-      console.error('Deep search assistant error:', err);
-      // Still give the user a spoken confirmation of what we heard + how
-      // many results we found, so the mic never feels "dead".
-      const count = results.length;
-      browserSpeak(
-        count > 0
-          ? `I found ${count} results for ${query}.`
-          : `I couldn't find results for ${query}.`,
-        'en',
-      );
     }
   };
 
@@ -917,17 +844,10 @@ const CinemaxDashboard: React.FC = () => {
     <header className="relative z-10 flex items-center justify-between px-6 sm:px-12 py-6">
       <button
         id="public-page-logo-home-btn"
-        onClick={() => setCurrentView("home")}
+        onClick={() => { setSearchQuery(""); setCurrentView("home"); }}
         className="flex items-center gap-2 cursor-pointer"
       >
         <CinemaxLogo compact />
-      </button>
-      <button
-        id="public-page-signin-btn"
-        onClick={() => openAuthModal("signin")}
-        className="text-xs font-bold px-5 py-2.5 rounded-xl border border-white/15 text-white hover:border-[#39FF14]/50 hover:text-[#39FF14] transition-all cursor-pointer"
-      >
-        Sign In
       </button>
     </header>
   );
@@ -1035,7 +955,7 @@ const CinemaxDashboard: React.FC = () => {
       <div id="main-content-panel" className="lg:pl-64 flex flex-col min-h-screen">
         
         {/* Top Header Navbar with frosted blur */}
-        <header id="top-navbar" className="h-20 glass-navbar sticky top-0 z-40 px-4 lg:px-8 flex items-center justify-between gap-2 sm:gap-4">
+        <header id="top-navbar" className="h-16 lg:h-20 glass-navbar sticky top-0 z-40 px-4 lg:px-8 flex items-center justify-between gap-2 sm:gap-4">
           
           {/* Left Section: Mobile menu, Search, Voice Agent, Download App */}
           <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
@@ -1075,6 +995,24 @@ const CinemaxDashboard: React.FC = () => {
               <audio ref={searchAudioRef} className="hidden" />
             </div>
 
+            {/* Voice Agent - integrated next to search bar */}
+            <div className="hidden lg:block flex-shrink-0">
+              <VoiceAgent 
+                onNavigate={setCurrentView}
+                onSearch={setSearchQuery}
+                onPlayMovie={(title) => {
+                  // Find and play movie by title
+                  const movie = searchResults.find(m => 
+                    m.title?.toLowerCase() === title.toLowerCase() ||
+                    m.name?.toLowerCase() === title.toLowerCase()
+                  );
+                  if (movie) {
+                    handleMovieClick(movie);
+                  }
+                }}
+              />
+            </div>
+
             {/* Download App Button - desktop only */}
             <div className="hidden lg:block flex-shrink-0">
               <InstallAppButton variant="header" label="Download App" />
@@ -1087,7 +1025,7 @@ const CinemaxDashboard: React.FC = () => {
           <nav className="hidden sm:flex items-center gap-1 flex-shrink-0 overflow-x-auto scrollbar-thin scrollbar-thumb-neutral-800 scrollbar-track-transparent">
             <button
               id="nav-movies-btn"
-              onClick={() => { setActiveGenre(null); setActiveGenreName(null); setCurrentView("movies"); }}
+              onClick={() => { setSearchQuery(""); setActiveGenre(null); setActiveGenreName(null); setCurrentView("movies"); }}
               className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 currentView === "movies" ? "bg-[#39FF14]/10 text-[#39FF14]" : "text-neutral-400 hover:text-white hover:bg-white/5"
               }`}
@@ -1096,7 +1034,7 @@ const CinemaxDashboard: React.FC = () => {
             </button>
             <button
               id="nav-tv-btn"
-              onClick={() => setCurrentView("tv")}
+              onClick={() => { setSearchQuery(""); setCurrentView("tv"); }}
               className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 currentView === "tv" ? "bg-[#39FF14]/10 text-[#39FF14]" : "text-neutral-400 hover:text-white hover:bg-white/5"
               }`}
@@ -1105,7 +1043,7 @@ const CinemaxDashboard: React.FC = () => {
             </button>
             <button
               id="nav-gens-btn"
-              onClick={() => setCurrentView("gens")}
+              onClick={() => { setSearchQuery(""); setCurrentView("gens"); }}
               className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 currentView === "gens" ? "bg-[#39FF14]/10 text-[#39FF14]" : "text-neutral-400 hover:text-white hover:bg-white/5"
               }`}
@@ -1454,9 +1392,9 @@ const CinemaxDashboard: React.FC = () => {
                         <h2 className="font-sans font-bold text-xl lg:text-2xl tracking-tight">{t("upNext")}</h2>
                         <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">{t("trendingNow")}</span>
                       </div>
-                      <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
+                      <div className="flex gap-3 sm:gap-4 overflow-x-auto no-scrollbar pb-2 scroll-snap-x-mandatory">
                         {(trendingMovies.length > 0 ? trendingMovies : popularMovies).slice(0, 12).map((movie) => (
-<div key={movie.id} className="flex-shrink-0 w-[110px] sm:w-[130px]">
+<div key={movie.id} className="flex-shrink-0 w-[100px] sm:w-[110px] md:w-[130px] scroll-snap-start">
                             <MovieCard movie={movie} onClick={() => handleMovieClick(movie)} />
                           </div>
                         ))}
