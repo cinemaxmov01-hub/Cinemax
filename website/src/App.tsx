@@ -30,6 +30,7 @@ import { LiveChat } from "./components/LiveChat";
 import { AdminDestinationModal } from "./components/AdminDestinationModal";
 import { OnboardingPreferences } from "./components/OnboardingPreferences";
 import { tmdb, getImageUrl, isTvShow, prepareForPlayback } from "./utils/tmdb";
+import { getConversationalAgent, ConversationalResponse } from "./lib/conversationalAIAgent";
 import {
   filterHiddenMovies,
   applyTrendingOverride,
@@ -138,10 +139,11 @@ const CinemaxDashboard: React.FC = () => {
   const [choiceModalOpen, setChoiceModalOpen] = useState(false);
   const [modalTargetMovie, setModalTargetMovie] = useState<Movie | null>(null);
   const [mobileSearchExpanded, setMobileSearchExpanded] = useState(false);
-  const [isSearchListening, setIsSearchListening] = useState(false);
-  const [hasPlayedSearchWelcome, setHasPlayedSearchWelcome] = useState(false);
-  const searchRecognitionRef = useRef<any>(null);
-  const searchAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [isConversationalAIActive, setIsConversationalAIActive] = useState(false);
+  const [aiResponse, setAIResponse] = useState<string | null>(null);
+  
+  // Initialize conversational AI agent
+  const conversationalAgent = useRef(getConversationalAgent());
 
   // Hero banner rotation — cycles the homepage hero through a handful of
   // featured titles every 3 seconds.
@@ -331,160 +333,80 @@ const CinemaxDashboard: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [heroMovies.length]);
 
-  // Initialize Speech Recognition for search
+  // Initialize Conversational AI Agent
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window) {
-      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-      if (SpeechRecognition) {
-        const recognition = new SpeechRecognition();
-        recognition.continuous = false;
-        recognition.interimResults = false;
-        recognition.lang = 'en-US';
-        recognition.maxAlternatives = 3; // Get multiple alternatives for better accuracy
+    const agent = conversationalAgent.current;
+    
+    // Set up transcript callback
+    agent.onTranscript((text: string, language: string) => {
+      console.log(`AI Transcript (${language}):`, text);
+    });
 
-        recognition.onstart = () => {
-          setIsSearchListening(true);
-        };
-
-        recognition.onresult = async (event: any) => {
-          const transcript = event.results[0][0].transcript;
-          const confidence = event.results[0][0].confidence;
-          
-          let finalTranscript = transcript;
-          
-          // Only use high-confidence results
-          if (confidence > 0.7) {
-            finalTranscript = transcript;
-          } else {
-            // Try alternatives if confidence is low
-            for (let i = 1; i < event.results[0].length; i++) {
-              if (event.results[0][i].confidence > 0.7) {
-                finalTranscript = event.results[0][i].transcript;
-                break;
-              }
-            }
-          }
-          
-          // Set search query and trigger immediate search
-          setSearchQuery(finalTranscript);
-          setIsSearchListening(false);
-          
-          // Trigger immediate search for faster results
-          if (finalTranscript.trim().length > 1) {
-            try {
-              const [tmdbBatch, customMatches] = await Promise.all([
-                tmdb.searchEverything(finalTranscript.trim(), { startPage: 1, pageCount: 3 }),
-                tmdb.searchCustomContent(finalTranscript.trim()),
-              ]);
-              const seen = new Set<string>();
-              const combined: Movie[] = [];
-              for (const item of [...tmdbBatch.results, ...customMatches]) {
-                const key = `${item.media_type || (item.title ? "movie" : "tv")}:${item.id}`;
-                if (!seen.has(key)) {
-                  seen.add(key);
-                  combined.push(item);
-                }
-              }
-              setSearchResults(combined);
-              setSearchHasMore(tmdbBatch.hasMore);
-              setSearchNextPage(4);
-            } catch (err) {
-              console.error("Voice search error:", err);
-            }
-          }
-        };
-
-        recognition.onend = () => {
-          setIsSearchListening(false);
-        };
-
-        recognition.onerror = (event: any) => {
-          console.error('Speech recognition error:', event.error);
-          setIsSearchListening(false);
-        };
-
-        searchRecognitionRef.current = recognition;
-      }
-    }
-
-    return () => {
-      if (searchRecognitionRef.current) {
-        searchRecognitionRef.current.stop();
-      }
-    };
-  }, []);
-
-  // Cleanup search audio on unmount
-  useEffect(() => {
-    return () => {
-      if (searchAudioRef.current) {
-        searchAudioRef.current.pause();
-        searchAudioRef.current = null;
-      }
-    };
-  }, []);
-
-  const toggleSearchListening = () => {
-    if (!searchRecognitionRef.current) {
-      alert('Voice search is not supported in your browser. Please use Chrome or Edge.');
-      return;
-    }
-
-    // Play welcome message on first click
-    if (!hasPlayedSearchWelcome) {
-      setHasPlayedSearchWelcome(true);
-      speakSearchResponse("Welcome to Cinemax", "en");
-      // Start listening after welcome message
-      setTimeout(() => {
-        searchRecognitionRef.current.start();
-      }, 2500);
-      return;
-    }
-
-    if (isSearchListening) {
-      searchRecognitionRef.current.stop();
-    } else {
-      searchRecognitionRef.current.start();
-    }
-  };
-
-  // Speak response for search welcome
-  const speakSearchResponse = async (text: string, language: string) => {
-    if (!text.trim()) return;
-
-    try {
-      const response = await fetch('/api/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ 
-          text: text.replace(/[*_`]/g, ''),
-          language 
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('TTS request failed');
-      }
-
-      const audioBlob = await response.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
+    // Set up response callback
+    agent.onResponse(async (response: ConversationalResponse) => {
+      setAIResponse(response.text);
       
-      if (searchAudioRef.current) {
-        searchAudioRef.current.pause();
-        searchAudioRef.current.src = audioUrl;
-        searchAudioRef.current.play();
+      // Speak the response in the detected language
+      await agent.speak(response.text, response.language);
+      
+      // Handle search action
+      if (response.shouldSearch && response.searchQuery) {
+        setSearchQuery(response.searchQuery);
         
-        searchAudioRef.current.onended = () => {
-          URL.revokeObjectURL(audioUrl);
-        };
-        
-        searchAudioRef.current.onerror = () => {
-          URL.revokeObjectURL(audioUrl);
-        };
+        if (response.searchQuery.trim().length > 1) {
+          try {
+            const [tmdbBatch, customMatches] = await Promise.all([
+              tmdb.searchEverything(response.searchQuery.trim(), { startPage: 1, pageCount: 3 }),
+              tmdb.searchCustomContent(response.searchQuery.trim()),
+            ]);
+            const seen = new Set<string>();
+            const combined: Movie[] = [];
+            for (const item of [...tmdbBatch.results, ...customMatches]) {
+              const key = `${item.media_type || (item.title ? "movie" : "tv")}:${item.id}`;
+              if (!seen.has(key)) {
+                seen.add(key);
+                combined.push(item);
+              }
+            }
+            setSearchResults(combined);
+            setSearchHasMore(tmdbBatch.hasMore);
+            setSearchNextPage(4);
+            
+            // Handle search results
+            const resultResponse = agent.handleSearchResults(combined, response.language);
+            await agent.speak(resultResponse.text, resultResponse.language);
+          } catch (err) {
+            console.error("Conversational AI search error:", err);
+            const errorResponse = agent.handleUnknownData(response.searchQuery, response.language);
+            await agent.speak(errorResponse.text, errorResponse.language);
+          }
+        }
       }
-    } catch (error) {
-      console.error('Search TTS error:', error);
+    });
+
+    return () => {
+      agent.destroy();
+    };
+  }, []);
+
+  const toggleConversationalAI = () => {
+    const agent = conversationalAgent.current;
+    
+    if (!agent.isActive()) {
+      // Start the conversational AI
+      const success = agent.startListening();
+      if (success) {
+        setIsConversationalAIActive(true);
+        // Speak welcome message in English by default
+        agent.speak("Welcome to Cinemax. I am your AI voice assistant. How can I help you today?", "en");
+      } else {
+        alert('Voice assistant is not supported in your browser. Please use Chrome or Edge.');
+      }
+    } else {
+      // Stop the conversational AI
+      agent.stopListening();
+      setIsConversationalAIActive(false);
+      setAIResponse(null);
     }
   };
 
@@ -991,18 +913,24 @@ const CinemaxDashboard: React.FC = () => {
               />
               {/* Voice Search Button */}
               <button
-                onClick={toggleSearchListening}
+                onClick={toggleConversationalAI}
                 className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg transition-colors cursor-pointer lg:hidden ${
-                  isSearchListening 
+                  isConversationalAIActive 
                     ? 'voice-button-active text-[#39FF14]' 
                     : 'hover:bg-white/10 text-neutral-400 hover:text-[#39FF14]'
                 }`}
-                title={isSearchListening ? "Listening..." : "Voice Search"}
+                title={isConversationalAIActive ? "Listening..." : "Voice Assistant"}
               >
                 <Mic className="h-4 w-4" />
               </button>
-              <audio ref={searchAudioRef} className="hidden" />
             </div>
+
+            {/* AI Response Display */}
+            {aiResponse && (
+              <div className="mt-2 px-3 py-2 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/30 text-xs text-[#39FF14] animate-pulse">
+                <span className="font-semibold">AI:</span> {aiResponse}
+              </div>
+            )}
 
             {/* Voice Agent - integrated next to search bar */}
             <div className="hidden lg:hidden flex-shrink-0">

@@ -26,7 +26,7 @@ import { getImageUrl, tmdb, isTvShow } from "../utils/tmdb";
 import { AdBanner } from "./AdBanner";
 import { fetchPublicAds, PublicAd } from "../utils/siteConfig";
 import { MovieCard } from "./MovieCard";
-import { PROVIDERS_CONFIG, buildEmbedUrl, embedUrlWithAutoplay, EMBED_IFRAME_ALLOW, ProviderFailoverSystem } from "../utils/streamingConfig";
+import { PROVIDERS_CONFIG, buildEmbedUrl, embedUrlWithAutoplay, EMBED_IFRAME_ALLOW, ProviderFailoverSystem, fetchBestProvider, IFRAME_SANDBOX_ATTRIBUTES } from "../utils/streamingConfig";
 import { LiveChat } from "./LiveChat";
 import { WatchChoiceModal } from "./WatchChoiceModal";
 import { DownloadChoiceModal } from "./DownloadChoiceModal";
@@ -375,8 +375,22 @@ export const PlayerPage: React.FC = () => {
     setCurrentEpisode(1);
     setTrailerKey(null);
     setIsLoadingVideo(true);
-    setActiveServerId(PROVIDERS_CONFIG[0].id);
     failoverSystem.resetToPrimary();
+    
+    // Use parallel fetching to select best provider
+    const selectBestProvider = async () => {
+      const type = isTvShow(selectedMovie) ? "tv" : "movie";
+      const bestProvider = await fetchBestProvider(
+        PROVIDERS_CONFIG,
+        type,
+        selectedMovie.id,
+        1,
+        1
+      );
+      setActiveServerId(bestProvider.provider.id);
+    };
+    
+    selectBestProvider();
   }, [selectedMovie?.id, selectedMovie?.media_type, failoverSystem]);
 
   // Start failover monitoring when iframe loads
@@ -761,6 +775,7 @@ export const PlayerPage: React.FC = () => {
               src={getStreamUrl()}
               className="w-full h-full border-0"
               allow={EMBED_IFRAME_ALLOW}
+              sandbox={IFRAME_SANDBOX_ATTRIBUTES}
               allowFullScreen
               referrerPolicy="origin"
               scrolling="no"
