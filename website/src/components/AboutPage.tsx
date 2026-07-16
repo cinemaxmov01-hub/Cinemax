@@ -1,6 +1,6 @@
 import React from "react";
 import { useApp } from "../context/AppContext";
-import { Bot, ImagePlus, Bookmark, ShieldCheck, Sparkles, Users, Rocket, Heart, Monitor, Smartphone, Settings, Play, Info } from "lucide-react";
+import { Bot, ImagePlus, Bookmark, ShieldCheck, Sparkles, Users, Rocket, Heart } from "lucide-react";
 
 const FEATURES = [
   {
@@ -22,31 +22,6 @@ const FEATURES = [
     icon: ShieldCheck,
     title: "Real Account Controls",
     description: "Change your name, password, and preferences in a settings panel that actually works.",
-  },
-  {
-    icon: Play,
-    title: "HD Video Streaming",
-    description: "Crystal-clear playback with 4K, 1080p, 720p, and adaptive quality options. Network-aware auto-selection ensures the best quality for your connection.",
-  },
-  {
-    icon: Smartphone,
-    title: "Mobile-Optimized Experience",
-    description: "Beautiful responsive design with touch-friendly controls, hamburger navigation, and bottom-sheet modals for seamless mobile viewing.",
-  },
-  {
-    icon: Monitor,
-    title: "Advanced Video Player",
-    description: "Enhanced HLS streaming with intelligent buffering, quality selector, hardware acceleration, and smooth playback controls.",
-  },
-  {
-    icon: Info,
-    title: "Rich Movie Details",
-    description: "Comprehensive movie information including synopsis, ratings, cast & crew, trailers, and action buttons in a polished modal interface.",
-  },
-  {
-    icon: Settings,
-    title: "Multi-Language Support",
-    description: "Audio and subtitle options in multiple languages including English, Spanish, and French for global accessibility.",
   },
 ];
 
@@ -76,7 +51,7 @@ export const AboutPage: React.FC = () => {
       {/* Hero */}
       <div className="text-center max-w-2xl mx-auto mb-16">
         <div className="inline-flex items-center gap-2 mb-5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#39FF14] font-black text-black text-lg">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#39FF14] font-black text-black shadow-[0_0_15px_rgba(57,255,20,0.4)] text-lg">
             C
           </div>
           <span className="text-lg font-black tracking-tighter select-none">
@@ -107,8 +82,8 @@ export const AboutPage: React.FC = () => {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-16">
         {[
           { value: "1M+", label: "Titles Indexed" },
-          { value: "3", label: "HD Streaming Servers" },
-          { value: "4K", label: "Max Video Quality" },
+          { value: "5", label: "Streaming Servers" },
+          { value: "24/7", label: "AI Help Desk" },
           { value: "99.9%", label: "Uptime Target" },
         ].map((stat) => (
           <div key={stat.label} className="rounded-2xl bg-white/5 border border-white/10 py-6 text-center">
@@ -121,7 +96,7 @@ export const AboutPage: React.FC = () => {
       {/* Features */}
       <div className="mb-16">
         <h2 className="font-sans text-2xl font-black mb-8 text-center">What You Get</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           {FEATURES.map((f) => {
             const Icon = f.icon;
             return (
@@ -164,10 +139,10 @@ export const AboutPage: React.FC = () => {
           <ShieldCheck className="h-7 w-7" />
         </div>
         <div>
-          <h3 className="font-sans font-bold text-base text-white mb-1.5">HD Multi-Server Playback</h3>
+          <h3 className="font-sans font-bold text-base text-white mb-1.5">Ad-Blocked, Multi-Server Playback</h3>
           <p className="text-xs text-neutral-400 leading-relaxed max-w-2xl">
-            Every full movie plays through a sandboxed player backed by 3 reliable HD streaming sources — switch servers
-            instantly if one is slow, with adaptive quality from 4K to 360p and pop-ups blocked automatically.
+            Every full movie plays through a sandboxed player backed by 5 reliable streaming sources — switch servers
+            instantly if one is slow, with pop-ups and forced redirects blocked automatically.
           </p>
         </div>
       </div>

@@ -92,7 +92,7 @@ export const Footer: React.FC = () => {
               <img
                 src="/branding/cinemax-logo-mark.svg"
                 alt="Cinemax mark"
-                className="h-8 w-8 rounded-xl border border-[#39FF14]/30 bg-black/40 p-1"
+                className="h-8 w-8 rounded-xl border border-[#39FF14]/30 bg-black/40 p-1 shadow-[0_0_12px_rgba(57,255,20,0.1)]"
               />
               <div className="leading-tight">
                 <span className="block text-base font-black tracking-tighter text-white">

@@ -20,7 +20,6 @@ import {
   Search,
   ChevronDown,
   Clock,
-  Play,
 } from "lucide-react";
 
 const QUICK_PROMPTS = [
@@ -353,12 +352,10 @@ export const HelpDeskPage: React.FC = () => {
                 {msg.visualMatches && msg.visualMatches.length > 0 && (
                   <div className="grid grid-cols-4 gap-2 w-full">
                     {msg.visualMatches.map((m) => (
-                      <button key={m.id} onClick={() => onSelectMovie(m)} className="rounded-xl overflow-hidden border border-white/10 group cursor-pointer">
-                        <img src={getImageUrl(m.poster_path, "w500")} alt={m.title || m.name} className="w-full aspect-[2/3] object-cover group-hover:scale-105 transition-transform" />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 flex items-center justify-center transition-all">
-                          <Play className="h-4 w-4 text-white opacity-0 group-hover:opacity-100 fill-white" />
-                        </div>
-                      </button>
+                      <div key={m.id} className="rounded-xl overflow-hidden border border-white/10 group cursor-default">
+                        <img src={getImageUrl(m.poster_path, "w500")} alt={m.title || m.name} className="w-full aspect-[2/3] object-cover" />
+                        <p className="text-[10px] text-neutral-400 p-1 truncate">{m.title || m.name}</p>
+                      </div>
                     ))}
                   </div>
                 )}

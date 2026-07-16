@@ -410,7 +410,7 @@ export const LandingPage: React.FC = () => {
                 <div className="relative">
                   <svg
                     viewBox="0 0 900 600"
-                    className="h-16 w-16 rounded-full border-2 border-[#39FF14]/40"
+                    className="h-16 w-16 rounded-full border-2 border-[#39FF14]/40 shadow-[0_0_20px_rgba(57,255,20,0.22)]"
                     role="img"
                     aria-label="Flag of Rwanda"
                     style={{ clipPath: 'circle(50% at 50% 50%)' }}
@@ -438,13 +438,13 @@ export const LandingPage: React.FC = () => {
 
               <div className="mb-6 flex items-center justify-center gap-4 text-[#39FF14]">
                 <span className="h-px w-16 bg-[#39FF14]/70" />
-                <Code2 className="h-6 w-6" />
+                <Code2 className="h-6 w-6 drop-shadow-[0_0_10px_rgba(57,255,20,0.75)]" />
                 <span className="h-px w-16 bg-[#39FF14]/70" />
               </div>
 
               <div className="space-y-4">
                 <div className="grid grid-cols-[3.5rem_1fr] items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-[#39FF14]/70 text-[#39FF14]">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-[#39FF14]/70 text-[#39FF14] shadow-[0_0_14px_rgba(57,255,20,0.16)]">
                     <UserRound className="h-6 w-6" />
                   </div>
                   <div className="border-b border-white/20 pb-3">
@@ -454,7 +454,7 @@ export const LandingPage: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-[3.5rem_1fr] items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-[#39FF14]/70 text-[#39FF14]">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-[#39FF14]/70 text-[#39FF14] shadow-[0_0_14px_rgba(57,255,20,0.16)]">
                     <MapPin className="h-6 w-6" />
                   </div>
                   <div className="border-b border-white/20 pb-3">
@@ -464,7 +464,7 @@ export const LandingPage: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-[3.5rem_1fr] items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-[#39FF14]/70 text-[#39FF14]">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-[#39FF14]/70 text-[#39FF14] shadow-[0_0_14px_rgba(57,255,20,0.16)]">
                     <Globe2 className="h-7 w-7" />
                   </div>
                   <p className="text-lg font-semibold text-neutral-300 sm:text-xl">
@@ -475,7 +475,7 @@ export const LandingPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="relative mx-auto aspect-[3/4] w-full max-w-[72px] overflow-hidden rounded-lg border border-[#39FF14] bg-black sm:max-w-[88px]">
+            <div className="relative mx-auto aspect-[3/4] w-full max-w-[72px] overflow-hidden rounded-lg border border-[#39FF14] bg-black shadow-[0_0_18px_rgba(57,255,20,0.22)] sm:max-w-[88px]">
               <img
                 src="/branding/developer-profile.jpg"
                 alt="shemalucin"
