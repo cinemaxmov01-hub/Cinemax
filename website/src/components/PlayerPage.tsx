@@ -340,6 +340,7 @@ export const PlayerPage: React.FC = () => {
   const [seasonsList, setSeasonsList] = useState<number[]>([]);
   const [episodesList, setEpisodesList] = useState<number[]>([]);
   const [activeServerId, setActiveServerId] = useState<string>(PROVIDERS_CONFIG[0].id);
+  const [iframeError, setIframeError] = useState(false);
   const [isLoadingVideo, setIsLoadingVideo] = useState(true);
   const [streamSource, setStreamSource] = useState<string | null>(null);
   const [streamType, setStreamType] = useState<'embed' | 'mp4' | 'hls'>('embed');
@@ -614,6 +615,44 @@ export const PlayerPage: React.FC = () => {
       : "";
 
   // Determine stream source based on playerMode with quality settings
+  const handleIframeError = () => {
+    console.warn(`[PlayerPage] Server ${activeServerId} failed to load, switching to next server`);
+    setIframeError(true);
+    setIsLoadingVideo(false);
+    
+    // Find current server index and switch to next one
+    const currentIndex = PROVIDERS_CONFIG.findIndex(p => p.id === activeServerId);
+    const nextIndex = (currentIndex + 1) % PROVIDERS_CONFIG.length;
+    setActiveServerId(PROVIDERS_CONFIG[nextIndex].id);
+    setIframeError(false);
+  };
+
+  const handleIframeLoad = () => {
+    console.log(`[PlayerPage] Server ${activeServerId} loaded successfully`);
+    setIsLoadingVideo(false);
+    setIframeError(false);
+  };
+
+  // Reset iframe error state when movie or server changes
+  useEffect(() => {
+    setIframeError(false);
+    setIsLoadingVideo(true);
+  }, [selectedMovie, activeServerId, currentSeason, currentEpisode]);
+
+  // Timeout fallback: if iframe takes too long to load, switch servers
+  useEffect(() => {
+    if (!selectedMovie || playerMode === "trailer" || selectedMovie.isCustom) return;
+    
+    const timeout = setTimeout(() => {
+      if (isLoadingVideo && !iframeError) {
+        console.warn(`[PlayerPage] Server ${activeServerId} timeout, switching to next server`);
+        handleIframeError();
+      }
+    }, 15000); // 15 second timeout
+    
+    return () => clearTimeout(timeout);
+  }, [selectedMovie, activeServerId, currentSeason, currentEpisode, isLoadingVideo, iframeError, playerMode]);
+
   const getStreamUrl = () => {
     if (!selectedMovie) return "";
 
@@ -916,6 +955,8 @@ export const PlayerPage: React.FC = () => {
               allowFullScreen
               referrerPolicy="origin"
               scrolling="no"
+              onError={handleIframeError}
+              onLoad={handleIframeLoad}
             />
           )}
 

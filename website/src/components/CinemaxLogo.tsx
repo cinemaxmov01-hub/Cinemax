@@ -16,7 +16,7 @@ export const CinemaxLogo: React.FC<CinemaxLogoProps> = ({ className = "", compac
           <img
             src={imgSrc}
             alt="Cinemax"
-            className={compact ? "h-6 w-6 sm:h-11 sm:w-11 object-contain" : "h-10 w-auto sm:h-auto sm:w-full object-contain"}
+            className={compact ? "h-6 w-6 sm:h-11 sm:w-11 object-contain" : "h-14 w-auto sm:h-auto sm:w-full object-contain"}
             onError={() => setImgFailed(true)}
           />
         )}

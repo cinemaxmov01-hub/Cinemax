@@ -67,6 +67,14 @@ export async function searchExactTitle(title: string, year?: string | null): Pro
     const hit = normalizeHit(r, r.media_type);
     if (hit) hits.push(hit);
   }
+  
+  // Sort by popularity and vote count to get the most accurate match
+  hits.sort((a, b) => {
+    const scoreA = (a.vote_average || 0) * 10 + (Math.log10(1 + (a.vote_count || 0)) * 5);
+    const scoreB = (b.vote_average || 0) * 10 + (Math.log10(1 + (b.vote_count || 0)) * 5);
+    return scoreB - scoreA;
+  });
+  
   return hits.slice(0, 3);
 }
 

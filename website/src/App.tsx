@@ -1248,12 +1248,12 @@ const CinemaxDashboard: React.FC = () => {
 
                     {/* Rotation progress dots */}
                     {heroMovies.length > 1 && (
-                      <div className="absolute top-6 right-6 lg:right-12 z-10 flex items-center gap-1">
+                      <div className="absolute top-6 right-6 lg:right-12 z-10 flex items-center gap-0.5">
                         {heroMovies.map((_, i) => (
                           <span
                             key={i}
-                            className={`h-0.5 rounded-full transition-all duration-300 ${
-                              i === heroIndex % heroMovies.length ? "w-2 bg-[#39FF14]" : "w-0.5 bg-white/25"
+                            className={`h-0.25 rounded-full transition-all duration-300 ${
+                              i === heroIndex % heroMovies.length ? "w-1 bg-[#39FF14]" : "w-0.25 bg-white/25"
                             }`}
                           />
                         ))}
