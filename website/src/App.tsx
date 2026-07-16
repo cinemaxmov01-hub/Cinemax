@@ -55,7 +55,8 @@ import {
   Lock,
   Tag,
   X as XIcon,
-  Mic
+  Mic,
+  Shield
 } from "lucide-react";
 
 // Pre-configured "Supergirl" Featured Hero Movie matching references
@@ -957,7 +958,7 @@ const CinemaxDashboard: React.FC = () => {
         {/* Top Header Navbar with frosted blur */}
         <header id="top-navbar" className="h-16 lg:h-20 glass-navbar sticky top-0 z-40 px-4 lg:px-8 flex items-center justify-between gap-2 sm:gap-4">
           
-          {/* Left Section: Mobile menu, Search, Voice Agent, Download App */}
+          {/* Left Section: Mobile menu */}
           <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
             <button
               id="mobile-menu-trigger"
@@ -967,56 +968,6 @@ const CinemaxDashboard: React.FC = () => {
             >
               <Menu className="h-5 w-5" />
             </button>
-
-            {/* Instant Search input — permanently visible across all devices */}
-            <div className="relative w-64 sm:w-80 lg:w-96">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500 pointer-events-none" aria-hidden="true" />
-              <input
-                id="header-search-input"
-                type="text"
-                aria-label="Search movies, TV shows, and actors"
-                placeholder="Search..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl pl-11 pr-12 py-2.5 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-[#39FF14]/50 transition-colors"
-              />
-              {/* Voice Search Button */}
-              <button
-                onClick={toggleSearchListening}
-                className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg transition-colors cursor-pointer ${
-                  isSearchListening 
-                    ? 'voice-button-active text-[#39FF14]' 
-                    : 'hover:bg-white/10 text-neutral-400 hover:text-[#39FF14]'
-                }`}
-                title={isSearchListening ? "Listening..." : "Voice Search"}
-              >
-                <Mic className="h-4 w-4" />
-              </button>
-              <audio ref={searchAudioRef} className="hidden" />
-            </div>
-
-            {/* Voice Agent - integrated next to search bar */}
-            <div className="hidden lg:block flex-shrink-0">
-              <VoiceAgent 
-                onNavigate={setCurrentView}
-                onSearch={setSearchQuery}
-                onPlayMovie={(title) => {
-                  // Find and play movie by title
-                  const movie = searchResults.find(m => 
-                    m.title?.toLowerCase() === title.toLowerCase() ||
-                    m.name?.toLowerCase() === title.toLowerCase()
-                  );
-                  if (movie) {
-                    handleMovieClick(movie);
-                  }
-                }}
-              />
-            </div>
-
-            {/* Download App Button - desktop only */}
-            <div className="hidden lg:block flex-shrink-0">
-              <InstallAppButton variant="header" label="Download App" />
-            </div>
           </div>
 
           {/* Center Navigation: Movies / TV Shows / Gens / All Categories —
@@ -1152,17 +1103,7 @@ const CinemaxDashboard: React.FC = () => {
               >
                 <AvatarRenderer value={currentUser.avatar} size={36} initials={currentUser.name?.[0]?.toUpperCase() || "C"} />
               </button>
-            ) : (
-              <button
-                id="header-login-btn"
-                onClick={() => requireSignInPrompt()}
-                title="Sign in to access your profile"
-                className="neon-btn text-[10px] sm:text-xs px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition-all cursor-pointer shadow-md flex items-center gap-1.5"
-              >
-                <Lock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                <span className="hidden sm:inline">Sign In</span>
-              </button>
-            )}
+            ) : null}
           </div>
         </header>
 
@@ -1276,12 +1217,12 @@ const CinemaxDashboard: React.FC = () => {
 
                     {/* Rotation progress dots */}
                     {heroMovies.length > 1 && (
-                      <div className="absolute top-6 right-6 lg:right-12 z-10 flex items-center gap-1.5">
+                      <div className="absolute top-6 right-6 lg:right-12 z-10 flex items-center gap-1">
                         {heroMovies.map((_, i) => (
                           <span
                             key={i}
-                            className={`h-1 rounded-full transition-all duration-300 ${
-                              i === heroIndex % heroMovies.length ? "w-6 bg-[#39FF14]" : "w-1.5 bg-white/25"
+                            className={`h-0.5 rounded-full transition-all duration-300 ${
+                              i === heroIndex % heroMovies.length ? "w-2 bg-[#39FF14]" : "w-0.5 bg-white/25"
                             }`}
                           />
                         ))}

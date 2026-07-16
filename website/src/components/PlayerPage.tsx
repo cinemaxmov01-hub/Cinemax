@@ -351,8 +351,6 @@ export const PlayerPage: React.FC = () => {
   const [trailerKey, setTrailerKey] = useState<string | null>(null);
   const [cast, setCast] = useState<CastMember[]>([]);
   const [selectedQuality, setSelectedQuality] = useState<string>("1080p");
-  const [selectedAudio, setSelectedAudio] = useState<string>("English");
-  const [selectedSubtitles, setSelectedSubtitles] = useState<string>("English");
   const [qualityMenuOpen, setQualityMenuOpen] = useState(false);
   const [detectedQuality, setDetectedQuality] = useState<string>("1080p");
   const [networkSpeed, setNetworkSpeed] = useState<number>(0);
@@ -632,7 +630,7 @@ export const PlayerPage: React.FC = () => {
     if (mode === "trailer") {
       return trailerKey
         ? `https://www.youtube.com/embed/${trailerKey}?autoplay=1&rel=0`
-        : embedUrlWithAutoplay(buildEmbedUrl(activeServer, isTv ? "tv" : "movie", selectedMovie.id, currentSeason, currentEpisode, selectedSubtitles, selectedQuality, selectedAudio));
+        : embedUrlWithAutoplay(buildEmbedUrl(activeServer, isTv ? "tv" : "movie", selectedMovie.id, currentSeason, currentEpisode, "English", selectedQuality, "English"));
     }
 
     const embedUrl = embedUrlWithAutoplay(
@@ -642,14 +640,14 @@ export const PlayerPage: React.FC = () => {
         selectedMovie.id,
         currentSeason,
         currentEpisode,
-        selectedSubtitles,
+        "English",
         selectedQuality,
-        selectedAudio
+        "English"
       )
     );
     
     console.log(`[PlayerPage] Generated embed URL:`, embedUrl);
-    console.log(`[PlayerPage] Provider: ${activeServer.id}, Quality: ${selectedQuality}, Audio: ${selectedAudio}, Season: ${currentSeason}, Episode: ${currentEpisode}`);
+    console.log(`[PlayerPage] Provider: ${activeServer.id}, Quality: ${selectedQuality}, Season: ${currentSeason}, Episode: ${currentEpisode}`);
     
     return embedUrl;
   };
@@ -1010,28 +1008,6 @@ export const PlayerPage: React.FC = () => {
                   </div>
                 )}
               </div>
-              
-              {/* Audio Selection */}
-              <select
-                value={selectedAudio}
-                onChange={(e) => setSelectedAudio(e.target.value)}
-                className="px-4 py-2.5 rounded-xl text-[11px] font-bold text-center transition-all cursor-pointer border bg-black/40 border-white/10 text-neutral-400 hover:text-white hover:border-[#22c55e]/30"
-              >
-                {activeServer.audioOptions.map((audio) => (
-                  <option key={audio} value={audio}>{audio}</option>
-                ))}
-              </select>
-              
-              {/* Subtitles Selection */}
-              <select
-                value={selectedSubtitles}
-                onChange={(e) => setSelectedSubtitles(e.target.value)}
-                className="px-4 py-2.5 rounded-xl text-[11px] font-bold text-center transition-all cursor-pointer border bg-black/40 border-white/10 text-neutral-400 hover:text-white hover:border-[#22c55e]/30"
-              >
-                {activeServer.subtitlesOptions.map((subtitle) => (
-                  <option key={subtitle} value={subtitle}>{subtitle}</option>
-                ))}
-              </select>
             </div>
           </div>
         )}

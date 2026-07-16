@@ -277,18 +277,6 @@ export const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({ movie, isO
               <Play className="h-5 w-5 fill-black" />
               <span>Watch Now</span>
             </button>
-            {trailerKey && (
-              <button
-                onClick={() => {
-                  // Open trailer in new tab or modal
-                  window.open(`https://www.youtube.com/watch?v=${trailerKey}`, '_blank');
-                }}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold px-6 py-3 sm:py-3 h-12 sm:h-auto rounded-2xl transition-all cursor-pointer min-h-[44px]"
-              >
-                <Play className="h-5 w-5" />
-                <span>Watch Trailer</span>
-              </button>
-            )}
             <button
               onClick={() => {
                 // Add to watchlist functionality

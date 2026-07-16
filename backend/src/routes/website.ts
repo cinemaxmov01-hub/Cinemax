@@ -163,7 +163,10 @@ authRouter.post("/api/auth/signup/verify", rateLimit({ name: "signup-verify", ma
   // being auto-signed-in.
   const existing = getUserByEmail(email);
   if (existing) {
-    res.status(200).json({ ok: true, alreadyExists: true });
+    res.status(409).json({ 
+      error: "An account with this email already exists. Please sign in or use the 'Forgot Password' option if you've forgotten your password.",
+      alreadyExists: true 
+    });
     return;
   }
 
