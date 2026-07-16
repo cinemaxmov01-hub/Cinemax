@@ -14,45 +14,45 @@ export interface StreamingProvider {
 
 /**
  * Streaming sources for the Multi-Server Movie Player.
- * Optimized configuration with VidLink, VidSrc Pro, and Embed.su.
+ * Optimized configuration with only P1, P2, and P3 in that specific order.
  */
 export const PROVIDERS_CONFIG: StreamingProvider[] = [
   {
-    // VidLink — clean player with custom color theming
-    id: "vidlink",
-    name: "VidLink",
-    homepage: "https://vidlink.pro",
-    moviePattern: "https://vidlink.pro/{id}",
-    tvPattern: "https://vidlink.pro/{id}/{season}/{episode}",
-    qualityOptions: ["4K", "1080p", "720p", "480p", "360p", "Auto"],
-    audioOptions: ["Original", "English", "Spanish", "French"],
-    subtitlesOptions: ["Embedded", "English", "Spanish", "French", "Auto"],
+    // Vidsrc.pm — high-availability professional player for full movies.
+    id: "vidsrc-pm",
+    name: "P1",
+    homepage: "https://vidsrc.pm",
+    moviePattern: "https://vidsrc.pm/embed/movie?tmdb={id}&ds_lang=en&autoplay=1",
+    tvPattern: "https://vidsrc.pm/embed/tv?tmdb={id}&season={season}&episode={episode}&ds_lang=en&autoplay=1",
+    qualityOptions: ["1080p", "720p", "Auto"],
+    audioOptions: ["Original", "English"],
+    subtitlesOptions: ["Embedded", "English"],
     defaultLatency: 95,
     status: "Online",
   },
   {
-    // VidSrc Pro — reliable streaming provider
-    id: "vidsrc-pro",
-    name: "VidSrc Pro",
-    homepage: "https://vidsrc.pro",
-    moviePattern: "https://vidsrc.pro/embed/movie/{id}",
-    tvPattern: "https://vidsrc.pro/embed/tv/{id}/{season}/{episode}",
-    qualityOptions: ["4K", "1080p", "720p", "480p", "360p", "Auto"],
-    audioOptions: ["Original", "English", "Spanish", "French"],
-    subtitlesOptions: ["Embedded", "English", "Spanish", "French", "Auto"],
+    id: "vidsrc-me",
+    name: "P2",
+    homepage: "https://vidsrc.me",
+    moviePattern: "https://vidsrc.me/embed/movie?tmdb={id}&ds_lang=en&autoplay=1",
+    tvPattern: "https://vidsrc.me/embed/tv?tmdb={id}&season={season}&episode={episode}&ds_lang=en&autoplay=1",
+    qualityOptions: ["1080p", "720p", "Auto"],
+    audioOptions: ["Original", "English"],
+    subtitlesOptions: ["Embedded", "English"],
     defaultLatency: 100,
     status: "Online",
   },
   {
-    // Embed.su — fallback streaming provider
-    id: "embed-su",
-    name: "Embed.su",
-    homepage: "https://embed.su",
-    moviePattern: "https://embed.su/movie/{id}",
-    tvPattern: "https://embed.su/tv/{id}/{season}/{episode}",
-    qualityOptions: ["4K", "1080p", "720p", "480p", "360p", "Auto"],
-    audioOptions: ["Original", "English", "Spanish", "French"],
-    subtitlesOptions: ["Embedded", "English", "Spanish", "French", "Auto"],
+    // Vidlink.pro — clean player, brand-color theming, autoplay, next-episode
+    // support out of the box. Great fallback when P1/P2 rate-limit.
+    id: "vidlink-pro",
+    name: "P3",
+    homepage: "https://vidlink.pro",
+    moviePattern: "https://vidlink.pro/movie/{id}?primaryColor=39FF14&secondaryColor=39FF14&iconColor=39FF14&autoplay=true&title=true",
+    tvPattern: "https://vidlink.pro/tv/{id}/{season}/{episode}?primaryColor=39FF14&secondaryColor=39FF14&iconColor=39FF14&autoplay=true&nextbutton=true&title=true",
+    qualityOptions: ["1080p", "720p", "Auto"],
+    audioOptions: ["Original", "English"],
+    subtitlesOptions: ["Embedded", "English"],
     defaultLatency: 115,
     status: "Online",
   },
@@ -68,39 +68,24 @@ export const buildEmbedUrl = (
   id: number | string,
   season: number = 1,
   episode: number = 1,
-  subtitles: string = "English",
-  quality: string = "1080p",
-  audio: string = "English"
+  _subtitles: string = "English",
+  _quality: string = "Auto",
+  _audio: string = "English"
 ): string => {
   const pattern = type === "movie" ? provider.moviePattern : provider.tvPattern;
 
-  let url = pattern
+  return pattern
     .replace("{id}", id.toString())
     .replace("{season}", season.toString())
     .replace("{episode}", episode.toString());
-
-  // Validate URL construction
-  if (!url || url.includes("{") || url.includes("}")) {
-    console.error(`[buildEmbedUrl] Invalid URL construction for ${provider.id}:`, url);
-  }
-
-  // Skip adding extra parameters for instant playback - providers handle quality/subtitles internally
-  // This reduces URL construction time and eliminates unnecessary parameters
-
-  return url;
 };
 
 /** Append autoplay hint for embed providers that support it. */
 export function embedUrlWithAutoplay(url: string): string {
   if (!url) return url;
-  
-  // Add autoplay parameter if not already present
-  if (!url.includes('autoplay=')) {
-    const separator = url.includes('?') ? '&' : '?';
-    return `${url}${separator}autoplay=1`;
-  }
-  
-  return url;
+  if (/autoplay=/.test(url)) return url;
+  const sep = url.includes("?") ? "&" : "?";
+  return `${url}${sep}autoplay=1`;
 }
 
 /**

@@ -112,7 +112,7 @@ export const PipPlayer: React.FC = () => {
       style={{
         transform: `translate(${position.x}px, ${position.y}px)`
       }}
-      className="fixed bottom-4 right-4 w-80 h-48 rounded-2xl overflow-hidden glass-card border border-white/10 z-50 flex flex-col transition-shadow"
+      className="fixed bottom-4 right-4 w-80 h-48 rounded-2xl overflow-hidden glass-card shadow-2xl border border-white/10 z-50 flex flex-col transition-shadow hover:shadow-[#39FF14]/10"
     >
       {/* Title Bar / Dragger */}
       <div
@@ -180,7 +180,7 @@ export const PipPlayer: React.FC = () => {
             <div className="flex-1 h-1 bg-neutral-800 rounded-full overflow-hidden relative mx-2">
               <div
                 style={{ width: `${pipProgress}%` }}
-                className="absolute top-0 bottom-0 left-0 bg-[#39FF14]"
+                className="absolute top-0 bottom-0 left-0 bg-[#39FF14] shadow-[0_0_8px_#39FF14]"
               />
             </div>
 

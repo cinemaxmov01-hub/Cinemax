@@ -52,7 +52,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
     appLanguage,
     setAppLanguage,
     siteConfig,
-    setSearchQuery,
   } = useApp();
 
   const [sidebarAds, setSidebarAds] = useState<PublicAd[]>([]);
@@ -121,8 +120,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
       setIsOpen(false);
       return;
     }
-    // Clear search query when navigating to a different page
-    setSearchQuery("");
     setActiveGenre(null);
     setActiveGenreName(null);
     setCurrentView(viewId);
@@ -148,12 +145,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
       {/* Sidebar Container */}
       <aside 
         id="sidebar"
-        className={`fixed top-0 left-0 z-50 flex w-64 flex-col border-r border-neutral-800 surface-panel text-neutral-400 transition-transform duration-300 ease-in-out lg:translate-x-0 h-screen overflow-hidden ${
+        className={`fixed top-0 bottom-0 left-0 z-50 flex w-64 flex-col border-r border-neutral-800 surface-panel text-neutral-400 transition-transform duration-300 ease-in-out lg:translate-x-0 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         {/* Logo Section */}
-        <div id="logo-section" className="flex h-16 sm:h-20 items-center justify-between px-4 sm:px-6 border-b border-white/5">
+        <div id="logo-section" className="flex h-20 items-center justify-between px-6 border-b border-white/5">
           <div 
             className="flex items-center gap-3 cursor-pointer select-none"
             onClick={() => handleNavClick("home")}
@@ -171,7 +168,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
         </div>
 
         {/* Scrollable Navigation Lists */}
-        <div id="nav-scroll-area" className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-6 space-y-8 scrollbar-thin scrollbar-thumb-neutral-800 scrollbar-track-transparent">
+        <div id="nav-scroll-area" className="flex-1 overflow-y-auto px-4 py-6 space-y-8 scrollbar-thin scrollbar-thumb-neutral-800 scrollbar-track-transparent">
           {/* Main Views */}
           <div id="primary-nav-group" className="space-y-1">
             {visiblePrimaryNav.map((item) => {
