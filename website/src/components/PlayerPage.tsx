@@ -26,7 +26,7 @@ import { getImageUrl, tmdb, isTvShow } from "../utils/tmdb";
 import { AdBanner } from "./AdBanner";
 import { fetchPublicAds, PublicAd } from "../utils/siteConfig";
 import { MovieCard } from "./MovieCard";
-import { PROVIDERS_CONFIG, buildEmbedUrl, embedUrlWithAutoplay, EMBED_IFRAME_ALLOW } from "../utils/streamingConfig";
+import { PROVIDERS_CONFIG, buildEmbedUrl, embedUrlWithAutoplay, EMBED_IFRAME_ALLOW, ProviderFailoverSystem } from "../utils/streamingConfig";
 import { LiveChat } from "./LiveChat";
 import { WatchChoiceModal } from "./WatchChoiceModal";
 import { DownloadChoiceModal } from "./DownloadChoiceModal";
@@ -103,7 +103,7 @@ const UpNextQueue: React.FC<{ movies: Movie[]; onSelect: (m: Movie) => void }> =
             </div>
           </div>
           <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-            <div className="h-12 w-12 rounded-full bg-[#39FF14] flex items-center justify-center shadow-lg">
+            <div className="h-12 w-12 rounded-full bg-[#39FF14] flex items-center justify-center">
               <Play className="h-5 w-5 text-black fill-black ml-0.5" />
             </div>
           </div>
@@ -344,9 +344,19 @@ export const PlayerPage: React.FC = () => {
   const [streamSource, setStreamSource] = useState<string | null>(null);
   const [streamType, setStreamType] = useState<'embed' | 'mp4' | 'hls'>('embed');
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
   const [trailerKey, setTrailerKey] = useState<string | null>(null);
   const [cast, setCast] = useState<CastMember[]>([]);
+  
+  // Automated failover system
+  const [failoverSystem] = useState(() => new ProviderFailoverSystem(
+    PROVIDERS_CONFIG,
+    (provider) => {
+      setActiveServerId(provider.id);
+      setIsLoadingVideo(true);
+    }
+  ));
   const [reviews, setReviews] = useState<Review[]>([]);
   const [recommendations, setRecommendations] = useState<Movie[]>([]);
   const [similarMovies, setSimilarMovies] = useState<Movie[]>([]);
@@ -366,7 +376,20 @@ export const PlayerPage: React.FC = () => {
     setTrailerKey(null);
     setIsLoadingVideo(true);
     setActiveServerId(PROVIDERS_CONFIG[0].id);
-  }, [selectedMovie?.id, selectedMovie?.media_type]);
+    failoverSystem.resetToPrimary();
+  }, [selectedMovie?.id, selectedMovie?.media_type, failoverSystem]);
+
+  // Start failover monitoring when iframe loads
+  useEffect(() => {
+    if (iframeRef.current && streamType === 'embed') {
+      failoverSystem.setIframeRef(iframeRef.current);
+      failoverSystem.startMonitoring();
+      
+      return () => {
+        failoverSystem.destroy();
+      };
+    }
+  }, [iframeRef, activeServerId, streamType, failoverSystem]);
 
   // Load deep details
   useEffect(() => {
@@ -706,7 +729,7 @@ export const PlayerPage: React.FC = () => {
         )}
         <div 
           id="video-player-container" 
-          className="relative w-full aspect-video rounded-3xl overflow-hidden border border-white/5 bg-black shadow-2xl max-w-5xl"
+          className="relative w-full aspect-video rounded-3xl overflow-hidden border border-white/5 bg-black max-w-5xl"
         >
           {/* If we resolved a proxied direct source, use a native video element (with HLS fallback).
               Otherwise fall back to the embed iframe. */}
@@ -734,6 +757,7 @@ export const PlayerPage: React.FC = () => {
             <iframe
               key={`${activeServerId}-${selectedMovie.id}-${currentSeason}-${currentEpisode}-${playerMode}`}
               id="vidsrc-stream-iframe"
+              ref={iframeRef}
               src={getStreamUrl()}
               className="w-full h-full border-0"
               allow={EMBED_IFRAME_ALLOW}
@@ -761,34 +785,8 @@ export const PlayerPage: React.FC = () => {
           )}
         </div>
 
-        {/* Server Toggle Row — 3 reliable, ad-blocked sources for the full movie/episode */}
-        {playerMode !== "trailer" && !selectedMovie.isCustom && (
-          <div id="server-toggle-row" className="max-w-5xl mt-4 space-y-2">
-            <span className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest px-1">
-              {t("chooseServer")}
-            </span>
-            <div className="grid grid-cols-3 sm:grid-cols-3 gap-2">
-              {PROVIDERS_CONFIG.map((server, idx) => {
-                const isActive = server.id === activeServerId;
-                return (
-                  <button
-                    key={server.id}
-                    id={`server-toggle-${server.id}`}
-                    onClick={() => setActiveServerId(server.id)}
-                    title={server.homepage}
-                    className={`px-2 py-2.5 rounded-xl text-[11px] font-bold text-center transition-all cursor-pointer border ${
-                      isActive
-                        ? "accent-active"
-                        : "bg-black/40 border-white/10 text-neutral-400 hover:text-white hover:border-[#22c55e]/30"
-                    }`}
-                  >
-                    {server.name || `P${idx + 1}`}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
+        {/* Server Toggle Row — Hidden UI for automated failover system */}
+        {/* Server switching is now handled automatically by the failover system and is invisible to users */}
 
         {/* TV Episode Selector Grid (IF TV SHOW) */}
         {isTv && tvDetails && playerMode !== "trailer" && (
@@ -1101,7 +1099,7 @@ export const PlayerPage: React.FC = () => {
       {/* Share Dialog Popup Modal */}
       {shareOpen && (
         <div id="share-dialog-backdrop" className="fixed inset-0 z-60 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div id="share-dialog" className="glass-card p-6 rounded-3xl w-full max-w-sm text-center relative shadow-2xl border border-white/10 bg-[#050505]/95">
+          <div id="share-dialog" className="glass-card p-6 rounded-3xl w-full max-w-sm text-center relative border border-white/10 bg-[#050505]/95">
             <button 
               id="close-share-btn"
               onClick={() => setShareOpen(false)}

@@ -13,7 +13,7 @@ import {
   ArrowRight,
   ArrowLeft,
   Shield,
-  ImagePlus,
+  Mic,
   Loader2,
   Code2,
   Globe2,
@@ -30,9 +30,9 @@ const REASONS = [
     accent: "from-[#39FF14]/20 to-transparent text-[#39FF14]",
   },
   {
-    icon: ImagePlus,
-    title: "Visual Search",
-    description: "Upload a poster or screenshot and get movies that match its mood, color, and style.",
+    icon: Mic,
+    title: "Voice Search",
+    description: "Use voice commands to search for movies, ask questions, and navigate the site hands-free.",
     accent: "from-sky-400/20 to-transparent text-sky-400",
   },
   {
@@ -52,7 +52,7 @@ const REASONS = [
 const FAQS = [
   {
     q: "What is Cinemax?",
-    a: "Cinemax is a personalized movie and TV discovery platform - track what you love, get AI-curated picks from All Kiki's, and find similar titles with visual search.",
+    a: "Cinemax is a personalized movie and TV discovery platform - track what you love, get AI-curated picks from All Kiki's, and find similar titles with voice search.",
   },
   {
     q: "Is Cinemax free to use?",
@@ -63,8 +63,8 @@ const FAQS = [
     a: "All Kiki's is built into the Help Desk. Ask it about movies, get recommendations, or ask it to change an account setting - it will always confirm before making any change.",
   },
   {
-    q: "What is Visual Search?",
-    a: "Upload an image - a poster, a screenshot, anything - and Cinemax's AI analyzes its mood and style, then finds titles with a similar look and feel.",
+    q: "What is Voice Search?",
+    a: "Use voice commands to search for movies, ask for recommendations, and navigate Cinemax hands-free. Just click the microphone and speak naturally.",
   },
   {
     q: "Can I install Cinemax on my device?",

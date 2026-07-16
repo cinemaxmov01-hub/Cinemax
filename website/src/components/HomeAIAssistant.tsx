@@ -2,9 +2,8 @@ import React, { useState, useRef, useEffect } from "react";
 import { useApp } from "../context/AppContext";
 import { Message, Movie } from "../types";
 import { getImageUrl } from "../utils/tmdb";
-import { runVisualSearchMatch, buildVisualContextFromResult, VisualContextPayload } from "../utils/visualSearch";
 import { askAssistant, stripActionBlocks, generateImage, AgentAction } from "../utils/assistantClient";
-import { Sparkles, Send, ImagePlus, X, Bot, Loader2, Play, MessageSquareText, ShieldCheck, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
+import { Sparkles, Send, X, Bot, Loader2, Play, MessageSquareText, ShieldCheck, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
 
 interface HomeAIAssistantProps {
   onSelectMovie: (movie: Movie) => void;
@@ -12,19 +11,6 @@ interface HomeAIAssistantProps {
   onSearch?: (query: string) => void;
 }
 
-function fileToBase64(file: File): Promise<{ data: string; mimeType: string }> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      const [prefix, data] = result.split(",");
-      const mimeType = prefix.match(/data:(.*);base64/)?.[1] || file.type || "image/jpeg";
-      resolve({ data, mimeType });
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
 
 const HOME_QUICK_PROMPTS = [
   "What should I watch tonight?",
@@ -41,14 +27,12 @@ export const HomeAIAssistant: React.FC<HomeAIAssistantProps> = ({ onSelectMovie,
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "model",
-      text: `Hey${user ? ` ${user.name}` : ""}! I'm All Kiki's — your Cinemax AI Agent. I can help you navigate the site, search for movies, generate images, and execute actions. Upload a photo for **Visual Search** or just ask me anything!${isAdmin ? "\n\nI recognize you as an administrator — ask me about the Admin Panel anytime." : ""}`,
+      text: `Hey${user ? ` ${user.name}` : ""}! I'm All Kiki's — your Cinemax AI Agent. I can help you navigate the site, search for movies, generate images, and execute actions. Use **Voice Search** by clicking the microphone or just ask me anything!${isAdmin ? "\n\nI recognize you as an administrator — ask me about the Admin Panel anytime." : ""}`,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [pendingImage, setPendingImage] = useState<{ previewUrl: string; base64: string; mimeType: string } | null>(null);
-  const visualContextRef = useRef<VisualContextPayload | null>(null);
   
   // Voice states
   const [isListening, setIsListening] = useState(false);
@@ -142,7 +126,6 @@ export const HomeAIAssistant: React.FC<HomeAIAssistantProps> = ({ onSelectMovie,
   };
 
   const scrollRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Initialize Speech Recognition
   useEffect(() => {
@@ -278,99 +261,52 @@ export const HomeAIAssistant: React.FC<HomeAIAssistantProps> = ({ onSelectMovie,
     if (open) scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, loading, open]);
 
-  const handlePickImage = () => fileInputRef.current?.click();
-
-  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const { data, mimeType } = await fileToBase64(file);
-    setPendingImage({ previewUrl: URL.createObjectURL(file), base64: data, mimeType });
-    e.target.value = "";
-  };
 
   const handleSend = async (textOverride?: string) => {
     const prompt = (textOverride ?? input).trim();
-    if (!prompt && !pendingImage) return;
+    if (!prompt) return;
 
-    const attachedImage = pendingImage;
     const userMsg: Message = {
       role: "user",
-      text: prompt || (attachedImage ? "Find movies that look like this image." : ""),
+      text: prompt,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      imageUrl: attachedImage?.previewUrl,
     };
 
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
-    setPendingImage(null);
     setLoading(true);
 
     try {
-      if (attachedImage) {
-        const result = await runVisualSearchMatch(attachedImage.base64, attachedImage.mimeType, prompt || undefined);
-        const ctx = buildVisualContextFromResult(result);
-        visualContextRef.current = ctx;
-
-        let replyText = result.aiAnswer
-          ? result.aiAnswer
-          : `${result.description}\n\nHere are titles with a similar look and feel:`;
-
-        if (!result.matches.length) {
-          replyText = `${result.description}\n\nI couldn't find close matches — try a clearer poster or screenshot, or describe the mood you want.`;
-        }
-
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "model",
-            text: replyText,
-            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-            visualMatches: result.matches.map(m => ({
-              ...m,
-              media_type: m.media_type || (m.name ? 'tv' : 'movie')
-            })),
-            visualContext: ctx,
-          },
-        ]);
-      } else {
-        const { text, action } = await askAssistant({
-          message: prompt,
-          history: messages.map((m) => ({ role: m.role, text: m.text })),
-          visualContext: visualContextRef.current,
-        });
-        
-        // Execute agent action if present
-        if (action) {
-          await executeAgentAction(action);
-        }
-        
-        const cleanText = stripActionBlocks(text) || "Here's what I found!";
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "model",
-            text: cleanText,
-            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          },
-        ]);
-        
-        // Speak the response if voice is enabled
-        await speakText(cleanText);
+      const { text, action } = await askAssistant({
+        message: prompt,
+        history: messages.map((m) => ({ role: m.role, text: m.text })),
+      });
+      
+      // Execute agent action if present
+      if (action) {
+        await executeAgentAction(action);
       }
+      
+      const cleanText = stripActionBlocks(text) || "Here's what I found!";
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "model",
+          text: cleanText,
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        },
+      ]);
+      
+      // Speak the response if voice is enabled
+      await speakText(cleanText);
     } catch (err: any) {
       const errorMessage = err?.message || "Sorry — please try again in a moment.";
-      
-      // Provide specific guidance for visual search configuration issues
-      let userFriendlyMessage = errorMessage;
-      if (errorMessage.includes("Visual search is not configured") || errorMessage.includes("GEMINI_API_KEY")) {
-        userFriendlyMessage = "Visual search requires the Gemini API key to be configured. Please add GEMINI_API_KEY to your backend environment variables to enable this feature.";
-      }
       
       setMessages((prev) => [
         ...prev,
         {
           role: "model",
-          text: userFriendlyMessage,
+          text: errorMessage,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         },
       ]);
@@ -411,7 +347,7 @@ export const HomeAIAssistant: React.FC<HomeAIAssistantProps> = ({ onSelectMovie,
                   All Kiki's AI
                   {isAdmin && <ShieldCheck className="h-3.5 w-3.5 text-[#39FF14]" title="Admin recognized" />}
                 </h3>
-                <p className="text-[10px] text-neutral-500 mt-1">Visual Search + full site guide</p>
+                <p className="text-[10px] text-neutral-500 mt-1">Voice Search + full site guide</p>
               </div>
             </div>
             <button id="close-home-ai-btn" onClick={() => setOpen(false)} className="text-neutral-500 hover:text-white cursor-pointer p-1">
@@ -427,21 +363,8 @@ export const HomeAIAssistant: React.FC<HomeAIAssistantProps> = ({ onSelectMovie,
                     m.role === "user" ? "bg-[#39FF14] text-black font-medium" : "bg-white/5 border border-white/10 text-neutral-200"
                   }`}
                 >
-                  {m.imageUrl && <img src={m.imageUrl} alt="Uploaded" className="rounded-xl mb-2 max-h-32 object-cover" />}
                   {m.generatedImageUrl && <img src={m.generatedImageUrl} alt="AI Generated" className="rounded-xl mb-2 max-h-48 object-cover" />}
                   {m.text}
-                  {m.visualMatches && m.visualMatches.length > 0 && (
-                    <div className="grid grid-cols-3 gap-2 mt-3">
-                      {m.visualMatches.map((movie) => (
-                        <button key={movie.id} onClick={() => onSelectMovie(movie)} className="group relative rounded-lg overflow-hidden aspect-[2/3] cursor-pointer">
-                          <img src={getImageUrl(movie.poster_path)} alt={movie.title || movie.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" referrerPolicy="no-referrer" />
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 flex items-center justify-center transition-all">
-                            <Play className="h-4 w-4 text-white opacity-0 group-hover:opacity-100 fill-white" />
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
                 </div>
               </div>
             ))}
@@ -449,7 +372,7 @@ export const HomeAIAssistant: React.FC<HomeAIAssistantProps> = ({ onSelectMovie,
               <div className="flex justify-start">
                 <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-3 flex items-center gap-2">
                   <Loader2 className="h-3.5 w-3.5 animate-spin text-[#39FF14]" />
-                  <span className="text-[10px] text-neutral-400">{pendingImage ? "Analyzing image..." : "Thinking..."}</span>
+                  <span className="text-[10px] text-neutral-400">Thinking...</span>
                 </div>
               </div>
             )}
@@ -466,21 +389,8 @@ export const HomeAIAssistant: React.FC<HomeAIAssistantProps> = ({ onSelectMovie,
             </div>
           )}
 
-          {pendingImage && (
-            <div className="px-4 pb-2 flex items-center gap-2">
-              <img src={pendingImage.previewUrl} alt="Pending" className="h-12 w-12 rounded-lg object-cover border border-white/10" />
-              <span className="text-[10px] text-neutral-400 flex-1">Visual Search ready — add a question or tap send</span>
-              <button onClick={() => setPendingImage(null)} className="text-neutral-500 hover:text-white cursor-pointer">
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          )}
 
           <div className="p-3 border-t border-white/10 flex items-center gap-2 bg-black/40">
-            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelected} className="hidden" />
-            <button onClick={handlePickImage} disabled={loading} className="flex-shrink-0 h-10 w-10 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-neutral-400 hover:text-[#39FF14] cursor-pointer disabled:opacity-40" title="Visual Search">
-              <ImagePlus className="h-4 w-4" />
-            </button>
             <button 
               onClick={toggleListening} 
               disabled={loading}
@@ -498,7 +408,7 @@ export const HomeAIAssistant: React.FC<HomeAIAssistantProps> = ({ onSelectMovie,
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
-              placeholder={pendingImage ? "Ask about this image (optional)..." : "Ask anything about Cinemax..."}
+              placeholder="Ask anything about Cinemax..."
               className="flex-1 bg-white/5 border border-white/10 focus:border-[#39FF14]/50 focus:outline-none rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-neutral-600"
             />
             <button 
@@ -512,7 +422,7 @@ export const HomeAIAssistant: React.FC<HomeAIAssistantProps> = ({ onSelectMovie,
             >
               {voiceEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
             </button>
-            <button onClick={() => handleSend()} disabled={loading || (!input.trim() && !pendingImage)} className="flex-shrink-0 h-10 w-10 rounded-xl bg-[#39FF14] hover:brightness-110 disabled:opacity-40 flex items-center justify-center text-black cursor-pointer">
+            <button onClick={() => handleSend()} disabled={loading || !input.trim()} className="flex-shrink-0 h-10 w-10 rounded-xl bg-[#39FF14] hover:brightness-110 disabled:opacity-40 flex items-center justify-center text-black cursor-pointer">
               <Send className="h-4 w-4" />
             </button>
           </div>

@@ -14,16 +14,16 @@ export interface StreamingProvider {
 
 /**
  * Streaming sources for the Multi-Server Movie Player.
- * Optimized configuration with only P1, P2, and P3 in that specific order.
+ * Configured with automated failover: Vidsrc.to (primary), Embed.su (secondary), Smashystream (tertiary).
  */
 export const PROVIDERS_CONFIG: StreamingProvider[] = [
   {
-    // Vidsrc.pm — high-availability professional player for full movies.
-    id: "vidsrc-pm",
+    // Vidsrc.to — Primary high-speed, HD stream provider
+    id: "vidsrc-to",
     name: "P1",
-    homepage: "https://vidsrc.pm",
-    moviePattern: "https://vidsrc.pm/embed/movie?tmdb={id}&ds_lang=en&autoplay=1",
-    tvPattern: "https://vidsrc.pm/embed/tv?tmdb={id}&season={season}&episode={episode}&ds_lang=en&autoplay=1",
+    homepage: "https://vidsrc.to",
+    moviePattern: "https://vidsrc.to/embed/movie/{id}",
+    tvPattern: "https://vidsrc.to/embed/tv/{id}/{season}/{episode}",
     qualityOptions: ["1080p", "720p", "Auto"],
     audioOptions: ["Original", "English"],
     subtitlesOptions: ["Embedded", "English"],
@@ -31,11 +31,12 @@ export const PROVIDERS_CONFIG: StreamingProvider[] = [
     status: "Online",
   },
   {
-    id: "vidsrc-me",
+    // Embed.su — Secondary high-reliability backup server cluster with built-in redundancy
+    id: "embed-su",
     name: "P2",
-    homepage: "https://vidsrc.me",
-    moviePattern: "https://vidsrc.me/embed/movie?tmdb={id}&ds_lang=en&autoplay=1",
-    tvPattern: "https://vidsrc.me/embed/tv?tmdb={id}&season={season}&episode={episode}&ds_lang=en&autoplay=1",
+    homepage: "https://embed.su",
+    moviePattern: "https://embed.su/embed/movie/{id}",
+    tvPattern: "https://embed.su/embed/tv/{id}/{season}/{episode}",
     qualityOptions: ["1080p", "720p", "Auto"],
     audioOptions: ["Original", "English"],
     subtitlesOptions: ["Embedded", "English"],
@@ -43,13 +44,12 @@ export const PROVIDERS_CONFIG: StreamingProvider[] = [
     status: "Online",
   },
   {
-    // Vidlink.pro — clean player, brand-color theming, autoplay, next-episode
-    // support out of the box. Great fallback when P1/P2 rate-limit.
-    id: "vidlink-pro",
+    // Smashystream.xyz — Tertiary optimized mobile player with multi-language auto-subtitle injection
+    id: "smashystream",
     name: "P3",
-    homepage: "https://vidlink.pro",
-    moviePattern: "https://vidlink.pro/movie/{id}?primaryColor=39FF14&secondaryColor=39FF14&iconColor=39FF14&autoplay=true&title=true",
-    tvPattern: "https://vidlink.pro/tv/{id}/{season}/{episode}?primaryColor=39FF14&secondaryColor=39FF14&iconColor=39FF14&autoplay=true&nextbutton=true&title=true",
+    homepage: "https://embed.smashystream.com",
+    moviePattern: "https://embed.smashystream.com/playere.php?tmdb={id}",
+    tvPattern: "https://embed.smashystream.com/playere.php?tmdb={id}&season={season}&episode={episode}",
     qualityOptions: ["1080p", "720p", "Auto"],
     audioOptions: ["Original", "English"],
     subtitlesOptions: ["Embedded", "English"],
@@ -131,3 +131,106 @@ export const checkProviderLatency = async (
     return { ping: simulatedPing, status };
   }
 };
+
+/**
+ * Automated failover system for video streaming providers.
+ * Monitors iframe loading and automatically switches to next provider on failure.
+ */
+export class ProviderFailoverSystem {
+  private currentProviderIndex: number = 0;
+  private providers: StreamingProvider[];
+  private timeoutMs: number = 2000; // 2-second timeout for failover
+  private iframeRef: HTMLIFrameElement | null = null;
+  private onProviderChange?: (provider: StreamingProvider) => void;
+  private failoverTimeoutId: number | null = null;
+
+  constructor(
+    providers: StreamingProvider[],
+    onProviderChange?: (provider: StreamingProvider) => void
+  ) {
+    this.providers = providers;
+    this.onProviderChange = onProviderChange;
+  }
+
+  /**
+   * Get the current provider in the failover chain
+   */
+  getCurrentProvider(): StreamingProvider {
+    return this.providers[this.currentProviderIndex];
+  }
+
+  /**
+   * Set the iframe reference for monitoring
+   */
+  setIframeRef(iframe: HTMLIFrameElement | null) {
+    this.iframeRef = iframe;
+  }
+
+  /**
+   * Start monitoring the current provider for failures
+   */
+  startMonitoring() {
+    if (!this.iframeRef) return;
+
+    // Clear any existing timeout
+    if (this.failoverTimeoutId !== null) {
+      window.clearTimeout(this.failoverTimeoutId);
+    }
+
+    // Set up timeout detection
+    this.failoverTimeoutId = window.setTimeout(() => {
+      this.handleProviderFailure();
+    }, this.timeoutMs);
+
+    // Monitor iframe load events
+    this.iframeRef.onload = () => {
+      if (this.failoverTimeoutId !== null) {
+        window.clearTimeout(this.failoverTimeoutId);
+      }
+    };
+
+    this.iframeRef.onerror = () => {
+      this.handleProviderFailure();
+    };
+  }
+
+  /**
+   * Handle provider failure and switch to next in chain
+   */
+  private handleProviderFailure() {
+    if (this.currentProviderIndex < this.providers.length - 1) {
+      this.currentProviderIndex++;
+      const nextProvider = this.providers[this.currentProviderIndex];
+      
+      console.log(`Provider failover: Switching to ${nextProvider.name} (${nextProvider.id})`);
+      
+      if (this.onProviderChange) {
+        this.onProviderChange(nextProvider);
+      }
+    } else {
+      console.error('All providers failed. No more fallback options available.');
+    }
+  }
+
+  /**
+   * Reset to primary provider (useful for manual refresh)
+   */
+  resetToPrimary() {
+    this.currentProviderIndex = 0;
+  }
+
+  /**
+   * Stop monitoring and cleanup
+   */
+  destroy() {
+    if (this.failoverTimeoutId !== null) {
+      window.clearTimeout(this.failoverTimeoutId);
+      this.failoverTimeoutId = null;
+    }
+    
+    if (this.iframeRef) {
+      this.iframeRef.onload = null;
+      this.iframeRef.onerror = null;
+    }
+  }
+}

@@ -144,7 +144,7 @@ export const ShortsPage: React.FC<ShortsPageProps> = ({ onWatch }) => {
         id="shorts-page"
         ref={containerRef}
         onScroll={handleScroll}
-        className="relative z-10 h-full w-full sm:w-[420px] sm:max-w-[420px] sm:my-4 sm:rounded-3xl overflow-y-scroll snap-y snap-mandatory scroll-smooth bg-black no-scrollbar sm:shadow-[0_0_60px_rgba(0,0,0,0.6)] sm:border sm:border-white/10"
+        className="relative z-10 h-full w-full sm:w-[420px] sm:max-w-[420px] sm:my-4 sm:rounded-3xl overflow-y-scroll snap-y snap-mandatory scroll-smooth bg-black no-scrollbar sm:border sm:border-white/10"
         style={{ scrollbarWidth: "none" }}
       >
         {clips.map((clip, idx) => (

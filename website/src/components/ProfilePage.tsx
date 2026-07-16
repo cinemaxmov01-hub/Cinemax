@@ -382,13 +382,13 @@ export const ProfilePage: React.FC = () => {
                         onClick={() => handleSelectAvatar(value)}
                         title={anim.label}
                         className={`relative flex flex-col items-center gap-1.5 p-2 rounded-2xl cursor-pointer transition-all duration-300 ${
-                          isActive ? "bg-[#39FF14]/10 ring-2 ring-[#39FF14] shadow-[0_0_20px_rgba(57,255,20,0.35)]" : "hover:bg-white/5 ring-1 ring-white/10"
+                          isActive ? "bg-[#39FF14]/10 ring-2 ring-[#39FF14]" : "hover:bg-white/5 ring-1 ring-white/10"
                         }`}
                       >
                         <AvatarRenderer value={value} size={56} initials={user.name?.[0]?.toUpperCase() || "C"} />
                         <span className="text-[9px] font-semibold text-neutral-400 text-center leading-tight">{anim.label}</span>
                         {isActive && (
-                          <div className="absolute top-1 right-1 bg-[#39FF14] text-black rounded-full p-0.5 shadow-lg">
+                          <div className="absolute top-1 right-1 bg-[#39FF14] text-black rounded-full p-0.5">
                             <Check className="h-3 w-3 stroke-[3]" />
                           </div>
                         )}
@@ -412,13 +412,13 @@ export const ProfilePage: React.FC = () => {
                         onClick={() => handleSelectAvatar(value)}
                         title={cartoon.label}
                         className={`relative flex flex-col items-center gap-1.5 p-2 rounded-2xl cursor-pointer transition-all duration-300 transform hover:scale-105 ${
-                          isActive ? "bg-[#39FF14]/10 ring-2 ring-[#39FF14] shadow-[0_0_20px_rgba(57,255,20,0.35)]" : "hover:bg-white/5 ring-1 ring-white/10"
+                          isActive ? "bg-[#39FF14]/10 ring-2 ring-[#39FF14]" : "hover:bg-white/5 ring-1 ring-white/10"
                         }`}
                       >
                         <AvatarRenderer value={value} size={64} />
                         <span className="text-[9px] font-semibold text-neutral-400 text-center leading-tight">{cartoon.label}</span>
                         {isActive && (
-                          <div className="absolute top-1 right-1 bg-[#39FF14] text-black rounded-full p-0.5 shadow-lg">
+                          <div className="absolute top-1 right-1 bg-[#39FF14] text-black rounded-full p-0.5">
                             <Check className="h-3 w-3 stroke-[3]" />
                           </div>
                         )}

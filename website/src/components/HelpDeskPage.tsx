@@ -2,12 +2,10 @@ import React, { useState, useRef, useEffect } from "react";
 import { useApp } from "../context/AppContext";
 import { Message, AssistantAction, Movie } from "../types";
 import { getImageUrl } from "../utils/tmdb";
-import { runVisualSearchMatch, buildVisualContextFromResult, VisualContextPayload } from "../utils/visualSearch";
 import { askAssistant } from "../utils/assistantClient";
 import {
   Sparkles,
   Send,
-  ImagePlus,
   X,
   Zap,
   ShieldCheck,
@@ -32,8 +30,8 @@ const QUICK_PROMPTS = [
 const HELP_FAQS = [
   {
     category: "AI",
-    q: "How does Visual Search work?",
-    a: "In Help Desk → AI Chat or the floating Ask AI button, tap the image icon and upload a poster or screenshot. Gemini analyzes the look and mood, then Cinemax finds matching titles. You can ask follow-up questions like \"which is closest?\" after results appear.",
+    q: "How does Voice Search work?",
+    a: "In Help Desk → AI Chat or the floating Ask AI button, click the microphone icon to start voice input. Speak naturally to search for movies, ask questions, or navigate the site. The AI understands your commands and responds accordingly.",
   },
   {
     category: "Downloads",
@@ -67,8 +65,8 @@ const HELP_FAQS = [
   },
   {
     category: "Features",
-    q: "What is Visual Search?",
-    a: "Upload a poster or screenshot in this Help Desk chat, and All Kiki's AI will find titles with a similar mood, palette, and style.",
+    q: "What is Voice Search?",
+    a: "Use voice commands to search for movies, ask for recommendations, and navigate Cinemax hands-free. Click the microphone and speak naturally - the AI understands context and provides relevant results.",
   },
   {
     category: "Features",
@@ -96,19 +94,6 @@ function extractAction(text: string): { cleanText: string; action: AssistantActi
   return { cleanText: text.replace(match[0], "").trim(), action: null };
 }
 
-function fileToBase64(file: File): Promise<{ data: string; mimeType: string }> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      const [prefix, data] = result.split(",");
-      const mimeType = prefix.match(/data:(.*);base64/)?.[1] || file.type || "image/jpeg";
-      resolve({ data, mimeType });
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
 
 export const HelpDeskPage: React.FC = () => {
   const { user, applyAssistantAction } = useApp();
@@ -173,98 +158,50 @@ export const HelpDeskPage: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "model",
-      text: `Hi${user ? `, ${user.name}` : ""}! I'm **All Kiki's**, your Cinemax AI Help Desk — trained on every feature of this site.${user?.role === "admin" ? " I recognize you as an **administrator** and can guide you through the Admin Panel, content management, and site settings." : ""}\n\nAsk about movies, account settings, or upload a poster/screenshot for Visual Search. After results appear, ask follow-up questions like "which is the closest match?"`,
+      text: `Hi${user ? `, ${user.name}` : ""}! I'm **All Kiki's**, your Cinemax AI Help Desk — trained on every feature of this site.${user?.role === "admin" ? " I recognize you as an **administrator** and can guide you through the Admin Panel, content management, and site settings." : ""}\n\nAsk about movies, account settings, or use Voice Search by clicking the microphone. I can help you find content and navigate the site hands-free.`,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [pendingImage, setPendingImage] = useState<{ previewUrl: string; base64: string; mimeType: string } | null>(null);
   const [actionStatus, setActionStatus] = useState<Record<number, string>>({});
-  const visualContextRef = useRef<VisualContextPayload | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, loading]);
 
-  const handlePickImage = () => fileInputRef.current?.click();
-
-  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const { data, mimeType } = await fileToBase64(file);
-    setPendingImage({ previewUrl: URL.createObjectURL(file), base64: data, mimeType });
-    e.target.value = "";
-  };
-
-  const runVisualSearch = async (base64: string, mimeType: string, question?: string) => {
-    const result = await runVisualSearchMatch(base64, mimeType, question);
-    const ctx = buildVisualContextFromResult(result);
-    visualContextRef.current = ctx;
-    return { description: result.description, matches: result.matches, aiAnswer: result.aiAnswer, visualContext: ctx };
-  };
 
   const handleSend = async (textOverride?: string) => {
     const prompt = (textOverride ?? input).trim();
-    if (!prompt && !pendingImage) return;
+    if (!prompt) return;
 
-    const attachedImage = pendingImage;
     const userMsg: Message = {
       role: "user",
-      text: prompt || (attachedImage ? "Find movies that look like this image." : ""),
+      text: prompt,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      imageUrl: attachedImage?.previewUrl,
     };
 
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
-    setPendingImage(null);
     setLoading(true);
 
     try {
-      if (attachedImage) {
-        const { description, matches, aiAnswer, visualContext } = await runVisualSearch(
-          attachedImage.base64,
-          attachedImage.mimeType,
-          prompt || undefined
-        );
-        const replyText = aiAnswer || (matches.length
-          ? `${description}\n\nHere's what I found that shares a similar look and feel:`
-          : `${description}\n\nI couldn't find close matches — try a clearer image or describe the mood.`);
-
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "model",
-            text: replyText,
-            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-            visualMatches: matches.map(m => ({
-              ...m,
-              media_type: m.media_type || (m.name ? 'tv' : 'movie')
-            })),
-            visualContext,
-          },
-        ]);
-      } else {
-        const { text } = await askAssistant({
-          message: prompt,
-          history: messages.map((m) => ({ role: m.role, text: m.text })),
-          visualContext: visualContextRef.current,
-        });
-        const { cleanText, action } = extractAction(text || "");
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "model",
-            text: cleanText,
-            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-            proposedAction: action,
-          },
-        ]);
-      }
+      const { text } = await askAssistant({
+        message: prompt,
+        history: messages.map((m) => ({ role: m.role, text: m.text })),
+      });
+      const { cleanText, action } = extractAction(text || "");
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "model",
+          text: cleanText,
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          proposedAction: action,
+        },
+      ]);
     } catch (err: any) {
       console.error("Help desk error:", err);
       setMessages((prev) => [
@@ -298,7 +235,7 @@ export const HelpDeskPage: React.FC = () => {
               <Zap className="h-3 w-3" /> Live
             </span>
           </h1>
-          <p className="text-xs text-neutral-500">Movie support, account actions, and AI-powered visual search — all in one place.</p>
+          <p className="text-xs text-neutral-500">Movie support, account actions, and AI-powered voice search — all in one place.</p>
         </div>
       </div>
 
@@ -336,9 +273,6 @@ export const HelpDeskPage: React.FC = () => {
           {messages.map((msg, idx) => (
             <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
               <div className={`max-w-[85%] ${msg.role === "user" ? "items-end" : "items-start"} flex flex-col gap-2`}>
-                {msg.imageUrl && (
-                  <img src={msg.imageUrl} alt="Uploaded" className="h-32 w-32 object-cover rounded-2xl border border-white/10" />
-                )}
                 {msg.text && (
                   <div
                     className={`rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
@@ -346,17 +280,6 @@ export const HelpDeskPage: React.FC = () => {
                     }`}
                   >
                     {msg.text}
-                  </div>
-                )}
-
-                {msg.visualMatches && msg.visualMatches.length > 0 && (
-                  <div className="grid grid-cols-4 gap-2 w-full">
-                    {msg.visualMatches.map((m) => (
-                      <div key={m.id} className="rounded-xl overflow-hidden border border-white/10 group cursor-default">
-                        <img src={getImageUrl(m.poster_path, "w500")} alt={m.title || m.name} className="w-full aspect-[2/3] object-cover" />
-                        <p className="text-[10px] text-neutral-400 p-1 truncate">{m.title || m.name}</p>
-                      </div>
-                    ))}
                   </div>
                 )}
 
@@ -411,36 +334,17 @@ export const HelpDeskPage: React.FC = () => {
 
         {/* Composer */}
         <div className="border-t border-white/10 p-4">
-          {pendingImage && (
-            <div className="mb-3 relative inline-block">
-              <img src={pendingImage.previewUrl} alt="Preview" className="h-16 w-16 object-cover rounded-xl border border-white/10" />
-              <button
-                onClick={() => setPendingImage(null)}
-                className="absolute -top-2 -right-2 h-5 w-5 bg-black border border-white/20 rounded-full flex items-center justify-center cursor-pointer"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          )}
           <div className="flex items-center gap-2">
-            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelected} className="hidden" />
-            <button
-              onClick={handlePickImage}
-              title="Upload an image for visual search"
-              className="flex-shrink-0 h-11 w-11 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-neutral-300 hover:text-[#39FF14] transition-colors cursor-pointer"
-            >
-              <ImagePlus className="h-5 w-5" />
-            </button>
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
-              placeholder={pendingImage ? "Add a note (optional) and send..." : "Ask All Kiki's anything..."}
+              placeholder="Ask All Kiki's anything..."
               className="flex-1 bg-white/5 border border-white/10 focus:border-[#39FF14]/50 focus:outline-none rounded-xl px-4 py-3 text-sm text-white placeholder:text-neutral-600 transition-colors"
             />
             <button
               onClick={() => handleSend()}
-              disabled={loading || (!input.trim() && !pendingImage)}
+              disabled={loading || !input.trim()}
               className="flex-shrink-0 h-11 w-11 rounded-xl bg-[#39FF14] hover:brightness-110 disabled:opacity-40 flex items-center justify-center text-black transition-all cursor-pointer"
             >
               <Send className="h-4 w-4" />

@@ -113,7 +113,7 @@ export const OnboardingPreferences: React.FC<OnboardingPreferencesProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
-      <div className="relative w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-3xl border border-white/10 bg-[#0a0a0a] shadow-2xl animate-slide-up scrollbar-thin scrollbar-thumb-neutral-800 scrollbar-track-transparent">
+      <div className="relative w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-3xl border border-white/10 bg-[#0a0a0a] animate-slide-up scrollbar-thin scrollbar-thumb-neutral-800 scrollbar-track-transparent">
         {/* Close button */}
         <button
           onClick={handleSkip}

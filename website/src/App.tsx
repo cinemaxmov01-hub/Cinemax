@@ -656,6 +656,8 @@ const CinemaxDashboard: React.FC = () => {
   const handleMovieClick = async (movie: Movie) => {
     const playKey = `${movie.media_type || (isTvShow(movie) ? "tv" : "movie")}:${movie.id}`;
     setPreparingPlayKey(playKey);
+    // Clear search query when clicking a movie to ensure player view takes priority
+    setSearchQuery("");
     try {
       const ready = await prepareForPlayback(movie);
       if (rememberChoice && defaultWatchChoice) {
@@ -990,7 +992,7 @@ const CinemaxDashboard: React.FC = () => {
               {/* Voice Search Button */}
               <button
                 onClick={toggleSearchListening}
-                className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg transition-colors cursor-pointer ${
+                className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg transition-colors cursor-pointer lg:hidden ${
                   isSearchListening 
                     ? 'voice-button-active text-[#39FF14]' 
                     : 'hover:bg-white/10 text-neutral-400 hover:text-[#39FF14]'
@@ -1003,7 +1005,7 @@ const CinemaxDashboard: React.FC = () => {
             </div>
 
             {/* Voice Agent - integrated next to search bar */}
-            <div className="hidden lg:block flex-shrink-0">
+            <div className="hidden lg:hidden flex-shrink-0">
               <VoiceAgent 
                 onNavigate={setCurrentView}
                 onSearch={setSearchQuery}
@@ -1020,8 +1022,8 @@ const CinemaxDashboard: React.FC = () => {
               />
             </div>
 
-            {/* Download App Button - desktop only */}
-            <div className="hidden lg:block flex-shrink-0">
+            {/* Download App Button - mobile only */}
+            <div className="lg:hidden flex-shrink-0">
               <InstallAppButton variant="header" label="Download App" />
             </div>
           </div>
@@ -1164,7 +1166,7 @@ const CinemaxDashboard: React.FC = () => {
                 id="header-login-btn"
                 onClick={() => requireSignInPrompt()}
                 title="Sign in to access your profile"
-                className="neon-btn text-[10px] sm:text-xs px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition-all cursor-pointer shadow-md flex items-center gap-1.5"
+                className="neon-btn text-[10px] sm:text-xs px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
               >
                 <Lock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 <span className="hidden sm:inline">Sign In</span>

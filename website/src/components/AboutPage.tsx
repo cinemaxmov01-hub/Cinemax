@@ -1,6 +1,6 @@
 import React from "react";
 import { useApp } from "../context/AppContext";
-import { Bot, ImagePlus, Bookmark, ShieldCheck, Sparkles, Users, Rocket, Heart } from "lucide-react";
+import { Bot, Mic, Bookmark, ShieldCheck, Sparkles, Users, Rocket, Heart } from "lucide-react";
 
 const FEATURES = [
   {
@@ -9,9 +9,9 @@ const FEATURES = [
     description: "A fast, professional assistant that answers questions and can adjust your settings on request — always with your confirmation first.",
   },
   {
-    icon: ImagePlus,
-    title: "Visual Search",
-    description: "Upload an image and let our AI find titles that match its mood, palette, and style.",
+    icon: Mic,
+    title: "Voice Search",
+    description: "Use voice commands to search for movies, ask questions, and navigate the site hands-free.",
   },
   {
     icon: Bookmark,
@@ -63,7 +63,7 @@ export const AboutPage: React.FC = () => {
         </h1>
         <p className="text-neutral-400 text-sm leading-relaxed">
           Cinemax is a personal movie & TV companion built around one idea: discovery should feel smart, not
-          overwhelming. An AI Help Desk, visual search, and a watchlist that actually keeps up with you.
+          overwhelming. An AI Help Desk, voice search, and a watchlist that actually keeps up with you.
         </p>
       </div>
 
@@ -73,7 +73,7 @@ export const AboutPage: React.FC = () => {
         <h2 className="font-sans text-xl font-bold mb-3">Our Mission</h2>
         <p className="text-neutral-400 text-sm max-w-xl mx-auto leading-relaxed">
           We built Cinemax because tracking what you want to watch shouldn't take more effort than watching it.
-          Every feature — from AI recommendations to visual search — exists to shorten the distance between "I'm
+          Every feature — from AI recommendations to voice search — exists to shorten the distance between "I'm
           bored" and "I found something great."
         </p>
       </div>
