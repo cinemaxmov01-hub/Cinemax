@@ -15,6 +15,12 @@ export interface TmdbMovieHit {
   release_date?: string;
   first_air_date?: string;
   media_type?: "movie" | "tv";
+  genre_ids?: number[];
+  genres?: Array<{ id: number; name: string }>;
+  runtime?: number;
+  episode_run_time?: number[];
+  number_of_seasons?: number;
+  number_of_episodes?: number;
 }
 
 function getTmdbKey(): string {
@@ -149,5 +155,27 @@ export async function matchMoviesFromAnalysis(analysis: VisualAnalysis): Promise
   push(byKeyword);
   push(byGenre);
 
-  return merged.slice(0, 12);
+  // Enrich results with additional details needed for streaming
+  const enriched = await Promise.all(
+    merged.slice(0, 12).map(async (m) => {
+      try {
+        const details = await tmdbFetch<any>(
+          m.media_type === "tv" ? `/tv/${m.id}` : `/movie/${m.id}`
+        );
+        return {
+          ...m,
+          genre_ids: details.genre_ids || [],
+          genres: details.genres || [],
+          runtime: details.runtime,
+          episode_run_time: details.episode_run_time,
+          number_of_seasons: details.number_of_seasons,
+          number_of_episodes: details.number_of_episodes,
+        };
+      } catch {
+        return m;
+      }
+    })
+  );
+
+  return enriched;
 }
