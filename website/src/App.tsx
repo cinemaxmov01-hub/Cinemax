@@ -990,8 +990,8 @@ const CinemaxDashboard: React.FC = () => {
                 onClick={toggleSearchListening}
                 className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg transition-colors cursor-pointer ${
                   isSearchListening 
-                    ? 'voice-button-active text-[#39FF14]' 
-                    : 'hover:bg-white/10 text-neutral-400 hover:text-[#39FF14]'
+                    ? 'voice-button-active text-[#39FF14] shadow-[0_0_20px_rgba(239,68,68,0.5)]' 
+                    : 'hover:bg-white/10 text-neutral-400 hover:text-[#39FF14] shadow-[0_0_15px_rgba(57,255,20,0.3),0_0_30px_rgba(200,200,200,0.2)] hover:shadow-[0_0_20px_rgba(57,255,20,0.5),0_0_40px_rgba(200,200,200,0.3)]'
                 }`}
                 title={isSearchListening ? "Listening..." : "Voice Search"}
               >
@@ -1252,8 +1252,8 @@ const CinemaxDashboard: React.FC = () => {
                         {heroMovies.map((_, i) => (
                           <span
                             key={i}
-                            className={`h-0.25 rounded-full transition-all duration-300 ${
-                              i === heroIndex % heroMovies.length ? "w-1 bg-[#39FF14]" : "w-0.25 bg-white/25"
+                            className={`h-0.125 rounded-full transition-all duration-300 ${
+                              i === heroIndex % heroMovies.length ? "w-0.75 bg-[#39FF14]" : "w-0.125 bg-white/25"
                             }`}
                           />
                         ))}

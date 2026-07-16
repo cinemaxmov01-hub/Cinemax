@@ -16,7 +16,7 @@ export const CinemaxLogo: React.FC<CinemaxLogoProps> = ({ className = "", compac
           <img
             src={imgSrc}
             alt="Cinemax"
-            className={compact ? "h-6 w-6 sm:h-11 sm:w-11 object-contain" : "h-14 w-auto sm:h-auto sm:w-full object-contain"}
+            className={compact ? "h-6 w-6 sm:h-11 sm:w-11 object-contain" : "h-16 w-auto sm:h-auto sm:w-full object-contain"}
             onError={() => setImgFailed(true)}
           />
         )}
@@ -29,13 +29,6 @@ export const CinemaxLogo: React.FC<CinemaxLogoProps> = ({ className = "", compac
                 <stop offset="50%" stopColor="#39FF14" />
                 <stop offset="100%" stopColor="#00D24A" />
               </linearGradient>
-              <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-                <feGaussianBlur stdDeviation="6" result="b" />
-                <feMerge>
-                  <feMergeNode in="b" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
             </defs>
             <circle cx="60" cy="60" r="34" fill="none" stroke="#052009" strokeWidth="10" />
             <path
@@ -44,7 +37,6 @@ export const CinemaxLogo: React.FC<CinemaxLogoProps> = ({ className = "", compac
               stroke="url(#g1)"
               strokeWidth="18"
               strokeLinecap="round"
-              filter="url(#glow)"
             />
           </svg>
         )}

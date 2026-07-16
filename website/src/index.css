@@ -223,41 +223,41 @@ body {
 .logo-mark {
   background: var(--accent);
   color: #000000;
-  box-shadow: 0 0 20px rgba(57, 255, 20, 0.5), 0 0 40px rgba(57, 255, 20, 0.3), 0 0 60px rgba(57, 255, 20, 0.2);
-  animation: green-pulse 2s ease-in-out infinite;
+  box-shadow: none;
+  animation: none;
 }
 
 @keyframes green-pulse {
   0%, 100% {
-    box-shadow: 0 0 20px rgba(57, 255, 20, 0.5), 0 0 40px rgba(57, 255, 20, 0.3), 0 0 60px rgba(57, 255, 20, 0.2);
+    box-shadow: none;
   }
   50% {
-    box-shadow: 0 0 30px rgba(57, 255, 20, 0.7), 0 0 60px rgba(57, 255, 20, 0.5), 0 0 90px rgba(57, 255, 20, 0.3);
+    box-shadow: none;
   }
 }
 
 /* Voice button glowing animation - light green and light grey */
 .voice-button-active {
-  animation: voice-glow 1.5s ease-in-out infinite;
-  background: linear-gradient(135deg, rgba(57, 255, 20, 0.3), rgba(200, 200, 200, 0.3), rgba(57, 255, 20, 0.3));
+  animation: none;
+  background: var(--accent);
   background-size: 200% 200%;
 }
 
 @keyframes voice-glow {
   0%, 100% {
-    box-shadow: 0 0 15px rgba(57, 255, 20, 0.6), 0 0 30px rgba(200, 200, 200, 0.4), 0 0 45px rgba(57, 255, 20, 0.3);
+    box-shadow: none;
     background-position: 0% 50%;
   }
   25% {
-    box-shadow: 0 0 20px rgba(57, 255, 20, 0.8), 0 0 40px rgba(200, 200, 200, 0.5), 0 0 60px rgba(57, 255, 20, 0.4);
+    box-shadow: none;
     background-position: 50% 50%;
   }
   50% {
-    box-shadow: 0 0 25px rgba(200, 200, 200, 0.7), 0 0 50px rgba(57, 255, 20, 0.6), 0 0 75px rgba(200, 200, 200, 0.5);
+    box-shadow: none;
     background-position: 100% 50%;
   }
   75% {
-    box-shadow: 0 0 20px rgba(57, 255, 20, 0.8), 0 0 40px rgba(200, 200, 200, 0.5), 0 0 60px rgba(57, 255, 20, 0.4);
+    box-shadow: none;
     background-position: 50% 100%;
   }
 }
@@ -294,7 +294,7 @@ video::-webkit-media-controls-mute-button {
 
 video::-webkit-media-controls-timeline-progress {
   background-color: #39FF14 !important;
-  box-shadow: 0 0 10px rgba(57, 255, 20, 0.5);
+  box-shadow: none;
 }
 
 video::-webkit-media-controls-fullscreen-button {
@@ -303,7 +303,7 @@ video::-webkit-media-controls-fullscreen-button {
 
 video::-webkit-media-controls-timeline-thumb {
   background-color: #39FF14 !important;
-  box-shadow: 0 0 10px rgba(57, 255, 20, 0.5);
+  box-shadow: none;
 }
 
 /* Additional video control elements to ensure green styling */

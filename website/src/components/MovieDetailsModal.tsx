@@ -272,7 +272,7 @@ export const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({ movie, isO
             <button
               id="details-modal-play-btn"
               onClick={() => onPlay(d)}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#39FF14] hover:bg-[#31dd11] text-black font-extrabold px-6 py-3 sm:py-3 h-12 sm:h-auto rounded-2xl shadow-[0_0_20px_rgba(57,255,20,0.35)] transition-all cursor-pointer min-h-[44px]"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#39FF14] hover:bg-[#31dd11] text-black font-extrabold px-6 py-3 sm:py-3 h-12 sm:h-auto rounded-2xl transition-all cursor-pointer min-h-[44px]"
             >
               <Play className="h-5 w-5 fill-black" />
               <span>Watch Now</span>

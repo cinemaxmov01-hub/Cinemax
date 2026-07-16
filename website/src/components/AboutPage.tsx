@@ -76,7 +76,7 @@ export const AboutPage: React.FC = () => {
       {/* Hero */}
       <div className="text-center max-w-2xl mx-auto mb-16">
         <div className="inline-flex items-center gap-2 mb-5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#39FF14] font-black text-black shadow-[0_0_15px_rgba(57,255,20,0.4)] text-lg">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#39FF14] font-black text-black text-lg">
             C
           </div>
           <span className="text-lg font-black tracking-tighter select-none">

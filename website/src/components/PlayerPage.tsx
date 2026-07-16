@@ -1055,7 +1055,7 @@ export const PlayerPage: React.FC = () => {
 
         {/* TV Episode Selector Grid (IF TV SHOW) */}
         {isTv && tvDetails && playerMode !== "trailer" && (
-          <div id="tv-episode-selector" className="max-w-5xl mt-6 p-6 rounded-3xl glass-card space-y-4">
+          <div id="tv-episode-selector" className="max-w-5xl mt-6 p-6 rounded-3xl space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/5 pb-3">
               <h3 className="font-sans font-bold text-lg text-white flex items-center gap-2">
                 <Tv className="h-5 w-5 text-[#39FF14]" />

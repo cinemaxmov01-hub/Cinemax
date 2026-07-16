@@ -229,10 +229,10 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({ onNavigate, onSearch, on
           disabled={isProcessing}
           className={`relative h-12 w-12 rounded-2xl flex items-center justify-center transition-all duration-300 transform group-hover:scale-105 ${
             isListening 
-              ? 'bg-gradient-to-br from-red-500/20 to-red-600/10 border-2 border-red-500 text-red-400 shadow-[0_0_25px_rgba(239,68,68,0.4)] animate-pulse' 
+              ? 'bg-gradient-to-br from-red-500/20 to-red-600/10 border-2 border-red-500 text-red-400 animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.5)]' 
               : isProcessing
-              ? 'bg-gradient-to-br from-[#39FF14]/10 to-[#39FF14]/5 border-2 border-[#39FF14]/40 text-[#39FF14] shadow-[0_0_25px_rgba(57,255,20,0.3)]'
-              : 'bg-gradient-to-br from-white/5 to-white/10 hover:from-white/10 hover:to-white/15 border border-white/20 hover:border-[#39FF14]/50 text-neutral-400 hover:text-white shadow-lg hover:shadow-[0_0_20px_rgba(57,255,20,0.2)]'
+              ? 'bg-gradient-to-br from-[#39FF14]/10 to-[#39FF14]/5 border-2 border-[#39FF14]/40 text-[#39FF14] shadow-[0_0_25px_rgba(57,255,20,0.4),0_0_50px_rgba(57,255,20,0.2)]'
+              : 'bg-gradient-to-br from-white/5 to-white/10 hover:from-white/10 hover:to-white/15 border border-white/20 hover:border-[#39FF14]/50 text-neutral-400 hover:text-white shadow-[0_0_15px_rgba(57,255,20,0.3),0_0_30px_rgba(200,200,200,0.2)] hover:shadow-[0_0_20px_rgba(57,255,20,0.5),0_0_40px_rgba(200,200,200,0.3)]'
           }`}
           title={isListening ? "Listening..." : isProcessing ? "Processing..." : "Voice Assistant"}
         >
