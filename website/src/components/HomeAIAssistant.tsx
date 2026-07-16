@@ -360,17 +360,11 @@ export const HomeAIAssistant: React.FC<HomeAIAssistantProps> = ({ onSelectMovie,
     } catch (err: any) {
       const errorMessage = err?.message || "Sorry — please try again in a moment.";
       
-      // Provide specific guidance for visual search configuration issues
-      let userFriendlyMessage = errorMessage;
-      if (errorMessage.includes("Visual search is not configured") || errorMessage.includes("GEMINI_API_KEY")) {
-        userFriendlyMessage = "Visual search requires the Gemini API key to be configured. Please add GEMINI_API_KEY to your backend environment variables to enable this feature.";
-      }
-      
       setMessages((prev) => [
         ...prev,
         {
           role: "model",
-          text: userFriendlyMessage,
+          text: errorMessage,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         },
       ]);

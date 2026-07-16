@@ -434,18 +434,22 @@ const CinemaxDashboard: React.FC = () => {
     // Play welcome message on first click
     if (!hasPlayedSearchWelcome) {
       setHasPlayedSearchWelcome(true);
-      speakSearchResponse("Welcome to Cinemax", "en");
+      speakSearchResponse("Welcome to Cinemax. What do you want to look for?", "en");
       // Start listening after welcome message
       setTimeout(() => {
         searchRecognitionRef.current.start();
-      }, 2500);
+      }, 3500);
       return;
     }
 
     if (isSearchListening) {
       searchRecognitionRef.current.stop();
     } else {
-      searchRecognitionRef.current.start();
+      speakSearchResponse("What do you want to look for?", "en");
+      // Start listening after prompt
+      setTimeout(() => {
+        searchRecognitionRef.current.start();
+      }, 2000);
     }
   };
 
@@ -958,7 +962,7 @@ const CinemaxDashboard: React.FC = () => {
         {/* Top Header Navbar with frosted blur */}
         <header id="top-navbar" className="h-16 lg:h-20 glass-navbar sticky top-0 z-40 px-4 lg:px-8 flex items-center justify-between gap-2 sm:gap-4">
           
-          {/* Left Section: Mobile menu */}
+          {/* Left Section: Mobile menu, Search, Voice Search */}
           <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
             <button
               id="mobile-menu-trigger"
@@ -968,6 +972,33 @@ const CinemaxDashboard: React.FC = () => {
             >
               <Menu className="h-5 w-5" />
             </button>
+
+            {/* Instant Search input — permanently visible across all devices */}
+            <div className="relative w-64 sm:w-80 lg:w-96">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500 pointer-events-none" aria-hidden="true" />
+              <input
+                id="header-search-input"
+                type="text"
+                aria-label="Search movies, TV shows, and actors"
+                placeholder="Search..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-2xl pl-11 pr-12 py-2.5 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-[#39FF14]/50 transition-colors"
+              />
+              {/* Voice Search Button */}
+              <button
+                onClick={toggleSearchListening}
+                className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg transition-colors cursor-pointer ${
+                  isSearchListening 
+                    ? 'voice-button-active text-[#39FF14]' 
+                    : 'hover:bg-white/10 text-neutral-400 hover:text-[#39FF14]'
+                }`}
+                title={isSearchListening ? "Listening..." : "Voice Search"}
+              >
+                <Mic className="h-4 w-4" />
+              </button>
+              <audio ref={searchAudioRef} className="hidden" />
+            </div>
           </div>
 
           {/* Center Navigation: Movies / TV Shows / Gens / All Categories —

@@ -532,9 +532,9 @@ Respond with ONLY raw JSON (no markdown fences):
 
   try {
     const ai = getGeminiClient();
-    console.log("[Gemini] Starting image analysis with model: gemini-1.5-flash");
+    console.log("[Gemini] Starting image analysis with model: gemini-1.5-flash-latest");
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
+      model: "gemini-1.5-flash-latest",
       contents: [
         {
           role: "user",
