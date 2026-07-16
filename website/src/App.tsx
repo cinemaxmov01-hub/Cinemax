@@ -952,7 +952,7 @@ const CinemaxDashboard: React.FC = () => {
         {/* Top Header Navbar with frosted blur */}
         <header id="top-navbar" className="h-16 lg:h-20 glass-navbar sticky top-0 z-40 px-4 lg:px-8 flex items-center justify-between gap-2 sm:gap-4">
           
-          {/* Left Section: Mobile menu, Search, Voice Search, Categories */}
+          {/* Left Section: Logo, Mobile menu, Search, Voice Search, Categories */}
           <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
             <button
               id="mobile-menu-trigger"
@@ -962,6 +962,11 @@ const CinemaxDashboard: React.FC = () => {
             >
               <Menu className="h-5 w-5" />
             </button>
+
+            {/* Desktop Logo */}
+            <div className="hidden lg:flex items-center cursor-pointer" onClick={() => { setSearchQuery(""); setCurrentView("home"); }}>
+              <CinemaxLogo compact />
+            </div>
 
             {/* Mobile 'All' Categories Button */}
             <div className="relative sm:hidden">

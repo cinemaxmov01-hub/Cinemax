@@ -171,7 +171,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
         </div>
 
         {/* Scrollable Navigation Lists */}
-        <div id="nav-scroll-area" className="flex-1 overflow-y-auto px-4 py-6 space-y-8 scrollbar-thin scrollbar-thumb-neutral-800 scrollbar-track-transparent">
+        <div id="nav-scroll-area" className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-6 space-y-8 scrollbar-thin scrollbar-thumb-neutral-800 scrollbar-track-transparent" style={{ maxHeight: 'calc(100vh - 200px)' }}>
           {/* Main Views */}
           <div id="primary-nav-group" className="space-y-1">
             {visiblePrimaryNav.map((item) => {

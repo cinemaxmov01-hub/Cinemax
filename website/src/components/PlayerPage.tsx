@@ -510,13 +510,13 @@ export const PlayerPage: React.FC = () => {
   // Loader effect: instant loading for immediate playback
   useEffect(() => {
     setIsLoadingVideo(true);
-    // Minimal delay to ensure iframe is ready - reduced to 50ms for near-instant playback
+    // Delay to ensure iframe is ready and content starts loading before hiding loader
     const progressTimer = setTimeout(() => {
       setIsLoadingVideo(false);
-    }, 50);
+    }, 2000);
 
     return () => clearTimeout(progressTimer);
-  }, [selectedMovie, currentSeason, currentEpisode, playerMode, activeServerId]);
+  }, [selectedMovie?.id, currentSeason, currentEpisode, playerMode, activeServerId]);
 
   // Network speed detection for auto-quality selection
   useEffect(() => {
