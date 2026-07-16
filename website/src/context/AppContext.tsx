@@ -977,14 +977,57 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const safeName = title.replace(/[^\w\s-]/g, "").trim().slice(0, 60) || "cinemax-title";
     
     if (mode === "device") {
-      // Direct video download only - no local storage, no images/JSON
-      const dlUrl = (movie as any).download_url as string | undefined | null;
-      console.log("[downloadMovie] Device mode - download URL:", dlUrl ? "available" : "not available");
+      // Try to resolve video source from embed providers for download
+      console.log("[downloadMovie] Device mode - attempting to resolve video source from embed providers");
+      
+      const API_BASE = (typeof import.meta === "object" && (import.meta as any).env?.VITE_API_BASE_URL)
+        ? String((import.meta as any).env.VITE_API_BASE_URL).replace(/\/+$/, "")
+        : "";
 
-      if (dlUrl) {
-        try {
+      try {
+        // Try to resolve direct video source from embed providers
+        const providers = [
+          { id: "vidlink", moviePattern: "https://vidlink.pro/{id}", tvPattern: "https://vidlink.pro/{id}/{season}/{episode}" },
+          { id: "vidsrc-pro", moviePattern: "https://vidsrc.pro/{id}", tvPattern: "https://vidsrc.pro/{id}/{season}/{episode}" },
+          { id: "embed-su", moviePattern: "https://embed.su/{id}", tvPattern: "https://embed.su/{id}/{season}/{episode}" }
+        ];
+
+        let videoSource: string | null = null;
+        
+        for (const provider of providers) {
+          const pattern = mediaType === "movie" ? provider.moviePattern : provider.tvPattern;
+          const embedUrl = pattern
+            .replace("{id}", movie.id.toString())
+            .replace("{season}", "1")
+            .replace("{episode}", "1");
+
+          console.log(`[downloadMovie] Trying provider ${provider.id} with embed:`, embedUrl);
+          
+          try {
+            const res = await fetch(`${API_BASE}/api/stream/full`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ url: embedUrl }),
+            });
+
+            if (res.ok) {
+              const data = await res.json();
+              const source = data?.sourceUrl as string | undefined | null;
+              
+              if (source) {
+                console.log(`[downloadMovie] Provider ${provider.id} returned source:`, source);
+                videoSource = source;
+                break;
+              }
+            }
+          } catch (err) {
+            console.warn(`[downloadMovie] Provider ${provider.id} failed:`, err);
+          }
+        }
+
+        if (videoSource) {
           console.log("[downloadMovie] Starting device download to:", `${safeName}.mp4`);
-          await downloadRemoteFile(dlUrl, `${safeName}.mp4`);
+          await downloadRemoteFile(videoSource, `${safeName}.mp4`);
           addNotification({
             type: "system",
             title: "Download complete",
@@ -992,18 +1035,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           });
           console.log("[downloadMovie] Device download completed successfully");
           return { ok: true };
-        } catch (err: any) {
-          console.error("[downloadMovie] Device video download failed:", err);
+        } else {
+          console.log("[downloadMovie] No video source could be resolved from any provider");
           return {
             ok: false,
-            error: err?.message || "Unable to download the video file. Please try again.",
+            error: "Unable to resolve video source from streaming providers. The video may not be available for direct download.",
           };
         }
-      } else {
-        console.log("[downloadMovie] No download URL available");
+      } catch (err: any) {
+        console.error("[downloadMovie] Device video download failed:", err);
         return {
           ok: false,
-          error: "No direct download URL available for this title.",
+          error: err?.message || "Unable to download the video file. Please try again.",
         };
       }
     }

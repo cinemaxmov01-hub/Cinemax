@@ -14,16 +14,16 @@ export interface StreamingProvider {
 
 /**
  * Streaming sources for the Multi-Server Movie Player.
- * Optimized configuration with only P1, P2, and P3 in that specific order.
+ * Optimized configuration with VidLink, VidSrc Pro, and Embed.su.
  */
 export const PROVIDERS_CONFIG: StreamingProvider[] = [
   {
-    // Vidsrc.pm — high-availability professional player for full movies.
-    id: "vidsrc-pm",
-    name: "P1",
-    homepage: "https://vidsrc.pm",
-    moviePattern: "https://vidsrc.pm/embed/movie?tmdb={id}&ds_lang=en&autoplay=1",
-    tvPattern: "https://vidsrc.pm/embed/tv?tmdb={id}&season={season}&episode={episode}&ds_lang=en&autoplay=1",
+    // VidLink — clean player with custom color theming
+    id: "vidlink",
+    name: "VidLink",
+    homepage: "https://vidlink.pro",
+    moviePattern: "https://vidlink.pro/{id}?primaryColor=39FF14&autoplay=true",
+    tvPattern: "https://vidlink.pro/{id}/{season}/{episode}?primaryColor=39FF14&autoplay=true",
     qualityOptions: ["4K", "1080p", "720p", "480p", "360p", "Auto"],
     audioOptions: ["Original", "English", "Spanish", "French"],
     subtitlesOptions: ["Embedded", "English", "Spanish", "French", "Auto"],
@@ -31,11 +31,12 @@ export const PROVIDERS_CONFIG: StreamingProvider[] = [
     status: "Online",
   },
   {
-    id: "vidsrc-me",
-    name: "P2",
-    homepage: "https://vidsrc.me",
-    moviePattern: "https://vidsrc.me/embed/movie?tmdb={id}&ds_lang=en&autoplay=1",
-    tvPattern: "https://vidsrc.me/embed/tv?tmdb={id}&season={season}&episode={episode}&ds_lang=en&autoplay=1",
+    // VidSrc Pro — reliable streaming provider
+    id: "vidsrc-pro",
+    name: "VidSrc Pro",
+    homepage: "https://vidsrc.pro",
+    moviePattern: "https://vidsrc.pro/{id}",
+    tvPattern: "https://vidsrc.pro/{id}/{season}/{episode}",
     qualityOptions: ["4K", "1080p", "720p", "480p", "360p", "Auto"],
     audioOptions: ["Original", "English", "Spanish", "French"],
     subtitlesOptions: ["Embedded", "English", "Spanish", "French", "Auto"],
@@ -43,13 +44,12 @@ export const PROVIDERS_CONFIG: StreamingProvider[] = [
     status: "Online",
   },
   {
-    // Vidlink.pro — clean player, brand-color theming, autoplay, next-episode
-    // support out of the box. Great fallback when P1/P2 rate-limit.
-    id: "vidlink-pro",
-    name: "P3",
-    homepage: "https://vidlink.pro",
-    moviePattern: "https://vidlink.pro/movie/{id}?primaryColor=39FF14&secondaryColor=39FF14&iconColor=39FF14&autoplay=true&title=true",
-    tvPattern: "https://vidlink.pro/tv/{id}/{season}/{episode}?primaryColor=39FF14&secondaryColor=39FF14&iconColor=39FF14&autoplay=true&nextbutton=true&title=true",
+    // Embed.su — fallback streaming provider
+    id: "embed-su",
+    name: "Embed.su",
+    homepage: "https://embed.su",
+    moviePattern: "https://embed.su/{id}",
+    tvPattern: "https://embed.su/{id}/{season}/{episode}",
     qualityOptions: ["4K", "1080p", "720p", "480p", "360p", "Auto"],
     audioOptions: ["Original", "English", "Spanish", "French"],
     subtitlesOptions: ["Embedded", "English", "Spanish", "French", "Auto"],
@@ -78,6 +78,11 @@ export const buildEmbedUrl = (
     .replace("{id}", id.toString())
     .replace("{season}", season.toString())
     .replace("{episode}", episode.toString());
+
+  // Validate URL construction
+  if (!url || url.includes("{") || url.includes("}")) {
+    console.error(`[buildEmbedUrl] Invalid URL construction for ${provider.id}:`, url);
+  }
 
   // Add quality parameter for supported providers
   if (quality && quality !== "Auto") {

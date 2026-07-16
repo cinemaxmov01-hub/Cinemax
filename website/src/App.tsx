@@ -304,11 +304,11 @@ const CinemaxDashboard: React.FC = () => {
   useEffect(() => {
     const fadeTimer = setTimeout(() => {
       setFadeSplash(true);
-    }, 800);
+    }, 50);
 
     const unmountTimer = setTimeout(() => {
       setShowSplash(false);
-    }, 1200);
+    }, 100);
 
     return () => {
       clearTimeout(fadeTimer);
@@ -807,7 +807,7 @@ const CinemaxDashboard: React.FC = () => {
   const splashScreen = (
     <div
       id="splash-loader-screen"
-      className={`fixed inset-0 z-[10000] bg-[#050505] on-dark-bg flex flex-col items-center justify-center transition-opacity duration-500 ease-out ${fadeSplash ? "opacity-0 pointer-events-none" : "opacity-100"}`}
+      className={`fixed inset-0 z-[10000] bg-[#050505] on-dark-bg flex flex-col items-center justify-center transition-opacity duration-100 ease-out ${fadeSplash ? "opacity-0 pointer-events-none" : "opacity-100"}`}
     >
       <div className="flex flex-col items-center gap-6 max-w-sm px-6 text-center">
         <div className="h-20 w-20 rounded-3xl logo-mark flex items-center justify-center">

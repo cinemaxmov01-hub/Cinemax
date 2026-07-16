@@ -623,6 +623,7 @@ export const PlayerPage: React.FC = () => {
     // Find current server index and switch to next one
     const currentIndex = PROVIDERS_CONFIG.findIndex(p => p.id === activeServerId);
     const nextIndex = (currentIndex + 1) % PROVIDERS_CONFIG.length;
+    console.log(`[PlayerPage] Switching from server ${currentIndex} to ${nextIndex}`);
     setActiveServerId(PROVIDERS_CONFIG[nextIndex].id);
     setIframeError(false);
   };
@@ -637,6 +638,7 @@ export const PlayerPage: React.FC = () => {
   useEffect(() => {
     setIframeError(false);
     setIsLoadingVideo(true);
+    console.log(`[PlayerPage] Resetting loading state for new content`);
   }, [selectedMovie, activeServerId, currentSeason, currentEpisode]);
 
   // Timeout fallback: if iframe takes too long to load, switch servers
@@ -648,7 +650,7 @@ export const PlayerPage: React.FC = () => {
         console.warn(`[PlayerPage] Server ${activeServerId} timeout, switching to next server`);
         handleIframeError();
       }
-    }, 15000); // 15 second timeout
+    }, 3000); // Reduced to 3 seconds for faster fallback
     
     return () => clearTimeout(timeout);
   }, [selectedMovie, activeServerId, currentSeason, currentEpisode, isLoadingVideo, iframeError, playerMode]);
@@ -1068,7 +1070,9 @@ export const PlayerPage: React.FC = () => {
                 <select 
                   value={currentSeason}
                   onChange={(e) => {
-                    setCurrentSeason(Number(e.target.value));
+                    const newSeason = Number(e.target.value);
+                    console.log(`[PlayerPage] Changing season from ${currentSeason} to ${newSeason}`);
+                    setCurrentSeason(newSeason);
                     setCurrentEpisode(1);
                   }}
                   className="bg-[#050505]/60 border border-white/10 rounded-xl px-3 py-1.5 text-sm font-semibold text-white focus:border-[#39FF14]/50 transition-colors cursor-pointer focus:outline-none"
@@ -1088,7 +1092,10 @@ export const PlayerPage: React.FC = () => {
                   <button
                     key={ep}
                     id={`episode-chip-${ep}`}
-                    onClick={() => setCurrentEpisode(ep)}
+                    onClick={() => {
+                      console.log(`[PlayerPage] Changing episode from ${currentEpisode} to ${ep}`);
+                      setCurrentEpisode(ep);
+                    }}
                     className={`h-10 w-12 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
                       isActive 
                         ? "accent-active" 
