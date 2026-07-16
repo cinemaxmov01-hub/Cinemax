@@ -297,7 +297,7 @@ export const PlayerPage: React.FC = () => {
     setDownloadChoiceOpen(false);
     setDownloadMsg(null);
     setDownloadBusy(true);
-    const result = await downloadMovie(selectedMovie!, mode);
+    const result = await downloadMovie(selectedMovie!, mode, currentSeason, currentEpisode);
     setDownloadBusy(false);
     if (result.ok) {
       setDownloadMsg(mode === "device" ? "Device download started." : "Saved to Cinemax Download History.");
@@ -310,7 +310,7 @@ export const PlayerPage: React.FC = () => {
   const handleFullMovieDownload = async () => {
     setFullDownloadResult(null);
     setDownloadBusy(true);
-    const result = await downloadMovie(selectedMovie!, "device");
+    const result = await downloadMovie(selectedMovie!, "device", currentSeason, currentEpisode);
     setDownloadBusy(false);
     setFullDownloadResult(result);
     if (result.ok) {
@@ -507,12 +507,13 @@ export const PlayerPage: React.FC = () => {
     loadSeasonEpisodes();
   }, [selectedMovie, currentSeason, isTv]);
 
-  // Loader effect: show Cinemax loader for 0.5 seconds on mount or video change (No motion animations)
+  // Loader effect: instant loading for immediate playback
   useEffect(() => {
     setIsLoadingVideo(true);
+    // Minimal delay to ensure iframe is ready - reduced to 50ms for near-instant playback
     const progressTimer = setTimeout(() => {
       setIsLoadingVideo(false);
-    }, 500);
+    }, 50);
 
     return () => clearTimeout(progressTimer);
   }, [selectedMovie, currentSeason, currentEpisode, playerMode, activeServerId]);
@@ -650,7 +651,7 @@ export const PlayerPage: React.FC = () => {
         console.warn(`[PlayerPage] Server ${activeServerId} timeout, switching to next server`);
         handleIframeError();
       }
-    }, 3000); // Reduced to 3 seconds for faster fallback
+    }, 1500); // Reduced to 1.5 seconds for faster fallback and instant playback experience
     
     return () => clearTimeout(timeout);
   }, [selectedMovie, activeServerId, currentSeason, currentEpisode, isLoadingVideo, iframeError, playerMode]);

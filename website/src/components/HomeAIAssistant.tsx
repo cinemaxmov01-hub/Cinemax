@@ -50,10 +50,10 @@ export const HomeAIAssistant: React.FC<HomeAIAssistantProps> = ({ onSelectMovie,
   const [pendingImage, setPendingImage] = useState<{ previewUrl: string; base64: string; mimeType: string } | null>(null);
   const visualContextRef = useRef<VisualContextPayload | null>(null);
   
-  // Voice states
+  // Voice states - voice enabled by default for auto TTS
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [voiceEnabled, setVoiceEnabled] = useState(true); // Voice ON by default
   const [detectedLanguage, setDetectedLanguage] = useState<string>("en");
   const recognitionRef = useRef<any>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);

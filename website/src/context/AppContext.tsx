@@ -21,6 +21,7 @@ import {
   fetchPublicSiteConfig,
   PublicSiteConfig,
 } from "../utils/siteConfig";
+import { PROVIDERS_CONFIG, buildEmbedUrl } from "../utils/streamingConfig";
 
 interface AppContextType {
   currentView: string;
@@ -93,7 +94,7 @@ interface AppContextType {
   downloads: DownloadItem[];
   downloadStorageUsed: number;
   downloadStorageLimit: number;
-  downloadMovie: (movie: Movie, mode?: "device" | "library") => Promise<{ ok: boolean; error?: string }>;
+  downloadMovie: (movie: Movie, mode?: "device" | "cinemax", season?: number, episode?: number) => Promise<{ ok: boolean; error?: string }>;
   removeDownload: (movieId: number) => Promise<{ ok: boolean; error?: string }>;
   fetchDownloads: () => Promise<void>;
   pipMovie: Movie | null;
@@ -180,7 +181,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Picture in Picture states
   const [pipMovie, setPipMovie] = useState<Movie | null>(null);
-  const [pipProviderId, setPipProviderId] = useState<string | null>("vidsrc-pm");
+  const [pipProviderId, setPipProviderId] = useState<string | null>("vidlink");
   const [pipProgress, setPipProgress] = useState<number>(0);
   const [pipSeason, setPipSeason] = useState<number>(1);
   const [pipEpisode, setPipEpisode] = useState<number>(1);
@@ -958,8 +959,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const downloadMovie = async (movie: Movie, mode: "device" | "cinemax" = "cinemax"): Promise<{ ok: boolean; error?: string }> => {
-    console.log("[downloadMovie] Starting download for:", movie.title || movie.name, "mode:", mode);
+  const downloadMovie = async (movie: Movie, mode: "device" | "cinemax" = "cinemax", season: number = 1, episode: number = 1): Promise<{ ok: boolean; error?: string }> => {
+    console.log("[downloadMovie] Starting download for:", movie.title || movie.name, "mode:", mode, "season:", season, "episode:", episode);
     
     if (mode === "cinemax" && (!user || isGuest)) {
       console.log("[downloadMovie] Authentication required for cinemax mode");
@@ -985,21 +986,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         : "";
 
       try {
-        // Try to resolve direct video source from embed providers
-        const providers = [
-          { id: "vidlink", moviePattern: "https://vidlink.pro/{id}", tvPattern: "https://vidlink.pro/{id}/{season}/{episode}" },
-          { id: "vidsrc-pro", moviePattern: "https://vidsrc.pro/{id}", tvPattern: "https://vidsrc.pro/{id}/{season}/{episode}" },
-          { id: "embed-su", moviePattern: "https://embed.su/{id}", tvPattern: "https://embed.su/{id}/{season}/{episode}" }
-        ];
-
+        // Try to resolve direct video source from embed providers using new config
         let videoSource: string | null = null;
         
-        for (const provider of providers) {
-          const pattern = mediaType === "movie" ? provider.moviePattern : provider.tvPattern;
-          const embedUrl = pattern
-            .replace("{id}", movie.id.toString())
-            .replace("{season}", "1")
-            .replace("{episode}", "1");
+        for (const provider of PROVIDERS_CONFIG) {
+          const embedUrl = buildEmbedUrl(
+            provider,
+            mediaType,
+            movie.id,
+            season, // use provided season
+            episode  // use provided episode
+          );
 
           console.log(`[downloadMovie] Trying provider ${provider.id} with embed:`, embedUrl);
           
@@ -1026,12 +1023,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
 
         if (videoSource) {
-          console.log("[downloadMovie] Starting device download to:", `${safeName}.mp4`);
-          await downloadRemoteFile(videoSource, `${safeName}.mp4`);
+          const filename = mediaType === "tv" 
+            ? `${safeName}_S${season}E${episode}.mp4` 
+            : `${safeName}.mp4`;
+          console.log("[downloadMovie] Starting device download to:", filename);
+          await downloadRemoteFile(videoSource, filename);
           addNotification({
             type: "system",
             title: "Download complete",
-            message: `"${title}" has been downloaded to your device.`,
+            message: mediaType === "tv" 
+              ? `"${title}" (S${season}E${episode}) has been downloaded to your device.`
+              : `"${title}" has been downloaded to your device.`,
           });
           console.log("[downloadMovie] Device download completed successfully");
           return { ok: true };
@@ -1039,7 +1041,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           console.log("[downloadMovie] No video source could be resolved from any provider");
           return {
             ok: false,
-            error: "Unable to resolve video source from streaming providers. The video may not be available for direct download.",
+            error: mediaType === "tv"
+              ? "Unable to download this episode. The streaming providers may not support direct downloads for this TV series content."
+              : "Unable to download this movie. The streaming providers may not support direct downloads for this content. Try using the built-in download button in the video player if available.",
           };
         }
       } catch (err: any) {

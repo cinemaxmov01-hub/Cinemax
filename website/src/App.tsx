@@ -300,20 +300,10 @@ const CinemaxDashboard: React.FC = () => {
     };
   }, [currentUser?.onboarding?.favoriteGenres, siteConfig.hiddenMovieIds]);
 
-  // One-time movie-focused splash screen timer
+  // Instant splash screen removal - no delay for immediate content visibility
   useEffect(() => {
-    const fadeTimer = setTimeout(() => {
-      setFadeSplash(true);
-    }, 50);
-
-    const unmountTimer = setTimeout(() => {
-      setShowSplash(false);
-    }, 100);
-
-    return () => {
-      clearTimeout(fadeTimer);
-      clearTimeout(unmountTimer);
-    };
+    setFadeSplash(true);
+    setShowSplash(false);
   }, []);
 
   // Hero rotation — admin-featured titles, or curated Supergirl + trending fallback
@@ -962,7 +952,7 @@ const CinemaxDashboard: React.FC = () => {
         {/* Top Header Navbar with frosted blur */}
         <header id="top-navbar" className="h-16 lg:h-20 glass-navbar sticky top-0 z-40 px-4 lg:px-8 flex items-center justify-between gap-2 sm:gap-4">
           
-          {/* Left Section: Mobile menu, Search, Voice Search */}
+          {/* Left Section: Mobile menu, Search, Voice Search, Categories */}
           <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
             <button
               id="mobile-menu-trigger"
@@ -972,6 +962,67 @@ const CinemaxDashboard: React.FC = () => {
             >
               <Menu className="h-5 w-5" />
             </button>
+
+            {/* Mobile 'All' Categories Button */}
+            <div className="relative sm:hidden">
+              <button
+                id="mobile-categories-btn"
+                onClick={() => setCategoriesOpen((v) => !v)}
+                className={`flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border border-white/10 ${
+                  categoriesOpen ? "bg-[#39FF14]/10 text-[#39FF14] border-[#39FF14]/30" : "text-neutral-400 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <span>All</span>
+                <ChevronRight className={`h-3 w-3 transition-transform duration-300 ${categoriesOpen ? "rotate-90" : ""}`} />
+              </button>
+              {categoriesOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setCategoriesOpen(false)} />
+                  <div className="absolute left-0 top-full mt-2 z-50 w-72 animate-dropdown-pop">
+                    <div className="absolute -top-1.5 left-4 h-3 w-3 rotate-45 bg-[#0c0c0c] border-l border-t border-[#39FF14]/20" />
+                    <div className="relative rounded-2xl border border-neutral-800 surface-panel overflow-hidden">
+                      <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-gradient-to-r from-[#39FF14]/10 to-transparent">
+                        <div className="flex items-center gap-2">
+                          <div className="h-6 w-6 rounded-lg bg-[#39FF14]/15 border border-[#39FF14]/30 flex items-center justify-center text-[#39FF14]">
+                            <Tag className="h-3 w-3" />
+                          </div>
+                          <span className="text-xs font-black text-white uppercase tracking-wider">{t("browseCategories")}</span>
+                        </div>
+                        <span className="text-[10px] font-bold text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/20 px-2 py-0.5 rounded-full">
+                          {allGenres.length}
+                        </span>
+                      </div>
+                      <div className="max-h-72 overflow-y-auto p-2 grid grid-cols-2 gap-1 scrollbar-thin scrollbar-thumb-neutral-800 scrollbar-track-transparent">
+                        {allGenres.map((g) => {
+                          const isActive = activeGenre === g.id;
+                          return (
+                            <button
+                              key={g.id}
+                              onClick={() => {
+                                setActiveGenre(g.id);
+                                setActiveGenreName(t(`genre.${g.name}`));
+                                setCurrentView("movies");
+                                setCategoriesOpen(false);
+                              }}
+                              className={`group relative flex items-center gap-2 text-left px-3 py-2 rounded-xl text-[11px] font-semibold transition-all duration-200 cursor-pointer overflow-hidden ${
+                                isActive
+                                  ? "accent-chip"
+                                  : "text-neutral-300 hover:bg-neutral-800 hover:text-white"
+                              }`}
+                            >
+                              <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 transition-all duration-200 ${
+                                isActive ? "bg-[#39FF14]" : "bg-neutral-700 group-hover:bg-neutral-600"
+                              }`} />
+                              <span className="truncate">{t(`genre.${g.name}`)}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
 
             {/* Instant Search input — permanently visible across all devices */}
             <div className="relative w-64 sm:w-80 lg:w-96">
@@ -1246,14 +1297,14 @@ const CinemaxDashboard: React.FC = () => {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/40 to-transparent" />
 
-                    {/* Rotation progress dots */}
+                    {/* Rotation progress dots - tiny sharp dots */}
                     {heroMovies.length > 1 && (
-                      <div className="absolute top-6 right-6 lg:right-12 z-10 flex items-center gap-0.5">
+                      <div className="absolute top-6 right-6 lg:right-12 z-10 flex items-center gap-1">
                         {heroMovies.map((_, i) => (
                           <span
                             key={i}
-                            className={`h-0.125 rounded-full transition-all duration-300 ${
-                              i === heroIndex % heroMovies.length ? "w-0.75 bg-[#39FF14]" : "w-0.125 bg-white/25"
+                            className={`h-1 rounded-full transition-all duration-300 ${
+                              i === heroIndex % heroMovies.length ? "w-1 bg-[#39FF14]" : "w-1 bg-white/25"
                             }`}
                           />
                         ))}
