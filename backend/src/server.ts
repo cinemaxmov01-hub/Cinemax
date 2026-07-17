@@ -47,6 +47,9 @@ function buildAllowedOrigins(): string[] {
     "https://cinemaxmovie-backend-1mol.onrender.com",
     "https://cinemaxmovie-site.onrender.com",
     "https://cinemax-tc3o.onrender.com",
+    // InfinityFree frontend domain
+    "https://cinemaxmov.site.je",
+    "http://cinemaxmov.site.je",
   );
   // Local dev conveniences.
   raw.push("http://localhost:5173", "http://localhost:5174", "http://localhost:3000");
