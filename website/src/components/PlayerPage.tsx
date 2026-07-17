@@ -605,18 +605,38 @@ export const PlayerPage: React.FC = () => {
 
     const tryResolveProvider = async (provider: typeof activeServer) => {
       const embed = buildEmbedUrl(provider, isTv ? 'tv' : 'movie', selectedMovie.id, currentSeason, currentEpisode);
-      const res = await fetch(`${API_BASE}/api/stream/full`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: embed }),
-      });
-      if (!res.ok) return null;
-      const j = await res.json();
-      const source = j?.sourceUrl as string | undefined | null;
-      if (!source) return null;
-      const proxied = API_BASE ? `${API_BASE}/api/proxy?url=${encodeURIComponent(source)}` : source;
-      const isHls = /\.m3u8(?:\?|$)/i.test(source);
-      return { type: isHls ? 'hls' as const : 'mp4' as const, source: proxied };
+      
+      try {
+        const res = await fetch(`${API_BASE}/api/stream/full`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ url: embed }),
+        });
+        
+        if (!res.ok) {
+          console.warn('Stream resolution failed with status:', res.status);
+          return null;
+        }
+        
+        const j = await res.json();
+        const source = j?.sourceUrl as string | undefined | null;
+        
+        if (!source) {
+          console.log('No direct source found for provider:', provider.id);
+          return null;
+        }
+        
+        const proxied = API_BASE ? `${API_BASE}/api/proxy?url=${encodeURIComponent(source)}` : source;
+        const isHls = /\.m3u8(?:\?|$)/i.test(source);
+        
+        console.log('Direct source resolved:', { provider: provider.id, type: isHls ? 'hls' : 'mp4', source: proxied });
+        
+        return { type: isHls ? 'hls' as const : 'mp4' as const, source: proxied };
+      } catch (err) {
+        console.warn('Provider resolve failed', provider.id, err);
+        return null;
+      }
     };
 
     const tryResolve = async () => {
@@ -627,11 +647,18 @@ export const PlayerPage: React.FC = () => {
           if (result && mounted) {
             setStreamType(result.type);
             setStreamSource(result.source);
+            console.log('Successfully resolved stream using provider:', provider.id);
             break;
           }
         } catch (err) {
           console.warn('Provider resolve failed', provider.id, err);
         }
+      }
+      
+      // If no direct source was found, fall back to embed
+      if (mounted && !streamSource) {
+        console.log('No direct source found, falling back to embed iframe');
+        setStreamType('embed');
       }
     };
 
@@ -775,7 +802,6 @@ export const PlayerPage: React.FC = () => {
               src={getStreamUrl()}
               className="w-full h-full border-0"
               allow={EMBED_IFRAME_ALLOW}
-              sandbox={IFRAME_SANDBOX_ATTRIBUTES}
               allowFullScreen
               referrerPolicy="origin"
               scrolling="no"

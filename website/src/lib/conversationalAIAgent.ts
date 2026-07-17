@@ -674,23 +674,183 @@ export class ConversationalAIAgent {
   private generateNaturalResponse(input: string, intent: string, language: string): string {
     const responses = CONVERSATIONAL_RESPONSES[language as keyof typeof CONVERSATIONAL_RESPONSES] || CONVERSATIONAL_RESPONSES.english;
     
-    // Add conversational fillers and natural transitions
-    const fillers = [
-      "Let me see...",
-      "I'll look that up for you.",
-      "Searching now...",
-      "One moment...",
-      "Let me find that...",
-    ];
+    // Add conversational fillers and natural transitions - more human-like variety
+    const fillers: Record<string, string[]> = {
+      english: [
+        "Let me see...",
+        "I'll look that up for you.",
+        "Searching now...",
+        "One moment...",
+        "Let me find that...",
+        "I'm on it...",
+        "Checking that for you...",
+        "Give me a second...",
+        "Let me check...",
+      ],
+      kinyarwanda: [
+        "Ndi kureba...",
+        "Ndi gushakisha...",
+        "Ndi gushakisha...",
+        "Impera...",
+        "Ndi gushakisha...",
+        "Ndi kubikorwa...",
+        "Ndi kureba...",
+        "Nsubira...",
+        "Ndi kureba...",
+      ],
+      french: [
+        "Laissez-moi voir...",
+        "Je vais chercher ça pour vous.",
+        "Recherche en cours...",
+        "Un instant...",
+        "Laissez-moi trouver ça...",
+        "Je m'en occupe...",
+        "Je vérifie ça pour vous...",
+        "Donnez-moi une seconde...",
+        "Laissez-moi vérifier...",
+      ],
+      spanish: [
+        "Déjame ver...",
+        "Voy a buscar eso para ti.",
+        "Buscando ahora...",
+        "Un momento...",
+        "Déjame encontrar eso...",
+        "Me encargo de eso...",
+        "Verificando eso para ti...",
+        "Dame un segundo...",
+        "Déjame verificar...",
+      ],
+      german: [
+        "Lass mich sehen...",
+        "Ich werde das für dich suchen.",
+        "Suche läuft...",
+        "Einen Moment...",
+        "Lass mich das finden...",
+        "Ich kümmere mich darum...",
+        "Ich überprüfe das für dich...",
+        "Gib mir eine Sekunde...",
+        "Lass mich überprüfen...",
+      ],
+      italian: [
+        "Fammi vedere...",
+        "Cercherò quello per te.",
+        "Ricerca in corso...",
+        "Un momento...",
+        "Fammi trovare quello...",
+        "Me ne occupo...",
+        "Controllo quello per te...",
+        "Dammi un secondo...",
+        "Fammi controllare...",
+      ],
+      portuguese: [
+        "Deixe-me ver...",
+        "Vou procurar isso para você.",
+        "Pesquisando agora...",
+        "Um momento...",
+        "Deixe-me encontrar isso...",
+        "Estou cuidando disso...",
+        "Verificando isso para você...",
+        "Me dê um segundo...",
+        "Deixe-me verificar...",
+      ],
+      arabic: [
+        "دعني أرى...",
+        "سأبحث عن ذلك لك.",
+        "جاري البحث...",
+        "لحظة واحدة...",
+        "دعني أجد ذلك...",
+        "أنا أعتني بذلك...",
+        "أتحقق من ذلك لك...",
+        "أعطني ثانية...",
+        "دعني أتحقق...",
+      ],
+      chinese: [
+        "让我看看...",
+        "我会为你查找那个。",
+        "正在搜索...",
+        "稍等...",
+        "让我找到那个...",
+        "我正在处理...",
+        "我为你检查那个...",
+        "给我一秒钟...",
+        "让我检查...",
+      ],
+      japanese: [
+        "見てみましょう...",
+        "それを探してあげます。",
+        "検索中...",
+        "ちょっと待って...",
+        "それを見つけましょう...",
+        "私がやります...",
+        "それを確認してあげます...",
+        "少し待って...",
+        "確認してみましょう...",
+      ],
+      korean: [
+        "한번 보게...",
+        "그걸 찾아줄게요.",
+        "검색 중...",
+        "잠시만요...",
+        "그걸 찾아보게...",
+        "제가 할게요...",
+        "그걸 확인해줄게요...",
+        "잠시 기다려주세요...",
+        "확인해보게...",
+      ],
+      swahili: [
+        "Nichekele kuona...",
+        "Nitafuta hiyo kwa ajili yako.",
+        "Ninatafuta sasa...",
+        "Dakika moja...",
+        "Nichekele kupata hiyo...",
+        "Ninafanya hilo...",
+        "Ninakagua hiyo kwa ajili yako...",
+        "Nipe sekunde moja...",
+        "Nichekele kukagua...",
+      ],
+    };
     
-    const randomFiller = fillers[Math.floor(Math.random() * fillers.length)];
+    const langFillers = fillers[language] || fillers.english;
+    const randomFiller = langFillers[Math.floor(Math.random() * langFillers.length)];
     
     if (intent === 'search') {
       return `${randomFiller} ${responses.searching}`;
     } else if (intent === 'play') {
-      return `${randomFiller} I'll get that ready for you.`;
+      const playResponses: Record<string, string[]> = {
+        english: ["I'll get that ready for you.", "Let me start that for you.", "I'll set that up right away.", "Coming right up!", "Let me get that playing."],
+        kinyarwanda: ["Ndi gutangira.", "Ndi gutangira.", "Ndi gutangira.", "Ndi gutangira.", "Ndi gutangira."],
+        french: ["Je vais préparer ça pour vous.", "Laissez-moi démarrer ça pour vous.", "Je vais configurer ça tout de suite.", "Ça arrive tout de suite!", "Laissez-moi mettre ça en lecture."],
+        spanish: ["Voy a preparar eso para ti.", "Déjame comenzar eso para ti.", "Voy a configurar eso de inmediato.", "¡Eso viene enseguida!", "Déjame poner eso en reproducción."],
+        german: ["Ich werde das für dich vorbereiten.", "Lass mich das für dich starten.", "Ich werde das sofort einrichten.", "Das kommt sofort!", "Lass mich das abspielen."],
+        italian: ["Preparerò quello per te.", "Farò partire quello per te.", "Configurerò quello subito.", "Arriva subito!", "Farò riprodurre quello."],
+        portuguese: ["Vou preparar isso para você.", "Deixe-me começar isso para você.", "Vou configurar isso imediatamente.", "Isso vem agora!", "Deixe-me colocar isso em reprodução."],
+        arabic: ["سأقوم بإعداد ذلك لك.", "دعني أبدأ ذلك لك.", "سأقوم بتكوين ذلك فوراً.", "يأتي ذلك فوراً!", "دعني أشغل ذلك."],
+        chinese: ["我会为你准备那个。", "让我为你开始那个。", "我会立即设置那个。", "那个马上就来！", "让我播放那个。"],
+        japanese: ["それを準備してあげます。", "それを始めてあげます。", "すぐに設定します。", "すぐ来ます！", "それを再生させてあげます。"],
+        korean: ["그걸 준비해줄게요.", "그걸 시작해줄게요.", "바로 설정해줄게요.", "바로 올게요!", "그걸 재생해줄게요."],
+        swahili: ["Nitayarudisha hiyo kwa ajili yako.", "Nianze hiyo kwa ajili yako.", "Nitaweka hiyo mara moja.", "Hiyo inakuja sasa!", "Nichekele kuichezesha hiyo."],
+      };
+      const langPlayResponses = playResponses[language] || playResponses.english;
+      const randomPlayResponse = langPlayResponses[Math.floor(Math.random() * langPlayResponses.length)];
+      return `${randomFiller} ${randomPlayResponse}`;
     } else if (intent === 'explain') {
-      return `${randomFiller} Let me tell you about that.`;
+      const explainResponses: Record<string, string[]> = {
+        english: ["Let me tell you about that.", "I'll explain that for you.", "Here's what I know about that.", "Let me share some details.", "I can tell you more about that."],
+        kinyarwanda: ["Ndi kubwira ibyo.", "Ndi gusobanura ibyo.", "Ndi kubwira ibyo nzi.", "Ndi kugira amakuru.", "Ndi kubwira ibyinshi."],
+        french: ["Laissez-moi vous parler de ça.", "Je vais vous expliquer ça.", "Voici ce que je sais à ce sujet.", "Laissez-moi partager quelques détails.", "Je peux vous en dire plus à ce sujet."],
+        spanish: ["Déjame contarte sobre eso.", "Te explicaré eso.", "Aquí está lo que sé sobre eso.", "Déjame compartir algunos detalles.", "Puedo decirte más sobre eso."],
+        german: ["Lass mich dir darüber erzählen.", "Ich werde dir das erklären.", "Hier ist, was ich darüber weiß.", "Lass mir einige Details teilen.", "Ich kann dir mehr darüber erzählen."],
+        italian: ["Fammi raccontare di quello.", "Ti spiegherò quello.", "Ecco quello che so su quello.", "Fammi condividere alcuni dettagli.", "Posso dirti di più su quello."],
+        portuguese: ["Deixe-me contar sobre isso.", "Vou explicar isso para você.", "Aqui está o que sei sobre isso.", "Deixe-me compartilhar alguns detalhes.", "Posso dizer mais sobre isso."],
+        arabic: ["دعني أخبرك عن ذلك.", "سأشرح ذلك لك.", "هذا ما أعرفه عن ذلك.", "دعني شارك بعض التفاصيل.", "يمكنني أن أخبرك المزيد عن ذلك."],
+        chinese: ["让我告诉你关于那个。", "我会为你解释那个。", "这是我对那个的了解。", "让我分享一些细节。", "我可以告诉你更多关于那个。"],
+        japanese: ["それについて教えてあげます。", "それを説明してあげます。", "それについて私が知っていることを教えます。", "いくつかの詳細を共有させてください。", "それについてもっと教えてあげます。"],
+        korean: ["그것에 대해 말해줄게요.", "그것을 설명해줄게요.", "그것에 대해 제가 아는 것을 알려드릴게요.", "몇 가지 세부 사항을 공유해드릴게요.", "그것에 대해 더 말해줄게요."],
+        swahili: ["Nikuambie kuhusu hiyo.", "Nitaelezea hiyo kwa ajili yako.", "Hii ndiyo ninayojua kuhusu hiyo.", "Nishiriki maelezo machache.", "Nikuambie zaidi kuhusu hiyo."],
+      };
+      const langExplainResponses = explainResponses[language] || explainResponses.english;
+      const randomExplainResponse = langExplainResponses[Math.floor(Math.random() * langExplainResponses.length)];
+      return `${randomFiller} ${randomExplainResponse}`;
     }
     
     return responses.searching;

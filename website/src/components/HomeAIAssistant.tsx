@@ -4,6 +4,7 @@ import { Message, Movie } from "../types";
 import { getImageUrl } from "../utils/tmdb";
 import { askAssistant, stripActionBlocks, generateImage, AgentAction } from "../utils/assistantClient";
 import { Sparkles, Send, X, Bot, Loader2, Play, MessageSquareText, ShieldCheck, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
+import { SPEECH_LANG_CODES, TTS_VOICE_CODES } from "../i18n/translations";
 
 interface HomeAIAssistantProps {
   onSelectMovie: (movie: Movie) => void;
@@ -19,7 +20,7 @@ const HOME_QUICK_PROMPTS = [
 ];
 
 export const HomeAIAssistant: React.FC<HomeAIAssistantProps> = ({ onSelectMovie, onNavigate, onSearch }) => {
-  const { user, setSearchQuery, setCurrentView } = useApp();
+  const { user, setSearchQuery, setCurrentView, appLanguage } = useApp();
   const isAdmin = user?.role === "admin";
   const [open, setOpen] = useState(false);
   const [hasAutoIntroduced, setHasAutoIntroduced] = useState(false);
@@ -38,9 +39,14 @@ export const HomeAIAssistant: React.FC<HomeAIAssistantProps> = ({ onSelectMovie,
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
-  const [detectedLanguage, setDetectedLanguage] = useState<string>("en");
+  const [detectedLanguage, setDetectedLanguage] = useState<string>(SPEECH_LANG_CODES[appLanguage] || "en-US");
   const recognitionRef = useRef<any>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Update detected language when app language changes
+  useEffect(() => {
+    setDetectedLanguage(SPEECH_LANG_CODES[appLanguage] || "en-US");
+  }, [appLanguage]);
 
   const executeAgentAction = async (action: AgentAction) => {
     try {
@@ -135,7 +141,7 @@ export const HomeAIAssistant: React.FC<HomeAIAssistantProps> = ({ onSelectMovie,
         const recognition = new SpeechRecognition();
         recognition.continuous = false;
         recognition.interimResults = true;
-        recognition.lang = 'en-US';
+        recognition.lang = SPEECH_LANG_CODES[appLanguage] || "en-US";
 
         recognition.onstart = () => {
           setIsListening(true);
@@ -172,7 +178,7 @@ export const HomeAIAssistant: React.FC<HomeAIAssistantProps> = ({ onSelectMovie,
         recognitionRef.current.stop();
       }
     };
-  }, []);
+  }, [appLanguage]);
 
   // Start/Stop listening
   const toggleListening = () => {
@@ -196,6 +202,9 @@ export const HomeAIAssistant: React.FC<HomeAIAssistantProps> = ({ onSelectMovie,
     try {
       setIsSpeaking(true);
       
+      // Map detected language to TTS voice code
+      const ttsVoice = detectedLanguage || TTS_VOICE_CODES[appLanguage] || "en-US";
+      
       // Call backend TTS endpoint
       const response = await fetch('/api/tts', {
         method: 'POST',
@@ -203,7 +212,7 @@ export const HomeAIAssistant: React.FC<HomeAIAssistantProps> = ({ onSelectMovie,
         credentials: 'include',
         body: JSON.stringify({ 
           text: text.replace(/```action[\s\S]*?```/g, '').trim(),
-          language: detectedLanguage 
+          language: ttsVoice
         }),
       });
 

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useApp } from "../context/AppContext";
 import { Mic, MicOff, Loader2 } from "lucide-react";
+import { SPEECH_LANG_CODES, TTS_VOICE_CODES } from "../i18n/translations";
 
 interface VoiceAgentProps {
   onNavigate?: (page: string) => void;
@@ -9,14 +10,19 @@ interface VoiceAgentProps {
 }
 
 export const VoiceAgent: React.FC<VoiceAgentProps> = ({ onNavigate, onSearch, onPlayMovie }) => {
-  const { user } = useApp();
+  const { user, appLanguage } = useApp();
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [detectedLanguage, setDetectedLanguage] = useState<string>("en");
+  const [detectedLanguage, setDetectedLanguage] = useState<string>(SPEECH_LANG_CODES[appLanguage] || "en-US");
   const [hasPlayedWelcome, setHasPlayedWelcome] = useState(false);
   const recognitionRef = useRef<any>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Update detected language when app language changes
+  useEffect(() => {
+    setDetectedLanguage(SPEECH_LANG_CODES[appLanguage] || "en-US");
+  }, [appLanguage]);
 
   // Initialize Speech Recognition
   useEffect(() => {
@@ -26,7 +32,7 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({ onNavigate, onSearch, on
         const recognition = new SpeechRecognition();
         recognition.continuous = false;
         recognition.interimResults = false;
-        recognition.lang = 'en-US';
+        recognition.lang = SPEECH_LANG_CODES[appLanguage] || "en-US";
 
         recognition.onstart = () => {
           setIsListening(true);
@@ -34,7 +40,7 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({ onNavigate, onSearch, on
 
         recognition.onresult = async (event: any) => {
           const transcript = event.results[0][0].transcript;
-          const detectedLang = event.results[0][0].lang || 'en';
+          const detectedLang = event.results[0][0].lang || SPEECH_LANG_CODES[appLanguage] || "en-US";
           setDetectedLanguage(detectedLang);
           
           setIsListening(false);
@@ -62,7 +68,7 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({ onNavigate, onSearch, on
         recognitionRef.current.stop();
       }
     };
-  }, []);
+  }, [appLanguage]);
 
   // Process voice command and execute tools
   const processVoiceCommand = async (command: string, language: string) => {
@@ -139,13 +145,16 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({ onNavigate, onSearch, on
     try {
       setIsSpeaking(true);
       
+      // Map detected language to TTS voice code
+      const ttsVoice = language || TTS_VOICE_CODES[appLanguage] || "en-US";
+      
       const response = await fetch('/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ 
           text: text.replace(/[*_`]/g, ''), // Remove markdown symbols for TTS
-          language 
+          language: ttsVoice
         }),
       });
 

@@ -378,3 +378,41 @@ export const LANG_CODES: Record<AppLang, string> = {
   Korean: "ko",
   Swahili: "sw",
 };
+
+/**
+ * Speech recognition language codes for Web Speech API
+ * Maps app languages to their corresponding BCP 47 language tags
+ */
+export const SPEECH_LANG_CODES: Record<AppLang, string> = {
+  English: "en-US",
+  French: "fr-FR",
+  Kinyarwanda: "rw-RW",
+  Spanish: "es-ES",
+  German: "de-DE",
+  Italian: "it-IT",
+  Portuguese: "pt-PT",
+  Arabic: "ar-SA",
+  Chinese: "zh-CN",
+  Japanese: "ja-JP",
+  Korean: "ko-KR",
+  Swahili: "sw-KE",
+};
+
+/**
+ * TTS voice codes for text-to-speech
+ * Maps app languages to their corresponding TTS voice identifiers
+ */
+export const TTS_VOICE_CODES: Record<AppLang, string> = {
+  English: "en-US",
+  French: "fr-FR",
+  Kinyarwanda: "rw-RW",
+  Spanish: "es-ES",
+  German: "de-DE",
+  Italian: "it-IT",
+  Portuguese: "pt-PT",
+  Arabic: "ar-SA",
+  Chinese: "zh-CN",
+  Japanese: "ja-JP",
+  Korean: "ko-KR",
+  Swahili: "sw-KE",
+};
