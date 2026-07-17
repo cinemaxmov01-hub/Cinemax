@@ -64,21 +64,16 @@ const SUPERGIRL_HERO: Movie = {
   id: 502356,
   title: "Supergirl",
   overview: "Kara Zor-El faces new challenges as she embraces her destiny in a world that needs a hero.",
-  poster_path: "/subfash_supergirl_poster.jpg", // TMDB path or fallback
-  backdrop_path: "/z993883u82.jpg", // fallback background
+  poster_path: "/subfash_supergirl_poster.jpg",
+  backdrop_path: "/z993883u82.jpg",
   vote_average: 8.2,
   release_date: "2023-06-16",
   genres: [{ id: 28, name: "Action" }, { id: 878, name: "Sci-Fi" }],
   runtime: 124,
 };
 
-// SUPERGIRL_HERO's backdrop_path isn't a real TMDB fragment, so it needs its
-// own fallback image whenever it's the one showing in the rotating hero.
 const HERO_FALLBACK_BACKDROP = "https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=1400&auto=format&fit=crop";
 
-// Maps the genre ids used by the onboarding card (OnboardingPreferences.tsx)
-// to their real TMDB genre ids, so "Because You Like ___" shelves can pull
-// actual titles instead of staying empty.
 const ONBOARDING_GENRE_ID_MAP: Record<string, number> = {
   action: 28,
   comedy: 35,
@@ -145,19 +140,12 @@ const CinemaxDashboard: React.FC = () => {
   const [interimTranscript, setInterimTranscript] = useState<string>('');
   const [showTranscriptPopup, setShowTranscriptPopup] = useState(false);
   
-  // Initialize conversational AI agent
   const conversationalAgent = useRef(getConversationalAgent());
-
-  // Hero banner rotation — cycles the homepage hero through a handful of
-  // featured titles every 3 seconds.
   const [heroIndex, setHeroIndex] = useState(0);
-
-  // "More Info" details modal — a distinct, fuller view of a title, separate
-  // from actually starting playback.
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [detailsModalMovie, setDetailsModalMovie] = useState<Movie | null>(null);
 
-  // Splash screen states
+  // Splash Screen ihita yizima niba user amaze kwinjira neza
   const [showSplash, setShowSplash] = useState(true);
   const [fadeSplash, setFadeSplash] = useState(false);
 
@@ -171,10 +159,6 @@ const CinemaxDashboard: React.FC = () => {
   const [customContent, setCustomContent] = useState<Movie[]>([]);
   const [featuredHeroMovies, setFeaturedHeroMovies] = useState<Movie[]>([]);
   const [publicAds, setPublicAds] = useState<PublicAd[]>([]);
-  // Real TMDB results for the user's onboarding-selected genres, keyed by
-  // genre slug (e.g. "action"). Populated below once onboarding data is
-  // available, so the "Your Favorites" shelves show actual titles instead
-  // of staying empty.
   const [personalizedMovies, setPersonalizedMovies] = useState<Record<string, Movie[]>>({});
 
   // Search/Filters results state
@@ -187,15 +171,13 @@ const CinemaxDashboard: React.FC = () => {
   const searchSentinelRef = useRef<HTMLDivElement>(null);
   const [preparingPlayKey, setPreparingPlayKey] = useState<string | null>(null);
 
-  // (Live TV feature replaced by Shorts — see ShortsPage.tsx)
-
-  // Load all lists — honors admin catalog curation (hidden IDs, trending override, featured hero)
+  // Load lists
   useEffect(() => {
     const loadAllLists = async () => {
       try {
-        const hiddenIds = siteConfig.hiddenMovieIds || [];
-        const trendingOverride = siteConfig.trendingOverrideIds || [];
-        const featuredIds = siteConfig.featuredMovieIds || [];
+        const hiddenIds = siteConfig?.hiddenMovieIds || [];
+        const trendingOverride = siteConfig?.trendingOverrideIds || [];
+        const featuredIds = siteConfig?.featuredMovieIds || [];
 
         const [trendingM, trendingT, popular, top, up, now] = await Promise.all([
           tmdb.getTrendingMovies(),
@@ -232,7 +214,7 @@ const CinemaxDashboard: React.FC = () => {
             setCustomContent(movies || []);
           }
         } catch {
-          /* optional */
+          // Fallback if API fails
         }
 
         try {
@@ -256,11 +238,9 @@ const CinemaxDashboard: React.FC = () => {
                 }))
             );
           } else {
-            console.warn("[App] Categories API returned non-OK status, using default genres");
             setAllGenres(genreList);
           }
         } catch (err) {
-          console.error("[App] Failed to fetch categories overrides, using default genres:", err);
           setAllGenres(genreList);
         }
       } catch (err) {
@@ -268,11 +248,9 @@ const CinemaxDashboard: React.FC = () => {
       }
     };
     loadAllLists();
-  }, [siteConfig.hiddenMovieIds, siteConfig.trendingOverrideIds, siteConfig.featuredMovieIds]);
+  }, [siteConfig]);
 
-  // Fetch real titles for each of the signed-in user's favorite genres
-  // (collected during onboarding) so the homepage can actually show them,
-  // not just reserve empty shelves.
+  // Uburyo bunoze bwo gushaka Personalized Movies badasomye ku buryo bu-crasha
   useEffect(() => {
     const favoriteGenres = user?.onboarding?.favoriteGenres;
     if (!favoriteGenres || favoriteGenres.length === 0) {
@@ -281,7 +259,7 @@ const CinemaxDashboard: React.FC = () => {
     }
     let cancelled = false;
     (async () => {
-      const hiddenIds = siteConfig.hiddenMovieIds || [];
+      const hiddenIds = siteConfig?.hiddenMovieIds || [];
       const entries = await Promise.all(
         favoriteGenres
           .map((g) => g.toLowerCase())
@@ -302,17 +280,17 @@ const CinemaxDashboard: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [user?.onboarding?.favoriteGenres, siteConfig.hiddenMovieIds]);
+  }, [user, siteConfig]);
 
-  // One-time movie-focused splash screen timer
+  // Splash Screen timer
   useEffect(() => {
     const fadeTimer = setTimeout(() => {
       setFadeSplash(true);
-    }, 800);
+    }, 600);
 
     const unmountTimer = setTimeout(() => {
       setShowSplash(false);
-    }, 1200);
+    }, 950);
 
     return () => {
       clearTimeout(fadeTimer);
@@ -320,7 +298,6 @@ const CinemaxDashboard: React.FC = () => {
     };
   }, []);
 
-  // Hero rotation — admin-featured titles, or curated Supergirl + trending fallback
   const heroMovies =
     featuredHeroMovies.length > 0
       ? featuredHeroMovies
@@ -331,38 +308,30 @@ const CinemaxDashboard: React.FC = () => {
 
   useEffect(() => {
     if (heroMovies.length < 2) return;
-    // Renamed interval var 't' to 'intervalId' to avoid shadowing external language translations hook ('t')
     const intervalId = setInterval(() => setHeroIndex((i) => (i + 1) % heroMovies.length), 4000);
     return () => clearInterval(intervalId);
   }, [heroMovies.length]);
 
-  // Initialize Conversational AI Agent
+  // Conversational Voice AI Agent setup
   useEffect(() => {
     const agent = conversationalAgent.current;
     
-    // Set up transcript callback
     agent.onTranscript((text: string, language: string) => {
-      console.log(`AI Transcript (${language}):`, text);
       setInterimTranscript('');
       setShowTranscriptPopup(false);
     });
 
-    // Set up interim transcript callback for real-time display
     agent.onInterimTranscript((text: string) => {
       setInterimTranscript(text);
-      if (text.length > 10) { // Show popup when user speaks more than 10 characters
+      if (text.length > 10) {
         setShowTranscriptPopup(true);
       }
     });
 
-    // Set up response callback
     agent.onResponse(async (response: ConversationalResponse) => {
       setAIResponse(response.text);
-      
-      // Speak the response in the detected language
       await agent.speak(response.text, response.language);
       
-      // Handle search action
       if (response.shouldSearch && response.searchQuery) {
         setSearchQuery(response.searchQuery);
         
@@ -385,11 +354,9 @@ const CinemaxDashboard: React.FC = () => {
             setSearchHasMore(tmdbBatch.hasMore);
             setSearchNextPage(4);
             
-            // Handle search results
             const resultResponse = agent.handleSearchResults(combined, response.language);
             await agent.speak(resultResponse.text, resultResponse.language);
           } catch (err) {
-            console.error("Conversational AI search error:", err);
             const errorResponse = agent.handleUnknownData(response.searchQuery, response.language);
             await agent.speak(errorResponse.text, errorResponse.language);
           }
@@ -404,27 +371,23 @@ const CinemaxDashboard: React.FC = () => {
 
   const toggleConversationalAI = () => {
     const agent = conversationalAgent.current;
-    
     if (!agent.isActive()) {
-      // Start the conversational AI
       const success = agent.startListening();
       if (success) {
         setIsConversationalAIActive(true);
-        // Speak welcome message in selected language
         const langCode = SUPPORTED_LANGUAGES[selectedLanguage as keyof typeof SUPPORTED_LANGUAGES]?.code || 'en';
-        agent.speak("Welcome to Cinemax. I am your AI voice assistant. How can I help you today?", langCode);
+        agent.speak("How can I help you?", langCode);
       } else {
-        alert('Voice assistant is not supported in your browser. Please use Chrome or Edge.');
+        alert('Voice assistant not supported.');
       }
     } else {
-      // Stop the conversational AI
       agent.stopListening();
       setIsConversationalAIActive(false);
       setAIResponse(null);
     }
   };
 
-  // Unified search — movies + TV + multi index, ranked and paginated
+  // Search
   useEffect(() => {
     if (searchQuery.trim().length <= 1) {
       setSearchResults([]);
@@ -453,9 +416,7 @@ const CinemaxDashboard: React.FC = () => {
         setSearchHasMore(tmdbBatch.hasMore);
         setSearchNextPage(4);
       } catch (err) {
-        console.error("Advanced search query error:", err);
         setSearchResults([]);
-        setSearchHasMore(false);
       } finally {
         setIsSearching(false);
       }
@@ -502,7 +463,7 @@ const CinemaxDashboard: React.FC = () => {
     return () => observer.disconnect();
   }, [searchQuery, loadMoreSearch, searchHasMore]);
 
-  // Handle genre/category filter changes (upgraded to support all 29 categories!)
+  // Genre Filters
   useEffect(() => {
     if (activeGenre !== null) {
       const loadGenreMovies = async () => {
@@ -515,15 +476,12 @@ const CinemaxDashboard: React.FC = () => {
             ...nowPlaying,
             ...trendingTV
           ];
-          
-          // Remove duplicates
           const uniquePool = Array.from(new Map(allPool.map(item => [item.id, item])).values());
           
           let filtered: Movie[] = [];
           if (typeof activeGenre === "number") {
             filtered = uniquePool.filter(m => m.genre_ids?.includes(activeGenre));
           } else {
-            // String-based custom category matches
             switch (activeGenre) {
               case "trending":
                 filtered = [...trendingMovies];
@@ -540,48 +498,13 @@ const CinemaxDashboard: React.FC = () => {
               case "now_playing":
                 filtered = [...nowPlaying];
                 break;
-              case "superhero": {
-                const keywords = ["super", "man", "spider", "bat", "captain", "avenger", "hero", "knight", "girl", "marvel", "dc", "justice"];
-                filtered = uniquePool.filter(m => {
-                  const title = (m.title || m.name || "").toLowerCase();
-                  return keywords.some(kw => title.includes(kw));
-                });
-                break;
-              }
-              case "anime":
-                filtered = uniquePool.filter(m => 
-                  m.genre_ids?.includes(16) || 
-                  (m.title || m.name || "").toLowerCase().includes("anime") ||
-                  (m.title || m.name || "").toLowerCase().includes("demon")
-                );
-                break;
-              case "kids":
-                filtered = uniquePool.filter(m => m.genre_ids?.includes(10751) || m.genre_ids?.includes(16));
-                break;
-              case "classic":
-                filtered = uniquePool.filter(m => {
-                  const date = m.release_date || m.first_air_date || "";
-                  const year = parseInt(date.substring(0, 4));
-                  return !isNaN(year) && year < 2018;
-                });
-                break;
-              case "award":
-                filtered = uniquePool.filter(m => m.vote_average >= 8.0);
-                break;
-              case "latest":
-                filtered = uniquePool.filter(m => {
-                  const date = m.release_date || m.first_air_date || "";
-                  const year = parseInt(date.substring(0, 4));
-                  return !isNaN(year) && year >= 2023;
-                });
-                break;
               default:
                 filtered = uniquePool;
             }
           }
           setGenreFilteredMovies(filtered);
         } catch (err) {
-          console.error("Error filtering by genre:", err);
+          console.error(err);
         }
       };
       loadGenreMovies();
@@ -593,7 +516,6 @@ const CinemaxDashboard: React.FC = () => {
   const handleMovieClick = async (movie: Movie) => {
     const playKey = `${movie.media_type || (isTvShow(movie) ? "tv" : "movie")}:${movie.id}`;
     setPreparingPlayKey(playKey);
-    // Clear search query when clicking a movie to ensure player view takes priority
     setSearchQuery("");
     try {
       const ready = await prepareForPlayback(movie);
@@ -606,7 +528,6 @@ const CinemaxDashboard: React.FC = () => {
         setChoiceModalOpen(true);
       }
     } catch (err) {
-      console.error("Failed to prepare title for playback:", err);
       const fallback: Movie = {
         ...movie,
         media_type: movie.media_type ?? (isTvShow(movie) ? "tv" : "movie"),
@@ -627,8 +548,7 @@ const CinemaxDashboard: React.FC = () => {
       setPlayerMode("full");
       setChoiceModalOpen(false);
       setCurrentView("player");
-    } catch (err) {
-      console.error("Failed to prepare full movie stream:", err);
+    } catch {
       setSelectedMovie({
         ...movie,
         media_type: movie.media_type ?? (isTvShow(movie) ? "tv" : "movie"),
@@ -649,15 +569,6 @@ const CinemaxDashboard: React.FC = () => {
     setCurrentView("player");
   };
 
-  // Check Watchlisted items for "My List" view
-  const getMyListMovies = () => {
-    if (!user) return [];
-    const ids = user.myList || user.watchlist || [];
-    const all = [...trendingMovies, ...trendingTV, ...popularMovies, ...topRated];
-    const matched = all.filter(m => ids.includes(m.id));
-    return Array.from(new Map(matched.map(item => [item.id, item])).values());
-  };
-
   const getContinueWatchingMovies = () => {
     if (!user?.watchHistory) return [];
     const inProgress = user.watchHistory.filter(h => h.progress > 0 && h.progress < 100);
@@ -668,7 +579,6 @@ const CinemaxDashboard: React.FC = () => {
     }).filter(Boolean) as (Movie & { _progress?: number; _season?: number; _episode?: number })[];
   };
 
-  // Reusable "sign in required" placeholder for guest-restricted views
   const renderGuestLock = (label: string) => (
     <div className="text-center py-24 text-neutral-500 space-y-4">
       <div className="h-14 w-14 rounded-2xl surface-elevated flex items-center justify-center mx-auto text-neutral-400">
@@ -694,7 +604,6 @@ const CinemaxDashboard: React.FC = () => {
     </div>
   );
 
-  // Helper for rendering horizontal row shelfs
   const renderRowShelf = (title: string, movies: Movie[], hasRank = false, seeAllTarget?: { view: "movies" | "tv"; genre?: string | number | null; genreLabel?: string }) => {
     if (movies.length === 0) return null;
     return (
@@ -738,13 +647,14 @@ const CinemaxDashboard: React.FC = () => {
     );
   };
 
+  // Splash screen ikoresha ifade neza mu kurinda black screen
   const splashScreen = (
     <div
       id="splash-loader-screen"
       className={`fixed inset-0 z-[10000] bg-[#050505] on-dark-bg flex flex-col items-center justify-center transition-opacity duration-500 ease-out ${fadeSplash ? "opacity-0 pointer-events-none" : "opacity-100"}`}
     >
       <div className="flex flex-col items-center gap-6 max-w-sm px-6 text-center">
-        <div className="h-20 w-20 rounded-3xl logo-mark flex items-center justify-center">
+        <div className="h-20 w-20 rounded-3xl logo-mark flex items-center justify-center animate-pulse">
           <svg
             className="h-10 w-10 text-black"
             viewBox="0 0 24 24"
@@ -763,10 +673,9 @@ const CinemaxDashboard: React.FC = () => {
             <path d="M17 11h-3v7h3V11Z" />
           </svg>
         </div>
-
         <div className="space-y-1.5">
           <span className="text-2xl font-black tracking-tighter flex items-center justify-center select-none font-sans">
-            <span className="brand-cinema">CINEMA</span><span className="brand-x">X</span>
+            <span className="brand-cinema text-white">CINEMA</span><span className="brand-x text-[#39FF14]">X</span>
           </span>
           <p className="text-[10px] text-neutral-500 font-mono tracking-widest uppercase font-black">
             STRICTLY MOVIES & SERIES ONLY
@@ -776,36 +685,16 @@ const CinemaxDashboard: React.FC = () => {
     </div>
   );
 
-  // Minimal branded header shown above Help/About when browsed pre-login
-  const publicPageHeader = (
-    <header className="relative z-10 flex items-center justify-between px-6 sm:px-12 py-6">
-      <button
-        id="public-page-logo-home-btn"
-        onClick={() => setCurrentView("home")}
-        className="flex items-center gap-2 cursor-pointer"
-      >
-        <CinemaxLogo compact />
-      </button>
-      <button
-        id="public-page-signin-btn"
-        onClick={() => openAuthModal("signin")}
-        className="text-xs font-bold px-5 py-2.5 rounded-xl border border-white/15 text-white hover:border-[#39FF14]/50 hover:text-[#39FF14] transition-all cursor-pointer"
-      >
-        Sign In
-      </button>
-    </header>
-  );
-
   if (showSplash || authLoading) {
     return splashScreen;
   }
 
-  const inMaintenance = siteConfig.maintenanceMode && user?.role !== "admin";
+  const inMaintenance = siteConfig?.maintenanceMode && user?.role !== "admin";
   if (inMaintenance) {
     return (
       <MaintenanceScreen
-        siteName={siteConfig.siteName}
-        heroTagline={siteConfig.heroTagline}
+        siteName={siteConfig?.siteName || "Cinemax"}
+        heroTagline={siteConfig?.heroTagline}
       />
     );
   }
@@ -813,31 +702,27 @@ const CinemaxDashboard: React.FC = () => {
   const homepageAdsTop = publicAds.filter((a) => a.placement === "homepage_top");
   const homepageAdsMid = publicAds.filter((a) => a.placement === "homepage_mid");
 
-  const personalizedSections = user?.onboarding?.favoriteGenres
-    ? user.onboarding.favoriteGenres
-        .filter((genre) => ONBOARDING_GENRE_ID_MAP[genre.toLowerCase()])
-        .map((genre) => ({
-          id: `personalized_${genre}`,
-          genreKey: genre.toLowerCase(),
-          label: `Because You Like ${genre.charAt(0).toUpperCase() + genre.slice(1)}`,
-          genreId: ONBOARDING_GENRE_ID_MAP[genre.toLowerCase()],
-          visible: true,
-        }))
-    : [];
+  // Mutekano usesekuye kuri onboarding checks (Ubu ntabwo byakunda gu-crasha pe)
+  const favoriteGenres = user?.onboarding?.favoriteGenres || [];
+  const personalizedSections = favoriteGenres
+    .filter((genre) => genre && ONBOARDING_GENRE_ID_MAP[genre.toLowerCase()])
+    .map((genre) => ({
+      id: `personalized_${genre}`,
+      genreKey: genre.toLowerCase(),
+      label: `Because You Like ${genre.charAt(0).toUpperCase() + genre.slice(1)}`,
+      genreId: ONBOARDING_GENRE_ID_MAP[genre.toLowerCase()],
+      visible: true,
+    }));
 
-  const homepageSectionData: Record<
-    string,
-    { movies: Movie[]; hasRank?: boolean; seeAll?: { view: "movies" | "tv"; genre?: string | number | null; genreLabel?: string } }
-  > = {
-    trending: { movies: trendingMovies, hasRank: true, seeAll: { view: "movies", genre: "trending", genreLabel: "Trending Now" } },
-    tv: { movies: trendingTV, seeAll: { view: "tv", genre: "tv", genreLabel: "Trending TV Shows" } },
-    popular: { movies: popularMovies, seeAll: { view: "movies", genre: "popular", genreLabel: "Popular Movies" } },
-    top_rated: { movies: topRated, seeAll: { view: "movies", genre: "top_rated", genreLabel: "Top Rated Classics" } },
-    upcoming: { movies: upcoming, seeAll: { view: "movies", genre: "upcoming", genreLabel: "Upcoming Releases" } },
-    now_playing: { movies: nowPlaying, seeAll: { view: "movies", genre: "now_playing", genreLabel: "Now Playing in Cinemas" } },
+  const homepageSectionData = {
+    trending: { movies: trendingMovies, hasRank: true, seeAll: { view: "movies" as const, genre: "trending", genreLabel: "Trending Now" } },
+    tv: { movies: trendingTV, seeAll: { view: "tv" as const, genre: "tv", genreLabel: "Trending TV Shows" } },
+    popular: { movies: popularMovies, seeAll: { view: "movies" as const, genre: "popular", genreLabel: "Popular Movies" } },
+    top_rated: { movies: topRated, seeAll: { view: "movies" as const, genre: "top_rated", genreLabel: "Top Rated Classics" } },
+    upcoming: { movies: upcoming, seeAll: { view: "movies" as const, genre: "upcoming", genreLabel: "Upcoming Releases" } },
+    now_playing: { movies: nowPlaying, seeAll: { view: "movies" as const, genre: "now_playing", genreLabel: "Now Playing in Cinemas" } },
   };
 
-  // Render the core contents based on selected Tab/View
   const renderMainViewContent = () => {
     switch (currentView) {
       case "player":
@@ -869,7 +754,6 @@ const CinemaxDashboard: React.FC = () => {
 
       case "home":
       default:
-        // Render Advanced Global Search Results Screen if querying
         if (searchQuery.trim().length > 1) {
           return (
             <div className="space-y-6 pt-2">
@@ -911,15 +795,12 @@ const CinemaxDashboard: React.FC = () => {
           );
         }
 
-        // Render standard structured homepage
         return (
           <div className="space-y-8">
-            {/* Ad Banner (Homepage Top) */}
             {homepageAdsTop.map((ad) => (
               <AdBanner key={ad.id} ad={ad} />
             ))}
 
-            {/* HERO ROTATOR BANNER */}
             {heroMovie && (
               <div className="relative h-[320px] sm:h-[420px] rounded-2xl overflow-hidden border border-white/10 shadow-2xl group">
                 <div className="absolute inset-0">
@@ -978,7 +859,6 @@ const CinemaxDashboard: React.FC = () => {
               </div>
             )}
 
-            {/* CONTINUE WATCHING (HISTORICAL TRACKING) */}
             {user && getContinueWatchingMovies().length > 0 && (
               <div className="space-y-4 pt-2">
                 <div className="flex items-center gap-2">
@@ -1010,7 +890,6 @@ const CinemaxDashboard: React.FC = () => {
               </div>
             )}
 
-            {/* PERSONALIZED USER SHELVES FROM ONBOARDING */}
             {personalizedSections.map((section) => {
               const moviesForGenre = personalizedMovies[section.genreKey] || [];
               return renderRowShelf(section.label, moviesForGenre, false, {
@@ -1020,12 +899,10 @@ const CinemaxDashboard: React.FC = () => {
               });
             })}
 
-            {/* Ad Banner (Homepage Middle) */}
             {homepageAdsMid.map((ad) => (
               <AdBanner key={ad.id} ad={ad} />
             ))}
 
-            {/* MAIN SHELVES */}
             {renderRowShelf("Trending Worldwide", homepageSectionData.trending.movies, true, homepageSectionData.trending.seeAll)}
             {renderRowShelf("Curated TV Shows", homepageSectionData.tv.movies, false, homepageSectionData.tv.seeAll)}
             {renderRowShelf("Popular Blockbusters", homepageSectionData.popular.movies, false, homepageSectionData.popular.seeAll)}
@@ -1033,7 +910,6 @@ const CinemaxDashboard: React.FC = () => {
             {renderRowShelf("Highly Anticipated", homepageSectionData.upcoming.movies, false, homepageSectionData.upcoming.seeAll)}
             {renderRowShelf("Now In Theatres", homepageSectionData.now_playing.movies, false, homepageSectionData.now_playing.seeAll)}
 
-            {/* AI Assistant Banner Area */}
             <HomeAIAssistant />
           </div>
         );
@@ -1042,23 +918,16 @@ const CinemaxDashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#050505] text-white flex flex-col font-sans antialiased overflow-x-hidden selection:bg-[#39FF14] selection:text-black">
-      {/* Background Ambience */}
       <div className="fixed inset-y-0 right-0 w-[40vw] pointer-events-none bg-gradient-to-l from-emerald-950/10 via-transparent to-transparent blur-3xl z-0" />
       <div className="fixed top-0 left-[20%] w-[30vw] h-[30vh] pointer-events-none bg-[#39FF14]/5 blur-[120px] rounded-full z-0" />
 
-      {/* Main Container */}
       <div className="flex flex-1 relative z-10">
-        
-        {/* Sidebar Component */}
         <Sidebar
           isOpen={sidebarOpen}
           setIsOpen={setSidebarOpen}
         />
 
-        {/* Outer Content Stream */}
         <main className="flex-1 flex flex-col min-w-0 min-h-screen px-4 sm:px-8 pb-24 lg:pb-12 pt-6">
-          
-          {/* Header Panel */}
           <header className="flex items-center justify-between gap-4 mb-6 relative">
             <div className="flex items-center gap-3">
               <button
@@ -1075,7 +944,6 @@ const CinemaxDashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Global Search and Control Cluster */}
             <div className="flex items-center gap-3">
               <div className="relative hidden md:block w-64 xl:w-80">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500" />
@@ -1088,7 +956,6 @@ const CinemaxDashboard: React.FC = () => {
                 />
               </div>
 
-              {/* Conversational Voice Assistant Button */}
               <button
                 onClick={toggleConversationalAI}
                 className={`h-10 w-10 rounded-xl flex items-center justify-center border transition-all cursor-pointer relative ${
@@ -1109,7 +976,6 @@ const CinemaxDashboard: React.FC = () => {
 
               <NotificationCenter />
               
-              {/* User Avatar Render */}
               <div 
                 onClick={() => isGuest ? requireSignInPrompt() : setCurrentView("profile")}
                 className="h-10 w-10 rounded-xl overflow-hidden border border-white/10 cursor-pointer surface-elevated p-1"
@@ -1119,7 +985,6 @@ const CinemaxDashboard: React.FC = () => {
             </div>
           </header>
 
-          {/* Active View Display */}
           <div className="flex-1">
             {renderMainViewContent()}
           </div>
@@ -1128,7 +993,6 @@ const CinemaxDashboard: React.FC = () => {
         </main>
       </div>
 
-      {/* Popups & Modals Portal Stack */}
       <WatchChoiceModal
         isOpen={choiceModalOpen}
         onClose={() => setChoiceModalOpen(false)}
@@ -1148,7 +1012,6 @@ const CinemaxDashboard: React.FC = () => {
         />
       )}
 
-      {/* Floating Transcripts Popups for Speech Agents */}
       {showTranscriptPopup && (
         <div className="fixed bottom-24 right-6 bg-black/95 border border-[#39FF14]/30 text-white rounded-2xl p-4 shadow-2xl max-w-sm z-[9999] animate-fade-in flex items-start gap-3">
           <div className="h-2 w-2 rounded-full bg-red-500 animate-ping mt-1.5 flex-shrink-0" />
@@ -1159,7 +1022,6 @@ const CinemaxDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Supporting Overlay Integrations */}
       <AuthModal />
       <PipPlayer />
       <LiveChat />
