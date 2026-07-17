@@ -14,16 +14,16 @@ export interface StreamingProvider {
 
 /**
  * Streaming sources for the Multi-Server Movie Player.
- * Configured with multiple working providers for robust failover.
+ * Configured with only the specified providers: vidsrc.pm, vidsrc.to, and vidsrc.cc.
  */
 export const PROVIDERS_CONFIG: StreamingProvider[] = [
   {
-    // Vidsrc.to — Primary working stream provider
-    id: "vidsrc-to",
+    // Vidsrc.pm — Primary stream provider
+    id: "vidsrc-pm",
     name: "P1",
-    homepage: "https://vidsrc.to",
-    moviePattern: "https://vidsrc.to/embed/movie/{id}",
-    tvPattern: "https://vidsrc.to/embed/tv/{id}/{season}/{episode}",
+    homepage: "https://vidsrc.pm",
+    moviePattern: "https://vidsrc.pm/embed/movie/{id}",
+    tvPattern: "https://vidsrc.pm/embed/tv/{id}/{season}/{episode}",
     qualityOptions: ["1080p", "720p", "Auto"],
     audioOptions: ["Original", "English"],
     subtitlesOptions: ["Embedded", "English"],
@@ -31,12 +31,12 @@ export const PROVIDERS_CONFIG: StreamingProvider[] = [
     status: "Online",
   },
   {
-    // Superembed.su — Secondary working backup provider
-    id: "superembed-su",
+    // Vidsrc.to — Secondary stream provider
+    id: "vidsrc-to",
     name: "P2",
-    homepage: "https://superembed.su",
-    moviePattern: "https://superembed.su/movie/{id}",
-    tvPattern: "https://superembed.su/tv/{id}/{season}/{episode}",
+    homepage: "https://vidsrc.to",
+    moviePattern: "https://vidsrc.to/embed/movie/{id}",
+    tvPattern: "https://vidsrc.to/embed/tv/{id}/{season}/{episode}",
     qualityOptions: ["1080p", "720p", "Auto"],
     audioOptions: ["Original", "English"],
     subtitlesOptions: ["Embedded", "English"],
@@ -54,97 +54,6 @@ export const PROVIDERS_CONFIG: StreamingProvider[] = [
     audioOptions: ["Original", "English"],
     subtitlesOptions: ["Embedded", "English"],
     defaultLatency: 110,
-    status: "Online",
-  },
-  {
-    // 2embed.cc — Additional backup provider
-    id: "2embed-cc",
-    name: "P4",
-    homepage: "https://www.2embed.cc",
-    moviePattern: "https://www.2embed.cc/embed/{id}",
-    tvPattern: "https://www.2embed.cc/embedtv/{id}&s={season}&e={episode}",
-    qualityOptions: ["1080p", "720p", "Auto"],
-    audioOptions: ["Original", "English"],
-    subtitlesOptions: ["Embedded", "English"],
-    defaultLatency: 120,
-    status: "Online",
-  },
-  {
-    // Vidsrc.me — Reliable vidsrc variant
-    id: "vidsrc-me",
-    name: "P5",
-    homepage: "https://vidsrc.me",
-    moviePattern: "https://vidsrc.me/embed/movie/{id}",
-    tvPattern: "https://vidsrc.me/embed/tv/{id}/{season}/{episode}",
-    qualityOptions: ["1080p", "720p", "Auto"],
-    audioOptions: ["Original", "English"],
-    subtitlesOptions: ["Embedded", "English"],
-    defaultLatency: 125,
-    status: "Online",
-  },
-  {
-    // Multiembed.cc — Multi-source embed with high reliability
-    id: "multiembed-cc",
-    name: "P6",
-    homepage: "https://multiembed.cc",
-    moviePattern: "https://multiembed.cc/?video_id={id}&tmdb=1",
-    tvPattern: "https://multiembed.cc/?video_id={id}&tmdb=1&s={season}&e={episode}",
-    qualityOptions: ["1080p", "720p", "Auto"],
-    audioOptions: ["Original", "English"],
-    subtitlesOptions: ["Embedded", "English"],
-    defaultLatency: 130,
-    status: "Online",
-  },
-  {
-    // Autoembed.cc — Auto-embed service with multiple sources
-    id: "autoembed-cc",
-    name: "P7",
-    homepage: "https://autoembed.cc",
-    moviePattern: "https://autoembed.cc/movie/tmdb/{id}",
-    tvPattern: "https://autoembed.cc/tv/tmdb/{id}/{season}/{episode}",
-    qualityOptions: ["1080p", "720p", "Auto"],
-    audioOptions: ["Original", "English"],
-    subtitlesOptions: ["Embedded", "English"],
-    defaultLatency: 135,
-    status: "Online",
-  },
-  {
-    // Smashystream.com — High-quality streaming embed
-    id: "smashystream",
-    name: "P8",
-    homepage: "https://smashystream.com",
-    moviePattern: "https://smashystream.com/play/{id}",
-    tvPattern: "https://smashystream.com/play/{id}/{season}/{episode}",
-    qualityOptions: ["1080p", "720p", "Auto"],
-    audioOptions: ["Original", "English"],
-    subtitlesOptions: ["Embedded", "English"],
-    defaultLatency: 140,
-    status: "Online",
-  },
-  {
-    // Superstream.to — Fast and reliable stream provider
-    id: "superstream-to",
-    name: "P9",
-    homepage: "https://superstream.to",
-    moviePattern: "https://superstream.to/embed/movie/{id}",
-    tvPattern: "https://superstream.to/embed/tv/{id}/{season}/{episode}",
-    qualityOptions: ["1080p", "720p", "Auto"],
-    audioOptions: ["Original", "English"],
-    subtitlesOptions: ["Embedded", "English"],
-    defaultLatency: 145,
-    status: "Online",
-  },
-  {
-    // Vidsrc.xyz — Another reliable vidsrc variant
-    id: "vidsrc-xyz",
-    name: "P10",
-    homepage: "https://vidsrc.xyz",
-    moviePattern: "https://vidsrc.xyz/embed/movie/{id}",
-    tvPattern: "https://vidsrc.xyz/embed/tv/{id}/{season}/{episode}",
-    qualityOptions: ["1080p", "720p", "Auto"],
-    audioOptions: ["Original", "English"],
-    subtitlesOptions: ["Embedded", "English"],
-    defaultLatency: 150,
     status: "Online",
   },
 ];
