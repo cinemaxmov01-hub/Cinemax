@@ -50,10 +50,6 @@ function buildAllowedOrigins(): string[] {
     // InfinityFree frontend domain
     "https://cinemaxmov.site.je",
     "http://cinemaxmov.site.je",
-    // Safety net: alternate spelling seen in the deployment request
-    // (cinemamov vs cinemaxmov) until confirmed which is the real live domain.
-    "https://cinemamov.site.je",
-    "http://cinemamov.site.je",
   );
   // Local dev conveniences.
   raw.push("http://localhost:5173", "http://localhost:5174", "http://localhost:3000");

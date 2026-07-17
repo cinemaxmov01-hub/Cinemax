@@ -486,7 +486,7 @@ authRouter.get("/api/auth/admin-portal-url", requireAuth, (req: AuthedRequest, r
     return;
   }
   const portalToken = signPortalToken(req.user!.id);
-  const base = (process.env.ADMIN_PANEL_URL || process.env.VITE_ADMIN_PANEL_URL || "https://cinemax-tc3o.onrender.com").replace(/\/$/, "");
+  const base = (process.env.ADMIN_PANEL_URL || process.env.VITE_ADMIN_PANEL_URL || "https://cinemaxmovie-admin.onrender.com").replace(/\/$/, "");
   res.json({ url: `${base}?token=${encodeURIComponent(portalToken)}` });
 });
 
