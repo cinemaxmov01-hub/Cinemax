@@ -553,6 +553,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const signIn = async (email: string, password: string): Promise<{ ok: boolean; error?: string }> => {
     setAuthError(null);
+    setAuthLoading(true);
     try {
       const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: "POST",
@@ -563,6 +564,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const data = await parseApiResponse(res);
       if (!res.ok) {
         setAuthError(data.error || "Invalid email or password.");
+        setAuthLoading(false);
         return { ok: false, error: data.error };
       }
       const mapped = mapServerUser(data.user);
@@ -572,6 +574,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setIsGuest(false);
       fetchNotifications();
       maybeShowAdminDestination(mapped);
+      setAuthLoading(false);
       
       // Check if user needs onboarding (first-time login without preferences)
       if (!mapped.onboarding) {
@@ -582,6 +585,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (err: any) {
       const error = err?.message || "Couldn't reach the server. Please try again.";
       setAuthError(error);
+      setAuthLoading(false);
       return { ok: false, error };
     }
   };
