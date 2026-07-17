@@ -275,10 +275,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   useEffect(() => {
-    document.documentElement.classList.add("dark");
-  }, []);
-
-  useEffect(() => {
     const reduced = user?.preferences?.reducedMotion ?? false;
     document.documentElement.classList.toggle("reduce-motion", reduced);
     document.documentElement.classList.toggle("compact-layout", user?.preferences?.compactLayout ?? false);
@@ -597,8 +593,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setAuthLoading(false);
       
       // Check if user needs onboarding (first-time login without preferences)
-      if (!mapped.onboarding) {
+      // Only show onboarding if the user explicitly has no onboarding data
+      if (mapped.onboarding === undefined || mapped.onboarding === null) {
         setNeedsOnboarding(true);
+      } else {
+        setNeedsOnboarding(false);
       }
       
       return { ok: true };
@@ -660,6 +659,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   /** Verifies the OTP the admin received by email and, on success, signs them in. */
   const verifyOtp = async (email: string, otp: string): Promise<{ ok: boolean; error?: string }> => {
     setAuthError(null);
+    setAuthLoading(true);
     try {
       const res = await fetch(`${API_BASE}/api/auth/otp/verify`, {
         method: "POST",
@@ -670,6 +670,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const data = await parseApiResponse(res);
       if (!res.ok) {
         setAuthError(data.error || "Incorrect code. Please try again.");
+        setAuthLoading(false);
         return { ok: false, error: data.error };
       }
       const mapped = mapServerUser(data.user);
@@ -679,10 +680,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setIsGuest(false);
       fetchNotifications();
       maybeShowAdminDestination(mapped);
+      setAuthLoading(false);
+      
+      // Check if user needs onboarding (first-time login without preferences)
+      // Only show onboarding if the user explicitly has no onboarding data
+      if (mapped.onboarding === undefined || mapped.onboarding === null) {
+        setNeedsOnboarding(true);
+      } else {
+        setNeedsOnboarding(false);
+      }
+      
       return { ok: true };
     } catch (err: any) {
       const error = err?.message || "Couldn't reach the server. Please try again.";
       setAuthError(error);
+      setAuthLoading(false);
       return { ok: false, error };
     }
   };
@@ -711,6 +723,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       watchHistory: [],
       preferences: { ...DEFAULT_PREFERENCES },
     });
+    setNeedsOnboarding(false);
     setCurrentView("home");
   };
 

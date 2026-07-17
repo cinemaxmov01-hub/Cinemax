@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { AppProvider, useApp } from "./context/AppContext";
-import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Sidebar } from "./components/Sidebar";
 import { MovieCard } from "./components/MovieCard";
 import { WatchChoiceModal } from "./components/WatchChoiceModal";
@@ -1669,15 +1668,9 @@ const OnboardingGate: React.FC = () => {
 
 export default function App() {
   return (
-    <ErrorBoundary label="App">
-      <AppProvider>
-        <ErrorBoundary label="CinemaxDashboard">
-          <CinemaxDashboard />
-        </ErrorBoundary>
-        <ErrorBoundary label="OnboardingGate">
-          <OnboardingGate />
-        </ErrorBoundary>
-      </AppProvider>
-    </ErrorBoundary>
+    <AppProvider>
+      <CinemaxDashboard />
+      <OnboardingGate />
+    </AppProvider>
   );
 }
