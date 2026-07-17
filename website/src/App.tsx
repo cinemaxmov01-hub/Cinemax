@@ -331,9 +331,9 @@ const CinemaxDashboard: React.FC = () => {
 
   useEffect(() => {
     if (heroMovies.length < 2) return;
-    const t = setInterval(() => setHeroIndex((i) => (i + 1) % heroMovies.length), 4000);
-    return () => clearInterval(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Renamed interval var 't' to 'intervalId' to avoid shadowing external language translations hook ('t')
+    const intervalId = setInterval(() => setHeroIndex((i) => (i + 1) % heroMovies.length), 4000);
+    return () => clearInterval(intervalId);
   }, [heroMovies.length]);
 
   // Initialize Conversational AI Agent
@@ -400,7 +400,7 @@ const CinemaxDashboard: React.FC = () => {
     return () => {
       agent.destroy();
     };
-  }, []);
+  }, [setSearchQuery]);
 
   const toggleConversationalAI = () => {
     const agent = conversationalAgent.current;
@@ -540,13 +540,14 @@ const CinemaxDashboard: React.FC = () => {
               case "now_playing":
                 filtered = [...nowPlaying];
                 break;
-              case "superhero":
+              case "superhero": {
                 const keywords = ["super", "man", "spider", "bat", "captain", "avenger", "hero", "knight", "girl", "marvel", "dc", "justice"];
                 filtered = uniquePool.filter(m => {
                   const title = (m.title || m.name || "").toLowerCase();
                   return keywords.some(kw => title.includes(kw));
                 });
                 break;
+              }
               case "anime":
                 filtered = uniquePool.filter(m => 
                   m.genre_ids?.includes(16) || 
@@ -775,9 +776,7 @@ const CinemaxDashboard: React.FC = () => {
     </div>
   );
 
-  // Minimal branded header shown above Help/About when browsed pre-login,
-  // so those pages don't feel orphaned on a blank background. Clicking the
-  // logo returns to the marketing landing page.
+  // Minimal branded header shown above Help/About when browsed pre-login
   const publicPageHeader = (
     <header className="relative z-10 flex items-center justify-between px-6 sm:px-12 py-6">
       <button
@@ -797,9 +796,6 @@ const CinemaxDashboard: React.FC = () => {
     </header>
   );
 
-  // Splash always shows first (brand moment + gives the session check time to
-  // resolve). Only once it's done do we know whether to show the marketing
-  // landing page (unauthenticated) or the real dashboard (authenticated).
   if (showSplash || authLoading) {
     return splashScreen;
   }
@@ -817,8 +813,6 @@ const CinemaxDashboard: React.FC = () => {
   const homepageAdsTop = publicAds.filter((a) => a.placement === "homepage_top");
   const homepageAdsMid = publicAds.filter((a) => a.placement === "homepage_mid");
 
-  // Personalized sections based on user onboarding preferences — populated
-  // with real TMDB results by the effect below (personalizedMovies).
   const personalizedSections = user?.onboarding?.favoriteGenres
     ? user.onboarding.favoriteGenres
         .filter((genre) => ONBOARDING_GENRE_ID_MAP[genre.toLowerCase()])
@@ -836,841 +830,342 @@ const CinemaxDashboard: React.FC = () => {
     { movies: Movie[]; hasRank?: boolean; seeAll?: { view: "movies" | "tv"; genre?: string | number | null; genreLabel?: string } }
   > = {
     trending: { movies: trendingMovies, hasRank: true, seeAll: { view: "movies", genre: "trending", genreLabel: "Trending Now" } },
-    tv: { movies: trendingTV, seeAll: { view: "tv" } },
+    tv: { movies: trendingTV, seeAll: { view: "tv", genre: "tv", genreLabel: "Trending TV Shows" } },
     popular: { movies: popularMovies, seeAll: { view: "movies", genre: "popular", genreLabel: "Popular Movies" } },
-    top_rated: { movies: topRated, seeAll: { view: "movies", genre: "top_rated", genreLabel: "Top Rated Cinema Hits" } },
-    upcoming: { movies: upcoming, seeAll: { view: "movies", genre: "upcoming", genreLabel: "Upcoming Blockbusters" } },
-    now_playing: { movies: nowPlaying, seeAll: { view: "movies", genre: "now_playing", genreLabel: "Now Playing in Theaters" } },
+    top_rated: { movies: topRated, seeAll: { view: "movies", genre: "top_rated", genreLabel: "Top Rated Classics" } },
+    upcoming: { movies: upcoming, seeAll: { view: "movies", genre: "upcoming", genreLabel: "Upcoming Releases" } },
+    now_playing: { movies: nowPlaying, seeAll: { view: "movies", genre: "now_playing", genreLabel: "Now Playing in Cinemas" } },
   };
 
-  // Add personalized genre sections if user has completed onboarding —
-  // backed by the real titles fetched in the effect above.
-  if (personalizedSections.length > 0) {
-    personalizedSections.forEach((section) => {
-      homepageSectionData[section.id] = {
-        movies: personalizedMovies[section.genreKey] || [],
-        seeAll: { view: "movies", genre: section.genreId, genreLabel: section.label },
-      };
-    });
-  }
-
-  if (!user) {
-    // The footer's Help/About links work even before signing in — they
-    // reuse the same currentView state the authenticated app uses, so once
-    // someone does sign in, they land right back on the page they were
-    // reading instead of being reset to the dashboard.
-    if (currentView === "help") {
-      return (
-        <div id="public-help-page" className="min-h-screen bg-[#050505] text-white">
-          {publicPageHeader}
-          <HelpDeskPage />
-          <Footer />
-          <AuthModal isOpen={authModalOpen} onClose={closeAuthModal} defaultMode={authModalMode} initialStep={authModalInitialStep} initialEmail={authModalPrefillEmail} />
-        </div>
-      );
-    }
-    if (currentView === "about") {
-      return (
-        <div id="public-about-page" className="min-h-screen bg-[#050505] text-white">
-          {publicPageHeader}
-          <AboutPage />
-          <Footer />
-          <AuthModal isOpen={authModalOpen} onClose={closeAuthModal} defaultMode={authModalMode} initialStep={authModalInitialStep} initialEmail={authModalPrefillEmail} />
-        </div>
-      );
-    }
-    return (
-      <>
-        <LandingPage />
-        <AuthModal isOpen={authModalOpen} onClose={closeAuthModal} defaultMode={authModalMode} initialEmail={authModalPrefillEmail} />
-      </>
-    );
-  }
-
-  return (
-    <div id="dashboard-wrapper" className="min-h-screen bg-[#050505] text-neutral-200 relative overflow-hidden">
+  // Render the core contents based on selected Tab/View
+  const renderMainViewContent = () => {
+    switch (currentView) {
+      case "player":
+        return <PlayerPage />;
       
-      {/* Background Radial Glow Gradient from theme */}
-      <div className="bg-gradient-radial-overlay" />
+      case "movies":
+        return <MoviesPage />;
 
-      {/* Left Sidebar Menu */}
-      <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+      case "tv":
+        return <TVShowsPage />;
 
-      {/* Main Content Area Container */}
-      <div id="main-content-panel" className="lg:pl-64 flex flex-col min-h-screen">
-        
-        {/* Top Header Navbar with frosted blur */}
-        <header id="top-navbar" className="h-20 glass-navbar sticky top-0 z-40 px-4 lg:px-8 flex items-center justify-between gap-2 sm:gap-4">
-          
-          {/* Left Section: Mobile menu, Search, Voice Agent, Download App */}
-          <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-            <button
-              id="mobile-menu-trigger"
-              aria-label="Open navigation menu"
-              onClick={() => setSidebarOpen(true)}
-              className="p-2 rounded-xl border border-white/5 text-neutral-400 hover:bg-white/5 hover:text-white lg:hidden cursor-pointer flex-shrink-0"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
+      case "shorts":
+        return <ShortsPage />;
 
-            {/* Instant Search input — permanently visible across all devices */}
-            <div className="relative w-64 sm:w-80 lg:w-96">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500 pointer-events-none" aria-hidden="true" />
-              <input
-                id="header-search-input"
-                type="text"
-                aria-label="Search movies, TV shows, and actors"
-                placeholder="Search..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl pl-11 pr-12 py-2.5 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-[#39FF14]/50 transition-colors"
-              />
-              {/* Voice Search Button */}
-              <button
-                onClick={toggleConversationalAI}
-                className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg transition-colors cursor-pointer ${
-                  isConversationalAIActive 
-                    ? 'voice-button-active text-[#39FF14]' 
-                    : 'hover:bg-white/10 text-neutral-400 hover:text-[#39FF14]'
-                }`}
-                title={isConversationalAIActive ? "Listening..." : "Voice Assistant"}
-              >
-                <Mic className="h-4 w-4" />
-              </button>
-              
-              {/* Language Selector Button */}
-              <button
-                onClick={() => setShowLanguageSelector(!showLanguageSelector)}
-                className="absolute right-10 top-1/2 -translate-y-1/2 p-1 rounded-lg transition-colors cursor-pointer hover:bg-white/10 text-neutral-400 hover:text-[#39FF14]"
-                title="Select Language"
-              >
-                <Globe className="h-4 w-4" />
-              </button>
-              
-              {/* Language Selector Dropdown */}
-              {showLanguageSelector && (
-                <div className="absolute right-0 top-full mt-2 w-48 bg-[#0a0a0a] border border-white/10 rounded-xl shadow-2xl z-50 max-h-80 overflow-y-auto">
-                  <div className="p-2">
-                    {Object.entries(SUPPORTED_LANGUAGES).map(([key, lang]) => (
-                      <button
-                        key={key}
-                        onClick={() => {
-                          setSelectedLanguage(key);
-                          setShowLanguageSelector(false);
-                        }}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-colors ${
-                          selectedLanguage === key
-                            ? 'bg-[#39FF14]/20 text-[#39FF14]'
-                            : 'text-neutral-300 hover:bg-white/5'
-                        }`}
-                      >
-                        {lang.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+      case "gens":
+        return <GensPage />;
 
-            {/* AI Response Display */}
-            {aiResponse && (
-              <div className="mt-2 px-3 py-2 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/30 text-xs text-[#39FF14] animate-pulse">
-                <span className="font-semibold">AI:</span> {aiResponse}
-              </div>
-            )}
+      case "profile":
+        return isGuest ? renderGuestLock("Profile Settings") : <ProfilePage />;
 
-            {/* Real-time Transcript Popup */}
-            {showTranscriptPopup && interimTranscript && (
-              <div className="fixed bottom-4 right-4 w-64 bg-[#0a0a0a]/95 backdrop-blur-sm border border-white/10 rounded-xl shadow-2xl z-50 p-3 animate-in fade-in slide-in-from-bottom-4">
-                <div className="flex items-start gap-2">
-                  <div className="w-2 h-2 rounded-full bg-[#39FF14] animate-pulse mt-1.5" />
-                  <div className="flex-1">
-                    <p className="text-xs text-neutral-400 mb-1">Speaking...</p>
-                    <p className="text-sm text-white leading-relaxed">{interimTranscript}</p>
-                  </div>
-                </div>
-              </div>
-            )}
+      case "downloads":
+        return isGuest ? renderGuestLock("Downloads") : <DownloadsPage />;
 
-            {/* Voice Agent - integrated next to search bar */}
-            <div className="hidden lg:hidden flex-shrink-0">
-              <VoiceAgent 
-                onNavigate={setCurrentView}
-                onSearch={setSearchQuery}
-                onPlayMovie={(title) => {
-                  // Find and play movie by title
-                  const movie = searchResults.find(m => 
-                    m.title?.toLowerCase() === title.toLowerCase() ||
-                    m.name?.toLowerCase() === title.toLowerCase()
-                  );
-                  if (movie) {
-                    handleMovieClick(movie);
-                  }
-                }}
-              />
-            </div>
+      case "help":
+        return <HelpDeskPage />;
 
-          </div>
+      case "about":
+        return <AboutPage />;
 
-          {/* Center Navigation: Movies / TV Shows / Gens / All Categories —
-             hidden on mobile (the hamburger drawer already covers every one
-             of these links); shown from sm up once there's room for it. */}
-          <nav className="hidden sm:flex items-center gap-1 flex-shrink-0 overflow-x-auto scrollbar-thin scrollbar-thumb-neutral-800 scrollbar-track-transparent">
-            <button
-              id="nav-movies-btn"
-              onClick={() => { setActiveGenre(null); setActiveGenreName(null); setCurrentView("movies"); }}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                currentView === "movies" ? "bg-[#39FF14]/10 text-[#39FF14]" : "text-neutral-400 hover:text-white hover:bg-white/5"
-              }`}
-            >
-              {t("movies")}
-            </button>
-            <button
-              id="nav-tv-btn"
-              onClick={() => setCurrentView("tv")}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                currentView === "tv" ? "bg-[#39FF14]/10 text-[#39FF14]" : "text-neutral-400 hover:text-white hover:bg-white/5"
-              }`}
-            >
-              {t("tvShows")}
-            </button>
-            <button
-              id="nav-gens-btn"
-              onClick={() => setCurrentView("gens")}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                currentView === "gens" ? "bg-[#39FF14]/10 text-[#39FF14]" : "text-neutral-400 hover:text-white hover:bg-white/5"
-              }`}
-            >
-              gens
-            </button>
-            <div className="relative">
-              <button
-                id="nav-categories-btn"
-                onClick={() => setCategoriesOpen((v) => !v)}
-                className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  categoriesOpen ? "bg-[#39FF14]/10 text-[#39FF14]" : "text-neutral-400 hover:text-white hover:bg-white/5"
-                }`}
-              >
-                <Tag className="h-3.5 w-3.5" />
-                {t("allCategories")}
-                <ChevronRight className={`h-3.5 w-3.5 transition-transform duration-300 ${categoriesOpen ? "rotate-90" : ""}`} />
-              </button>
-              {categoriesOpen && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setCategoriesOpen(false)} />
-
-                  {/* Notification-style premium dropdown panel */}
-                  <div
-                    id="all-categories-dropdown"
-                    className="absolute left-0 top-full mt-3 z-50 w-80 animate-dropdown-pop"
-                  >
-                    {/* Little caret connecting the panel to the trigger button */}
-                    <div className="absolute -top-1.5 left-6 h-3 w-3 rotate-45 bg-[#0c0c0c] border-l border-t border-[#39FF14]/20" />
-
-                    <div className="relative rounded-2xl border border-neutral-800 surface-panel overflow-hidden">
-                      {/* Header row */}
-                      <div className="flex items-center justify-between px-4 py-3.5 border-b border-white/10 bg-gradient-to-r from-[#39FF14]/10 to-transparent">
-                        <div className="flex items-center gap-2">
-                          <div className="h-7 w-7 rounded-lg bg-[#39FF14]/15 border border-[#39FF14]/30 flex items-center justify-center text-[#39FF14]">
-                            <Tag className="h-3.5 w-3.5" />
-                          </div>
-                          <span className="text-xs font-black text-white uppercase tracking-wider">{t("browseCategories")}</span>
-                        </div>
-                        <span className="text-[10px] font-bold text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/20 px-2 py-0.5 rounded-full">
-                          {allGenres.length}
-                        </span>
-                      </div>
-
-                      {/* Genre grid */}
-                      <div className="max-h-80 overflow-y-auto p-2 grid grid-cols-2 gap-1.5 scrollbar-thin scrollbar-thumb-neutral-800 scrollbar-track-transparent">
-                        {allGenres.map((g) => {
-                          const isActive = activeGenre === g.id;
-                          return (
-                            <button
-                              key={g.id}
-                              onClick={() => {
-                                setActiveGenre(g.id);
-                                setActiveGenreName(t(`genre.${g.name}`));
-                                setCurrentView("movies");
-                                setCategoriesOpen(false);
-                              }}
-                              className={`group relative flex items-center gap-2 text-left px-3 py-2.5 rounded-xl text-[11px] font-semibold transition-all duration-200 cursor-pointer overflow-hidden ${
-                                isActive
-                                  ? "accent-chip"
-                                  : "text-neutral-300 hover:bg-neutral-800 hover:text-white"
-                              }`}
-                            >
-                              <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 transition-all duration-200 ${
-                                isActive ? "bg-[#39FF14]" : "bg-neutral-700 group-hover:bg-neutral-600"
-                              }`} />
-                              <span className="truncate">{t(`genre.${g.name}`)}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          </nav>
-
-          {/* Right Header Navigation widgets */}
-          <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-            {/* Notification bell — locked for guests */}
-            <div className="relative">
-              <button
-                id="notification-bell-btn"
-                aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
-                onClick={() => (user && !isGuest ? setNotifOpen((v) => !v) : requireSignInPrompt())}
-                className="p-2 sm:p-2.5 rounded-2xl border border-white/10 hover:border-[#39FF14]/20 bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition-all relative cursor-pointer"
-              >
-                {isGuest ? <Lock className="h-4 w-4" /> : <Bell className="h-4 w-4" />}
-                {!isGuest && unreadCount > 0 && (
-                  <span className="absolute top-1.5 right-1.5 flex h-4 min-w-4 px-0.5 items-center justify-center rounded-full bg-[#39FF14] text-black text-[9px] font-black">
-                    {unreadCount > 9 ? "9+" : unreadCount}
-                  </span>
-                )}
-              </button>
-              {!isGuest && <NotificationCenter isOpen={notifOpen} onClose={() => setNotifOpen(false)} />}
-            </div>
-
-            {/* Profile circular menu — locked for guests */}
-            {user && !isGuest ? (
-              <button
-                id="header-profile-menu-avatar"
-                aria-label={`Open account settings for ${user.name}`}
-                onClick={() => setCurrentView("profile")}
-                className="rounded-full border border-white/15 overflow-hidden cursor-pointer hover:border-[#39FF14] transition-colors"
-              >
-                <AvatarRenderer value={user.avatar} size={36} initials={user.name?.[0]?.toUpperCase() || "C"} />
-              </button>
-            ) : (
-              <button
-                id="header-login-btn"
-                onClick={() => requireSignInPrompt()}
-                title="Sign in to access your profile"
-                className="neon-btn text-[10px] sm:text-xs px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
-              >
-                <Lock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                <span className="hidden sm:inline">Sign In</span>
-              </button>
-            )}
-          </div>
-        </header>
-
-        {/* Dynamic Display Rendering Area */}
-        <main id="dashboard-main-content" className="flex-1">
-
-          {/* Player always takes priority — search overlay was blocking playback */}
-          {currentView === "player" ? (
-            <div className="player-enter">
-              <PlayerPage />
-            </div>
-          ) : searchQuery.trim().length > 1 ? (
-            <div id="search-results-panel" className="p-4 lg:p-8 space-y-6 search-panel-enter">
-              <div className="flex items-center justify-between flex-wrap gap-3">
-                <div>
-                  <h2 className="font-sans font-bold text-xl text-white">
-                    Search Results for: <span className="text-[#39FF14]">"{searchQuery}"</span>
-                  </h2>
-                  {!isSearching && searchResults.length > 0 && (
-                    <p className="text-xs text-neutral-500 mt-1">
-                      {searchResults.length} titles · movies & TV · scroll for more
-                    </p>
-                  )}
-                </div>
+      case "home":
+      default:
+        // Render Advanced Global Search Results Screen if querying
+        if (searchQuery.trim().length > 1) {
+          return (
+            <div className="space-y-6 pt-2">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold tracking-tight text-white font-sans">
+                  Search Results for "{searchQuery}"
+                </h2>
                 <button
-                  id="clear-search-btn"
                   onClick={() => setSearchQuery("")}
-                  className="text-xs text-neutral-500 hover:text-white cursor-pointer"
+                  className="text-xs text-neutral-400 hover:text-white"
                 >
-                  Clear Search
+                  Clear search
                 </button>
               </div>
 
-              {isSearching ? (
-                <div className="flex flex-col items-center justify-center py-20 gap-4 text-neutral-400">
-                  <div className="w-full max-w-md h-2 rounded-full overflow-hidden search-shimmer" />
-                  <span className="text-xs font-mono font-bold tracking-widest text-[#39FF14] uppercase animate-pulse-soft">
-                    Searching movies, TV shows & Cinemax catalog…
-                  </span>
+              {isSearching && searchResults.length === 0 ? (
+                <div className="flex justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#39FF14]" />
                 </div>
-              ) : searchResults.length > 0 ? (
-                <>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-                    {searchResults.map((movie, index) => {
-                      const cardKey = `${movie.media_type || (isTvShow(movie) ? "tv" : "movie")}:${movie.id}`;
-                      const isPreparing = preparingPlayKey === cardKey;
-                      return (
-                        <div
-                          key={cardKey}
-                          className="search-card-enter"
-                          style={{ animationDelay: `${Math.min(index, 24) * 35}ms` }}
-                        >
-                          <MovieCard
-                            movie={movie}
-                            isPreparing={isPreparing}
-                            onClick={() => handleMovieClick(movie)}
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <div ref={searchSentinelRef} className="h-8 flex items-center justify-center py-8">
-                    {searchLoadingMore && (
-                      <span className="text-xs font-mono text-[#39FF14] animate-pulse">Loading more titles…</span>
-                    )}
-                    {!searchLoadingMore && searchHasMore && (
-                      <button
-                        type="button"
-                        onClick={loadMoreSearch}
-                        className="neon-btn text-xs font-bold px-6 py-2.5 rounded-xl uppercase tracking-wide cursor-pointer"
-                      >
-                        Load more
-                      </button>
-                    )}
-                  </div>
-                </>
+              ) : searchResults.length === 0 ? (
+                <div className="text-center py-12 text-neutral-500 space-y-2">
+                  <p>No titles match "{searchQuery}".</p>
+                  <p className="text-xs">Try looking for action, sci-fi, anime, or specific keywords.</p>
+                </div>
               ) : (
-                <div className="text-center py-20 text-neutral-500">
-                  <p>No results found. Try a different spelling or shorter keywords.</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                  {searchResults.map((m) => (
+                    <MovieCard key={m.id} movie={m} onClick={() => handleMovieClick(m)} />
+                  ))}
+                </div>
+              )}
+              <div ref={searchSentinelRef} className="h-10 w-full" />
+              {searchLoadingMore && (
+                <div className="flex justify-center py-4">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#39FF14]" />
                 </div>
               )}
             </div>
-          ) : (
-            <>
-              {/* VIEW: HOME DISCOVERY */}
-              {currentView === "home" && (
-                <div id="home-view" className="pb-12 space-y-8">
-                  {homepageAdsTop.length > 0 && (
-                    <div className="px-4 lg:px-8 pt-4 space-y-3">
-                      {homepageAdsTop.map((ad) => (
-                        <AdBanner key={ad.id} ad={ad} />
-                      ))}
-                    </div>
-                  )}
-                  {/* Featured Hero Banner — rotates through a handful of
-                      featured titles every 3 seconds. */}
-                  <div 
-                    id="hero-banner" 
-                    className="relative w-full h-[480px] flex items-end p-6 lg:p-12 overflow-hidden bg-black"
-                  >
-                    {/* Backdrop */}
-                    <img 
-                      id="hero-backdrop"
-                      key={heroMovie.id}
-                      src={heroMovie.id === SUPERGIRL_HERO.id ? HERO_FALLBACK_BACKDROP : getImageUrl(heroMovie.backdrop_path, "original")}
-                      alt={`${heroMovie.title || heroMovie.name} Hero Background`}
-                      className="absolute inset-0 w-full h-full object-cover opacity-65 blur-[1px] transition-opacity duration-700"
-                      referrerPolicy="no-referrer"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/40 to-transparent" />
+          );
+        }
 
-                    {/* Rotation progress dots */}
-                    {heroMovies.length > 1 && (
-                      <div className="absolute top-6 right-6 lg:right-12 z-10 flex items-center gap-1.5">
-                        {heroMovies.map((_, i) => (
-                          <span
-                            key={i}
-                            className={`h-1 rounded-full transition-all duration-300 ${
-                              i === heroIndex % heroMovies.length ? "w-6 bg-[#39FF14]" : "w-1.5 bg-white/25"
-                            }`}
-                          />
-                        ))}
-                      </div>
+        // Render standard structured homepage
+        return (
+          <div className="space-y-8">
+            {/* Ad Banner (Homepage Top) */}
+            {homepageAdsTop.map((ad) => (
+              <AdBanner key={ad.id} ad={ad} />
+            ))}
+
+            {/* HERO ROTATOR BANNER */}
+            {heroMovie && (
+              <div className="relative h-[320px] sm:h-[420px] rounded-2xl overflow-hidden border border-white/10 shadow-2xl group">
+                <div className="absolute inset-0">
+                  <img
+                    src={
+                      heroMovie.backdrop_path === "/z993883u82.jpg"
+                        ? HERO_FALLBACK_BACKDROP
+                        : getImageUrl(heroMovie.backdrop_path || heroMovie.poster_path, "original")
+                    }
+                    alt={heroMovie.title || heroMovie.name}
+                    className="w-full h-full object-cover transform scale-105 group-hover:scale-100 transition-all duration-700"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/20 to-transparent" />
+                </div>
+
+                <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8 space-y-4 max-w-2xl">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-[#39FF14] text-black font-mono font-black text-[9px] px-2 py-0.5 rounded tracking-wider uppercase">
+                      Featured Hero
+                    </span>
+                    {heroMovie.vote_average && (
+                      <span className="text-xs text-neutral-300 font-bold flex items-center gap-1">
+                        <Star className="h-3 w-3 fill-yellow-400 stroke-none" /> {heroMovie.vote_average.toFixed(1)}
+                      </span>
                     )}
-
-                    {/* Meta/Descriptions */}
-                    <div key={`meta-${heroMovie.id}`} className="relative max-w-2xl space-y-4 z-10 animate-fade-in">
-                      <div className="flex flex-wrap items-center gap-3">
-                        <span className="rounded bg-[#39FF14] text-black px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-widest">
-                          Trending Now
-                        </span>
-                        <div className="flex items-center gap-1 text-xs text-amber-400">
-                          <Star className="h-3.5 w-3.5 fill-amber-400" />
-                          <span className="font-bold">{heroMovie.vote_average != null ? heroMovie.vote_average.toFixed(1) : "N/A"}</span>
-                        </div>
-                        {(heroMovie.release_date || heroMovie.first_air_date) && (
-                          <span className="text-neutral-400 text-xs">• {(heroMovie.release_date || heroMovie.first_air_date || "").slice(0, 4)}</span>
-                        )}
-                        {heroMovie.runtime && (
-                          <span className="text-neutral-400 text-xs">• {Math.floor(heroMovie.runtime / 60)}h {heroMovie.runtime % 60}m</span>
-                        )}
-                        <span className="rounded border border-neutral-700 px-1.5 py-0.5 text-[9px] text-neutral-300 font-bold">
-                          {heroMovie.title ? "Movie" : "Series"}
-                        </span>
-                      </div>
-
-                      <h1 className="font-sans text-4xl lg:text-5xl font-black text-white tracking-tight uppercase line-clamp-2">
-                        {heroMovie.title || heroMovie.name}
-                      </h1>
-
-                      <p className="text-sm text-neutral-300 leading-relaxed line-clamp-3">
-                        {heroMovie.overview}
-                      </p>
-
-                      <div className="flex items-center gap-4 pt-2">
-                        <button
-                          id="hero-play-btn"
-                          onClick={() => handleMovieClick(heroMovie)}
-                          className="flex items-center gap-2 neon-btn font-extrabold px-6 py-3 rounded-2xl transition-all cursor-pointer"
-                        >
-                          <Play className="h-5 w-5 fill-black" />
-                          <span>Play Now</span>
-                        </button>
-                        <button
-                          id="hero-more-info-btn"
-                          onClick={() => {
-                            setDetailsModalMovie(heroMovie);
-                            setDetailsModalOpen(true);
-                          }}
-                          className="flex items-center gap-2 btn-secondary font-semibold px-6 py-3 rounded-2xl transition-all cursor-pointer"
-                        >
-                          <Info className="h-5 w-5" />
-                          <span>More Info</span>
-                        </button>
-                      </div>
-                    </div>
                   </div>
 
-                  {/* Personalized shelves — driven by the genres picked during
-                      onboarding. Placed first, above every admin-curated row,
-                      so a user's favorites are the most prominent thing on
-                      their homepage. */}
-                  {personalizedSections.length > 0 && (
-                    <div id="personalized-shelves" className="px-4 lg:px-8 space-y-10">
-                      {personalizedSections.map((section) => {
-                        const data = homepageSectionData[section.id];
-                        if (!data || data.movies.length === 0) return null;
-                        return (
-                          <React.Fragment key={section.id}>
-                            {renderRowShelf(section.label, data.movies, false, data.seeAll)}
-                          </React.Fragment>
-                        );
-                      })}
-                    </div>
-                  )}
+                  <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white font-sans drop-shadow">
+                    {heroMovie.title || heroMovie.name}
+                  </h2>
+                  <p className="text-xs sm:text-sm text-neutral-300 line-clamp-3 sm:line-clamp-2 max-w-lg leading-relaxed drop-shadow">
+                    {heroMovie.overview}
+                  </p>
 
-                  {/* Curated Row shelves — visibility controlled from Admin Panel */}
-                  <div id="curated-shelves" className="px-4 lg:px-8 space-y-10">
-                    {customContent.length > 0 && renderRowShelf("Cinemax Originals", customContent, false)}
-                    {(siteConfig.homepageSections || [])
-                      .filter((s) => s.visible)
-                      .map((section, idx) => {
-                        const data = homepageSectionData[section.id];
-                        if (!data) return null;
-                        const shelf = renderRowShelf(section.label, data.movies, data.hasRank, data.seeAll);
-                        if (!shelf) return null;
-                        const showMidAds = idx === 1 && homepageAdsMid.length > 0;
-                        return (
-                          <React.Fragment key={section.id}>
-                            {shelf}
-                            {showMidAds && (
-                              <div className="space-y-3">
-                                {homepageAdsMid.map((ad) => (
-                                  <AdBanner key={ad.id} ad={ad} />
-                                ))}
-                              </div>
-                            )}
-                          </React.Fragment>
-                        );
-                      })}
-                  </div>
-
-                  {/* Up Next + Live Chat */}
-<div id="home-up-next-section" className="px-4 lg:px-8 space-y-8 pt-4">
-                    <section className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <h2 className="font-sans font-bold text-xl lg:text-2xl tracking-tight">{t("upNext")}</h2>
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">{t("trendingNow")}</span>
-                      </div>
-                      <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
-                        {(trendingMovies.length > 0 ? trendingMovies : popularMovies).slice(0, 12).map((movie) => (
-<div key={movie.id} className="flex-shrink-0 w-[110px] sm:w-[130px]">
-                            <MovieCard movie={movie} onClick={() => handleMovieClick(movie)} />
-                          </div>
-                        ))}
-                      </div>
-                    </section>
-
-                    <section id="home-live-chat" className="max-w-3xl">
-                      <LiveChat variant="home" />
-                    </section>
+                  <div className="flex items-center gap-3 pt-2">
+                    <button
+                      onClick={() => handleMovieClick(heroMovie)}
+                      className="px-6 py-2.5 bg-white text-black hover:bg-[#39FF14] transition-all duration-300 rounded-xl font-bold flex items-center gap-2 cursor-pointer shadow-lg hover:shadow-[#39FF14]/20"
+                    >
+                      <Play className="h-4 w-4 fill-black" />
+                      <span>Play Now</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setDetailsModalMovie(heroMovie);
+                        setDetailsModalOpen(true);
+                      }}
+                      className="px-5 py-2.5 surface-elevated text-white hover:bg-neutral-800 border border-white/10 rounded-xl font-bold flex items-center gap-2 transition-all cursor-pointer"
+                    >
+                      <Info className="h-4 w-4" />
+                      <span>Info</span>
+                    </button>
                   </div>
                 </div>
-              )}
+              </div>
+            )}
 
-              {/* VIEW: MOVIES GRID */}
-              {currentView === "movies" && (
-                <MoviesPage
-                  key={`movies-${String(activeGenre)}`}
-                  onMovieClick={handleMovieClick}
-                  initialGenre={activeGenre}
-                  initialGenreLabel={activeGenreName}
+            {/* CONTINUE WATCHING (HISTORICAL TRACKING) */}
+            {user && getContinueWatchingMovies().length > 0 && (
+              <div className="space-y-4 pt-2">
+                <div className="flex items-center gap-2">
+                  <HistoryIcon className="h-4 w-4 text-[#39FF14]" />
+                  <h3 className="font-sans font-extrabold text-lg tracking-tight text-white">
+                    Continue Watching
+                  </h3>
+                </div>
+                <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-thin">
+                  {getContinueWatchingMovies().map((m) => (
+                    <div key={m.id} className="flex-none w-[180px] space-y-1.5 relative group cursor-pointer" onClick={() => handleMovieClick(m)}>
+                      <div className="aspect-video w-full rounded-xl overflow-hidden relative border border-white/10">
+                        <img
+                          src={getImageUrl(m.backdrop_path || m.poster_path, "w500")}
+                          alt={m.title || m.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-neutral-800">
+                          <div className="h-full bg-[#39FF14]" style={{ width: `${m._progress}%` }} />
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between px-1">
+                        <span className="text-xs font-bold text-neutral-300 line-clamp-1">{m.title || m.name}</span>
+                        {m._season && <span className="text-[10px] text-[#39FF14] font-semibold">S{m._season}:E{m._episode}</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* PERSONALIZED USER SHELVES FROM ONBOARDING */}
+            {personalizedSections.map((section) => {
+              const moviesForGenre = personalizedMovies[section.genreKey] || [];
+              return renderRowShelf(section.label, moviesForGenre, false, {
+                view: "movies",
+                genre: section.genreId,
+                genreLabel: section.label,
+              });
+            })}
+
+            {/* Ad Banner (Homepage Middle) */}
+            {homepageAdsMid.map((ad) => (
+              <AdBanner key={ad.id} ad={ad} />
+            ))}
+
+            {/* MAIN SHELVES */}
+            {renderRowShelf("Trending Worldwide", homepageSectionData.trending.movies, true, homepageSectionData.trending.seeAll)}
+            {renderRowShelf("Curated TV Shows", homepageSectionData.tv.movies, false, homepageSectionData.tv.seeAll)}
+            {renderRowShelf("Popular Blockbusters", homepageSectionData.popular.movies, false, homepageSectionData.popular.seeAll)}
+            {renderRowShelf("Top Rated Legends", homepageSectionData.top_rated.movies, false, homepageSectionData.top_rated.seeAll)}
+            {renderRowShelf("Highly Anticipated", homepageSectionData.upcoming.movies, false, homepageSectionData.upcoming.seeAll)}
+            {renderRowShelf("Now In Theatres", homepageSectionData.now_playing.movies, false, homepageSectionData.now_playing.seeAll)}
+
+            {/* AI Assistant Banner Area */}
+            <HomeAIAssistant />
+          </div>
+        );
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#050505] text-white flex flex-col font-sans antialiased overflow-x-hidden selection:bg-[#39FF14] selection:text-black">
+      {/* Background Ambience */}
+      <div className="fixed inset-y-0 right-0 w-[40vw] pointer-events-none bg-gradient-to-l from-emerald-950/10 via-transparent to-transparent blur-3xl z-0" />
+      <div className="fixed top-0 left-[20%] w-[30vw] h-[30vh] pointer-events-none bg-[#39FF14]/5 blur-[120px] rounded-full z-0" />
+
+      {/* Main Container */}
+      <div className="flex flex-1 relative z-10">
+        
+        {/* Sidebar Component */}
+        <Sidebar
+          isOpen={sidebarOpen}
+          setIsOpen={setSidebarOpen}
+        />
+
+        {/* Outer Content Stream */}
+        <main className="flex-1 flex flex-col min-w-0 min-h-screen px-4 sm:px-8 pb-24 lg:pb-12 pt-6">
+          
+          {/* Header Panel */}
+          <header className="flex items-center justify-between gap-4 mb-6 relative">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="lg:hidden h-10 w-10 rounded-xl surface-elevated flex items-center justify-center border border-white/10 text-neutral-300 hover:text-white transition-all"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+              <div className="hidden sm:flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-[#39FF14] animate-pulse" />
+                <span className="text-[10px] font-mono tracking-widest text-neutral-500 uppercase font-black">
+                  Streaming Online
+                </span>
+              </div>
+            </div>
+
+            {/* Global Search and Control Cluster */}
+            <div className="flex items-center gap-3">
+              <div className="relative hidden md:block w-64 xl:w-80">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500" />
+                <input
+                  type="text"
+                  placeholder="Search strictly movies & tv shows..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-[#121212] border border-white/15 focus:border-[#39FF14]/60 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder:text-neutral-500 outline-none transition-all"
                 />
-              )}
+              </div>
 
-              {/* VIEW: TV SHOWS GRID */}
-              {currentView === "tv" && <TVShowsPage onShowClick={handleMovieClick} />}
+              {/* Conversational Voice Assistant Button */}
+              <button
+                onClick={toggleConversationalAI}
+                className={`h-10 w-10 rounded-xl flex items-center justify-center border transition-all cursor-pointer relative ${
+                  isConversationalAIActive 
+                    ? "bg-[#39FF14] text-black border-[#39FF14] shadow-[0_0_15px_rgba(57,255,20,0.4)]" 
+                    : "surface-elevated text-neutral-400 border-white/10 hover:border-[#39FF14]/30 hover:text-[#39FF14]"
+                }`}
+                title="Open AI Voice Assistant"
+              >
+                <Mic className="h-4 w-4" />
+                {isConversationalAIActive && (
+                  <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                  </span>
+                )}
+              </button>
 
-              {/* VIEW: MY LIST / WATCHLIST */}
-              {currentView === "mylist" && (
-                <div id="mylist-view" className="p-4 lg:p-8 space-y-6">
-                  <div className="flex items-center gap-2">
-                    <ListPlus className="h-5 w-5 text-[#22c55e]" />
-                    <h2 className="font-sans font-bold text-xl text-white">My List — Saved for Later</h2>
-                  </div>
-                  {isGuest ? renderGuestLock("My List") : getMyListMovies().length > 0 ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-                      {getMyListMovies().map(movie => (
-                        <MovieCard key={movie.id} movie={movie} onClick={() => handleMovieClick(movie)} />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-24 text-neutral-500 space-y-3">
-                      <ListPlus className="h-12 w-12 text-neutral-700 mx-auto" />
-                      <h3 className="font-sans font-bold text-lg text-neutral-400">My List is Empty</h3>
-                      <p className="text-xs max-w-sm mx-auto">Save titles you want to watch later from any movie card or player page.</p>
-                    </div>
-                  )}
-                </div>
-              )}
+              <NotificationCenter />
+              
+              {/* User Avatar Render */}
+              <div 
+                onClick={() => isGuest ? requireSignInPrompt() : setCurrentView("profile")}
+                className="h-10 w-10 rounded-xl overflow-hidden border border-white/10 cursor-pointer surface-elevated p-1"
+              >
+                <AvatarRenderer avatar={user?.avatar || "avatar1"} className="w-full h-full object-cover" />
+              </div>
+            </div>
+          </header>
 
-              {currentView === "watchlist" && (
-                <div id="watchlist-view" className="p-4 lg:p-8 space-y-6">
-                  <div className="flex items-center gap-2">
-                    <Bookmark className="h-5 w-5 text-[#22c55e]" />
-                    <h2 className="font-sans font-bold text-xl text-white">Watchlist — Continue Watching</h2>
-                  </div>
-                  {isGuest ? renderGuestLock("your watchlist") : getContinueWatchingMovies().length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {getContinueWatchingMovies().map(movie => (
-                        <div
-                          key={movie.id}
-                          onClick={() => handleMovieClick(movie)}
-                          className="flex gap-4 p-4 rounded-3xl solid-card hover:border-[#22c55e]/30 transition-all cursor-pointer"
-                        >
-                          <img src={getImageUrl(movie.poster_path)} alt={movie.title || movie.name} className="h-24 w-20 rounded-xl object-cover" referrerPolicy="no-referrer" />
-                          <div className="flex-1">
-                            <h4 className="font-bold text-sm text-white">{movie.title || movie.name}</h4>
-                            <p className="text-[10px] text-neutral-500 mt-1">Resume at {movie._progress}%</p>
-                            <div className="w-full bg-neutral-900 h-1 rounded-full mt-2">
-                              <div className="bg-[#22c55e] h-full rounded-full" style={{ width: `${movie._progress || 0}%` }} />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-24 text-neutral-500 space-y-3">
-                      <Bookmark className="h-12 w-12 text-neutral-700 mx-auto" />
-                      <h3 className="font-sans font-bold text-lg text-neutral-400">Nothing in Progress</h3>
-                      <p className="text-xs max-w-sm mx-auto">Start watching a movie or series — it will appear here so you can resume where you left off.</p>
-                    </div>
-                  )}
-                </div>
-              )}
+          {/* Active View Display */}
+          <div className="flex-1">
+            {renderMainViewContent()}
+          </div>
 
-              {/* VIEW: HISTORY */}
-              {currentView === "history" && (
-                <div id="history-view" className="p-4 lg:p-8 space-y-6">
-                  <div className="flex items-center gap-2">
-                    <HistoryIcon className="h-5 w-5 text-[#39FF14]" />
-                    <h2 className="font-sans font-bold text-xl text-white">
-                      Continue Watching History
-                    </h2>
-                  </div>
-
-                  {user && user.watchHistory && user.watchHistory.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {user.watchHistory.map((hist, idx) => (
-                        <div 
-                          key={idx} 
-                          onClick={async () => {
-                            const fullMovie = hist.type === "movie" 
-                              ? await tmdb.getMovieDetails(hist.id)
-                              : await tmdb.getTVDetails(hist.id);
-                            setSelectedMovie(fullMovie);
-                            setPlayerMode("full");
-                            setCurrentView("player");
-                          }}
-                          className="flex gap-4 p-4 rounded-3xl glass-card hover:border-[#39FF14]/30 transition-all cursor-pointer group"
-                        >
-                          <img 
-                            src={getImageUrl(hist.poster)} 
-                            alt={hist.title}
-                            className="h-24 w-20 rounded-xl object-cover"
-                            referrerPolicy="no-referrer"
-                          />
-                          <div className="flex-1 flex flex-col justify-between py-1">
-                            <div>
-                              <div className="flex items-center justify-between">
-                                <h4 className="font-sans font-bold text-sm text-white group-hover:text-[#39FF14] transition-colors">
-                                  {hist.title}
-                                </h4>
-                                <span className="text-[10px] text-neutral-500 font-extrabold uppercase">
-                                  {hist.type === "movie" ? "Movie" : "TV Series"}
-                                </span>
-                              </div>
-                              <p className="text-[10px] text-neutral-600 font-mono mt-1">
-                                Last Streamed: {new Date(hist.watchedAt).toLocaleDateString()}
-                              </p>
-                            </div>
-
-                            <div className="space-y-1.5">
-                              <div className="flex justify-between text-[10px] text-neutral-400 font-medium">
-                                <span>Progress: {hist.progress}%</span>
-                                <span>{Math.round((hist.progress / 100) * hist.duration)}m watched</span>
-                              </div>
-                              <div className="w-full bg-[#050505] h-1 rounded-full overflow-hidden">
-                                <div className="bg-[#39FF14] h-full rounded-full" style={{ width: `${hist.progress}%` }} />
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-24 text-neutral-500 space-y-3">
-                      <HistoryIcon className="h-12 w-12 text-neutral-700 mx-auto" />
-                      <h3 className="font-sans font-bold text-lg text-neutral-400">No History Saved</h3>
-                      <p className="text-xs max-w-sm mx-auto">Start streaming your favorite titles, and we will track your progress right here!</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* VIEW: FAVORITES */}
-              {currentView === "favorites" && (
-                <div id="favorites-view" className="p-4 lg:p-8 space-y-6">
-                  <div className="flex items-center gap-2">
-                    <Heart className="h-5 w-5 text-[#39FF14]" />
-                    <h2 className="font-sans font-bold text-xl text-white">
-                      My Favorites Collection
-                    </h2>
-                  </div>
-
-                  {isGuest ? renderGuestLock("your favorites") : user && user.favorites && user.favorites.length > 0 ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-                      {[...trendingMovies, ...popularMovies, ...topRated]
-                        .filter(m => user.favorites.includes(m.id))
-                        .map(movie => (
-                          <MovieCard key={movie.id} movie={movie} onClick={() => handleMovieClick(movie)} />
-                        ))
-                      }
-                    </div>
-                  ) : (
-                    <div className="text-center py-24 text-neutral-500 space-y-3">
-                      <Heart className="h-12 w-12 text-neutral-700 mx-auto" />
-                      <h3 className="font-sans font-bold text-lg text-neutral-400">Favorites empty</h3>
-                      <p className="text-xs max-w-sm mx-auto">Add items to your favorites within the streaming player details tab!</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* VIEW: DOWNLOADS */}
-              {currentView === "downloads" && <DownloadsPage />}
-
-              {/* VIEW: GENS - Age-restricted romance/mature content */}
-              {currentView === "gens" && <GensPage onMovieClick={handleMovieClick} />}
-
-              {/* VIEW: SHORTS — vertical autoplay trailer feed */}
-              {currentView === "shorts" && (
-                <div id="shorts-view" className="lg:p-4">
-                  <ShortsPage onWatch={handleMovieClick} />
-                </div>
-              )}
-
-              {/* VIEW: PREMIUM PLAYER (FULL / TRAILER) */}
-              {/* VIEW: PREMIUM PLAYER (FULL / TRAILER) — rendered at main level when active */}
-
-              {/* VIEW: PROFILE */}
-              {currentView === "profile" && <ProfilePage />}
-              {currentView === "help" && <HelpDeskPage />}
-              {currentView === "about" && <AboutPage />}
-              {currentView === "admin" && <AdminRedirect />}
-
-            </>
-          )}
-
+          <Footer />
         </main>
-
-
-        {currentView !== "player" && currentView !== "shorts" && currentView !== "help" && currentView !== "about" && <Footer />}
       </div>
 
-      {/* POPUP WATCH DECIDER MODAL */}
+      {/* Popups & Modals Portal Stack */}
       <WatchChoiceModal
-        movie={modalTargetMovie}
         isOpen={choiceModalOpen}
         onClose={() => setChoiceModalOpen(false)}
-        onChoose={handleChoiceSelected}
+        movieName={modalTargetMovie?.title || modalTargetMovie?.name || ""}
+        onSelectChoice={handleChoiceSelected}
       />
 
-      {/* REGISTRATION / LOGIN AUTH DIALOG */}
-      <AuthModal
-        isOpen={authModalOpen}
-        onClose={closeAuthModal}
-        defaultMode={authModalMode}
-        initialStep={authModalInitialStep}
-        initialEmail={authModalPrefillEmail}
-      />
+      {detailsModalMovie && (
+        <MovieDetailsModal
+          isOpen={detailsModalOpen}
+          onClose={() => {
+            setDetailsModalOpen(false);
+            setDetailsModalMovie(null);
+          }}
+          movie={detailsModalMovie}
+          onPlay={handlePlayFullMovie}
+        />
+      )}
 
-      {/* FLOATING PICTURE IN PICTURE STREAMING CONTAINER */}
+      {/* Floating Transcripts Popups for Speech Agents */}
+      {showTranscriptPopup && (
+        <div className="fixed bottom-24 right-6 bg-black/95 border border-[#39FF14]/30 text-white rounded-2xl p-4 shadow-2xl max-w-sm z-[9999] animate-fade-in flex items-start gap-3">
+          <div className="h-2 w-2 rounded-full bg-red-500 animate-ping mt-1.5 flex-shrink-0" />
+          <div className="space-y-1">
+            <span className="text-[10px] font-mono text-neutral-400 uppercase tracking-widest block">Live Speech Transcript</span>
+            <p className="text-xs text-neutral-200 leading-normal italic">"{interimTranscript}"</p>
+          </div>
+        </div>
+      )}
+
+      {/* Supporting Overlay Integrations */}
+      <AuthModal />
       <PipPlayer />
-
-      {/* AI ASSISTANT — available on every page, not just Home. Only ever
-          appears via its own floating "Ask AI" launcher button; it stays
-          fully closed/hidden otherwise. */}
-      <HomeAIAssistant 
-        onSelectMovie={handleMovieClick} 
-        onNavigate={setCurrentView}
-        onSearch={setSearchQuery}
-      />
-
-      {/* MOVIE DETAILS MODAL — powers the Hero's "More Info" button with a
-          full detail view, distinct from "Play Now" which jumps straight
-          into playback. */}
-      <MovieDetailsModal
-        movie={detailsModalMovie}
-        isOpen={detailsModalOpen}
-        onClose={() => setDetailsModalOpen(false)}
-        onPlay={(m) => {
-          setDetailsModalOpen(false);
-          handleMovieClick(m);
-        }}
-      />
-
-      <AdminDestinationModal
-        isOpen={adminDestinationOpen}
-        onAdmin={goToAdminPanel}
-        onWebsite={dismissAdminToWebsite}
-      />
-
+      <LiveChat />
+      <AdminDestinationModal />
     </div>
   );
 };
 
-const OnboardingGate: React.FC = () => {
-  const { needsOnboarding, completeOnboarding, dismissOnboarding } = useApp();
-  return (
-    <OnboardingPreferences
-      isOpen={needsOnboarding}
-      onComplete={async (preferences) => {
-        await completeOnboarding(preferences);
-      }}
-      onSkip={dismissOnboarding}
-    />
-  );
-};
-
-export default function App() {
-  return (
-    <AppProvider>
-      <CinemaxDashboard />
-      <OnboardingGate />
-    </AppProvider>
-  );
-}
+export default CinemaxDashboard;
