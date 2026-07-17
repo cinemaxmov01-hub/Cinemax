@@ -275,10 +275,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   useEffect(() => {
-    document.documentElement.classList.add("dark");
-  }, []);
-
-  useEffect(() => {
     const reduced = user?.preferences?.reducedMotion ?? false;
     document.documentElement.classList.toggle("reduce-motion", reduced);
     document.documentElement.classList.toggle("compact-layout", user?.preferences?.compactLayout ?? false);
