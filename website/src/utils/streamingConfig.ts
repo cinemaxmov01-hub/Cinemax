@@ -74,14 +74,22 @@ export const buildEmbedUrl = (
 ): string => {
   const pattern = type === "movie" ? provider.moviePattern : provider.tvPattern;
 
+  // Log input parameters for debugging
+  console.log(`buildEmbedUrl called with: type=${type}, id=${id} (${typeof id}), season=${season}, episode=${episode}`);
+
   // Validate and sanitize parameters
   const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
   const validSeason = Math.max(1, season);
   const validEpisode = Math.max(1, episode);
 
-  if (isNaN(numericId) || numericId <= 0) {
-    console.error(`Invalid TMDB ID: ${id}`);
+  // Temporarily relax validation to debug 404 issues
+  if (isNaN(numericId)) {
+    console.error(`Invalid TMDB ID (NaN): ${id} (type: ${typeof id})`);
     return "";
+  }
+
+  if (numericId <= 0) {
+    console.warn(`TMDB ID is <= 0: ${numericId}, but proceeding anyway for debugging`);
   }
 
   const url = pattern

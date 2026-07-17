@@ -795,13 +795,6 @@ const CinemaxDashboard: React.FC = () => {
       >
         <CinemaxLogo compact />
       </button>
-      <button
-        id="public-page-signin-btn"
-        onClick={() => openAuthModal("signin")}
-        className="text-xs font-bold px-5 py-2.5 rounded-xl border border-white/15 text-white hover:border-[#39FF14]/50 hover:text-[#39FF14] transition-all cursor-pointer"
-      >
-        Sign In
-      </button>
     </header>
   );
 
@@ -921,6 +914,70 @@ const CinemaxDashboard: React.FC = () => {
               <Menu className="h-5 w-5" />
             </button>
 
+            {/* Mobile Categories Dropdown */}
+            <div className="relative sm:hidden">
+              <button
+                id="mobile-categories-btn"
+                onClick={() => setCategoriesOpen((v) => !v)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  categoriesOpen ? "bg-[#39FF14]/10 text-[#39FF14]" : "text-neutral-400 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <span>All</span>
+                <ChevronRight className={`h-3.5 w-3.5 transition-transform duration-300 ${categoriesOpen ? "rotate-90" : ""}`} />
+              </button>
+              {categoriesOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setCategoriesOpen(false)} />
+                  <div
+                    id="mobile-categories-dropdown"
+                    className="absolute left-0 top-full mt-2 z-50 w-72 animate-dropdown-pop transition-all duration-300 ease-out"
+                  >
+                    <div className="absolute -top-1.5 left-4 h-3 w-3 rotate-45 bg-[#0c0c0c] border-l border-t border-[#39FF14]/20" />
+                    <div className="relative rounded-2xl border border-neutral-800 surface-panel overflow-hidden">
+                      <div className="flex items-center justify-between px-4 py-3.5 border-b border-white/10 bg-gradient-to-r from-[#39FF14]/10 to-transparent">
+                        <div className="flex items-center gap-2">
+                          <div className="h-7 w-7 rounded-lg bg-[#39FF14]/15 border border-[#39FF14]/30 flex items-center justify-center text-[#39FF14]">
+                            <Tag className="h-3.5 w-3.5" />
+                          </div>
+                          <span className="text-xs font-black text-white uppercase tracking-wider">{t("browseCategories")}</span>
+                        </div>
+                        <span className="text-[10px] font-bold text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/20 px-2 py-0.5 rounded-full">
+                          {allGenres.length}
+                        </span>
+                      </div>
+                      <div className="max-h-80 overflow-y-auto p-2 grid grid-cols-2 gap-1.5 scrollbar-thin scrollbar-thumb-neutral-800 scrollbar-track-transparent">
+                        {allGenres.map((g) => {
+                          const isActive = activeGenre === g.id;
+                          return (
+                            <button
+                              key={g.id}
+                              onClick={() => {
+                                setActiveGenre(g.id);
+                                setActiveGenreName(t(`genre.${g.name}`));
+                                setCurrentView("movies");
+                                setCategoriesOpen(false);
+                              }}
+                              className={`group relative flex items-center gap-2 text-left px-3 py-2.5 rounded-xl text-[11px] font-semibold transition-all duration-200 cursor-pointer overflow-hidden ${
+                                isActive
+                                  ? "accent-chip"
+                                  : "text-neutral-300 hover:bg-neutral-800 hover:text-white"
+                              }`}
+                            >
+                              <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 transition-all duration-200 ${
+                                isActive ? "bg-[#39FF14]" : "bg-neutral-700 group-hover:bg-neutral-600"
+                              }`} />
+                              <span className="truncate">{t(`genre.${g.name}`)}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
             {/* Instant Search input — permanently visible across all devices */}
             <div className="relative w-64 sm:w-80 lg:w-96">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500 pointer-events-none" aria-hidden="true" />
@@ -945,39 +1002,6 @@ const CinemaxDashboard: React.FC = () => {
               >
                 <Mic className="h-4 w-4" />
               </button>
-              
-              {/* Language Selector Button */}
-              <button
-                onClick={() => setShowLanguageSelector(!showLanguageSelector)}
-                className="absolute right-10 top-1/2 -translate-y-1/2 p-1 rounded-lg transition-colors cursor-pointer hover:bg-white/10 text-neutral-400 hover:text-[#39FF14]"
-                title="Select Language"
-              >
-                <Globe className="h-4 w-4" />
-              </button>
-              
-              {/* Language Selector Dropdown */}
-              {showLanguageSelector && (
-                <div className="absolute right-0 top-full mt-2 w-48 bg-[#0a0a0a] border border-white/10 rounded-xl shadow-2xl z-50 max-h-80 overflow-y-auto">
-                  <div className="p-2">
-                    {Object.entries(SUPPORTED_LANGUAGES).map(([key, lang]) => (
-                      <button
-                        key={key}
-                        onClick={() => {
-                          setSelectedLanguage(key);
-                          setShowLanguageSelector(false);
-                        }}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-colors ${
-                          selectedLanguage === key
-                            ? 'bg-[#39FF14]/20 text-[#39FF14]'
-                            : 'text-neutral-300 hover:bg-white/5'
-                        }`}
-                      >
-                        {lang.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* AI Response Display */}
@@ -1070,7 +1094,7 @@ const CinemaxDashboard: React.FC = () => {
                   {/* Notification-style premium dropdown panel */}
                   <div
                     id="all-categories-dropdown"
-                    className="absolute left-0 top-full mt-3 z-50 w-80 animate-dropdown-pop"
+                    className="absolute left-0 top-full mt-3 z-50 w-80 animate-dropdown-pop transition-all duration-300 ease-out"
                   >
                     {/* Little caret connecting the panel to the trigger button */}
                     <div className="absolute -top-1.5 left-6 h-3 w-3 rotate-45 bg-[#0c0c0c] border-l border-t border-[#39FF14]/20" />

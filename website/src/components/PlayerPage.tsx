@@ -595,15 +595,21 @@ export const PlayerPage: React.FC = () => {
         : embedUrlWithAutoplay(buildEmbedUrl(activeServer, isTv ? "tv" : "movie", selectedMovie.id, currentSeason, currentEpisode));
     }
 
-    return embedUrlWithAutoplay(
-      buildEmbedUrl(
-        activeServer,
-        isTv ? "tv" : "movie",
-        selectedMovie.id,
-        currentSeason,
-        currentEpisode
-      )
+    const embedUrl = buildEmbedUrl(
+      activeServer,
+      isTv ? "tv" : "movie",
+      selectedMovie.id,
+      currentSeason,
+      currentEpisode
     );
+
+    console.log(`Final stream URL: ${embedUrl}`);
+    console.log(`Active server: ${activeServer.name} (${activeServer.id})`);
+    console.log(`Media type: ${isTv ? "tv" : "movie"}`);
+    console.log(`TMDB ID: ${selectedMovie.id}`);
+    console.log(`Season: ${currentSeason}, Episode: ${currentEpisode}`);
+
+    return embedUrlWithAutoplay(embedUrl);
   };
 
   // Try to resolve a direct media source (mp4 or m3u8) using the backend resolver.

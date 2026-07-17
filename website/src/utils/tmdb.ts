@@ -49,28 +49,42 @@ export interface SearchBatchResult {
 
 /** Fetches full TMDB details and resolves the correct movie vs TV type for streaming embeds. */
 export async function prepareForPlayback(item: Movie): Promise<Movie> {
+  console.log(`prepareForPlayback called with: id=${item.id}, media_type=${item.media_type}, title=${item.title || item.name}`);
+  
   if (item.isCustom || item.id <= 0) {
+    console.log(`Item is custom or invalid ID, returning as-is`);
     return { ...item, media_type: item.media_type ?? "movie" };
   }
 
   const preferTv = isTvShow(item);
   const tryOrder: Array<"movie" | "tv"> = preferTv ? ["tv", "movie"] : ["movie", "tv"];
 
+  console.log(`Trying media types in order: ${tryOrder.join(", ")}`);
+
   for (const type of tryOrder) {
     try {
-      const details = await fetchFromTMDB<Movie>(type === "tv" ? `/tv/${item.id}` : `/movie/${item.id}`);
-      return {
+      const endpoint = type === "tv" ? `/tv/${item.id}` : `/movie/${item.id}`;
+      console.log(`Fetching from TMDB endpoint: ${endpoint}`);
+      const details = await fetchFromTMDB<Movie>(endpoint);
+      console.log(`TMDB response for ${type}: id=${details.id}, title=${details.title || details.name}`);
+      
+      const result = {
         ...item,
         ...details,
         media_type: type,
         poster_path: details.poster_path || item.poster_path,
         backdrop_path: details.backdrop_path || item.backdrop_path,
       };
-    } catch {
+      
+      console.log(`Prepared for playback: id=${result.id}, media_type=${result.media_type}`);
+      return result;
+    } catch (err) {
+      console.log(`Failed to fetch ${type} details for id ${item.id}:`, err);
       /* try the other media type — search results can mislabel titles */
     }
   }
 
+  console.log(`All TMDB fetch attempts failed, returning item with default media_type`);
   return {
     ...item,
     media_type: item.media_type ?? (preferTv ? "tv" : "movie"),
