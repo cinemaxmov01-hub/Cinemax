@@ -603,7 +603,9 @@ const CinemaxDashboard: React.FC = () => {
     // Clear search query when clicking a movie to ensure player view takes priority
     setSearchQuery("");
     try {
+      console.log(`handleMovieClick: Preparing ${movie.title || movie.name} for playback`);
       const ready = await prepareForPlayback(movie);
+      console.log(`handleMovieClick: Prepared movie with media_type=${ready.media_type}, id=${ready.id}`);
       if (rememberChoice && defaultWatchChoice) {
         setSelectedMovie(ready);
         setPlayerMode(defaultWatchChoice);
@@ -629,13 +631,16 @@ const CinemaxDashboard: React.FC = () => {
     const playKey = `${movie.media_type || (isTvShow(movie) ? "tv" : "movie")}:${movie.id}`;
     setPreparingPlayKey(playKey);
     try {
+      console.log(`handlePlayFullMovie: Preparing ${movie.title || movie.name} for full playback`);
       const ready = await prepareForPlayback(movie);
+      console.log(`handlePlayFullMovie: Prepared movie with media_type=${ready.media_type}, id=${ready.id}`);
       setSelectedMovie(ready);
       setPlayerMode("full");
       setChoiceModalOpen(false);
       setCurrentView("player");
     } catch (err) {
       console.error("Failed to prepare full movie stream:", err);
+      // Even if prepareForPlayback fails, still try to play with original data
       setSelectedMovie({
         ...movie,
         media_type: movie.media_type ?? (isTvShow(movie) ? "tv" : "movie"),

@@ -380,14 +380,21 @@ export const PlayerPage: React.FC = () => {
     // Use parallel fetching to select best provider
     const selectBestProvider = async () => {
       const type = isTvShow(selectedMovie) ? "tv" : "movie";
-      const bestProvider = await fetchBestProvider(
-        PROVIDERS_CONFIG,
-        type,
-        selectedMovie.id,
-        1,
-        1
-      );
-      setActiveServerId(bestProvider.provider.id);
+      console.log(`Selecting best provider for ${type} with ID ${selectedMovie.id}`);
+      try {
+        const bestProvider = await fetchBestProvider(
+          PROVIDERS_CONFIG,
+          type,
+          selectedMovie.id,
+          1,
+          1
+        );
+        setActiveServerId(bestProvider.provider.id);
+        console.log(`Selected provider: ${bestProvider.provider.name} (${bestProvider.provider.id})`);
+      } catch (err) {
+        console.error('Failed to select best provider, using default:', err);
+        // Keep the default provider if selection fails
+      }
     };
     
     selectBestProvider();
@@ -517,21 +524,24 @@ export const PlayerPage: React.FC = () => {
         // Remove duplicates while preserving order
         const uniqueNums = [...new Set(nums)];
         
-        setEpisodesList(uniqueNums);
-        
-        // Set to first available episode once list is loaded
+        // If we have valid episodes from TMDB, use them
         if (uniqueNums.length > 0) {
+          setEpisodesList(uniqueNums);
           console.log(`Setting current episode to: ${uniqueNums[0]}`);
           setCurrentEpisode(uniqueNums[0]);
         } else {
-          console.warn(`No valid episodes found for season ${currentSeason}, defaulting to episode 1`);
-          setEpisodesList([1]);
+          // Fallback: generate episode numbers based on typical season structure
+          // Most seasons have 8-24 episodes, so we'll create a reasonable range
+          console.warn(`No valid episodes found for season ${currentSeason}, generating fallback episode list`);
+          const fallbackEpisodes = Array.from({ length: 12 }, (_, i) => i + 1); // Default to 12 episodes
+          setEpisodesList(fallbackEpisodes);
           setCurrentEpisode(1);
         }
       } catch (err) {
         console.error("Error loading season episodes", err);
-        // Fallback to episode 1 if API fails
-        setEpisodesList([1]);
+        // Fallback to a reasonable number of episodes if API fails
+        const fallbackEpisodes = Array.from({ length: 12 }, (_, i) => i + 1);
+        setEpisodesList(fallbackEpisodes);
         setCurrentEpisode(1);
       }
     };
@@ -661,12 +671,13 @@ export const PlayerPage: React.FC = () => {
       for (const provider of providersToTry) {
         if (!mounted) break;
         try {
+          console.log(`Attempting to resolve stream using provider: ${provider.id}`);
           const result = await tryResolveProvider(provider);
           if (result && mounted) {
             setStreamType(result.type);
             setStreamSource(result.source);
             console.log('Successfully resolved stream using provider:', provider.id);
-            break;
+            return;
           }
         } catch (err) {
           console.warn('Provider resolve failed', provider.id, err);
@@ -674,8 +685,8 @@ export const PlayerPage: React.FC = () => {
       }
       
       // If no direct source was found, fall back to embed
-      if (mounted && !streamSource) {
-        console.log('No direct source found, falling back to embed iframe');
+      if (mounted) {
+        console.log('No direct source found from any provider, falling back to embed iframe');
         setStreamType('embed');
       }
     };

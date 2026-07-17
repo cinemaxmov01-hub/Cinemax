@@ -14,12 +14,31 @@ function normalizeSearchItem(raw: Movie & { media_type?: string }, fallbackType:
   if (!raw.poster_path || (!raw.title && !raw.name)) return null;
   const mt = raw.media_type as string | undefined;
   if (mt === "person") return null;
-  const media_type =
-    mt === "tv" || (!raw.title && raw.name)
-      ? "tv"
-      : mt === "movie" || raw.title
-        ? "movie"
-        : fallbackType;
+  
+  // Enhanced media_type detection with multiple fallback strategies
+  let media_type: "movie" | "tv";
+  
+  if (mt === "tv") {
+    media_type = "tv";
+  } else if (mt === "movie") {
+    media_type = "movie";
+  } else if (!raw.title && raw.name) {
+    // If it has a name but no title, it's likely a TV show
+    media_type = "tv";
+  } else if (raw.title && !raw.name) {
+    // If it has a title but no name, it's likely a movie
+    media_type = "movie";
+  } else if (raw.first_air_date && !raw.release_date) {
+    // Has first_air_date but no release_date -> TV show
+    media_type = "tv";
+  } else if (raw.release_date && !raw.first_air_date) {
+    // Has release_date but no first_air_date -> movie
+    media_type = "movie";
+  } else {
+    // Final fallback to the provided fallback type
+    media_type = fallbackType;
+  }
+  
   return { ...raw, media_type };
 }
 
@@ -84,7 +103,27 @@ export async function prepareForPlayback(item: Movie): Promise<Movie> {
     }
   }
 
-  console.log(`All TMDB fetch attempts failed, returning item with default media_type`);
+  // If both endpoints fail, try a multi-search to get the correct media_type
+  console.log(`Both endpoints failed, trying multi-search to determine correct media_type`);
+  try {
+    const multiData = await fetchFromTMDB<{ results: Array<Movie & { media_type?: string }> }>(
+      "/search/multi",
+      { query: item.title || item.name || "", page: "1" }
+    );
+    
+    const matchedItem = multiData.results.find((r) => r.id === item.id);
+    if (matchedItem && matchedItem.media_type) {
+      console.log(`Found correct media_type from multi-search: ${matchedItem.media_type}`);
+      return {
+        ...item,
+        media_type: matchedItem.media_type,
+      };
+    }
+  } catch (err) {
+    console.log(`Multi-search also failed:`, err);
+  }
+
+  console.log(`All attempts failed, returning item with inferred media_type`);
   return {
     ...item,
     media_type: item.media_type ?? (preferTv ? "tv" : "movie"),

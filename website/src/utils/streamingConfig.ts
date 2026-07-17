@@ -14,7 +14,7 @@ export interface StreamingProvider {
 
 /**
  * Streaming sources for the Multi-Server Movie Player.
- * Configured with only the specified providers: vidsrc.pm, vidsrc.to, and vidsrc.cc.
+ * Configured with multiple reliable providers for better failover.
  */
 export const PROVIDERS_CONFIG: StreamingProvider[] = [
   {
@@ -56,6 +56,32 @@ export const PROVIDERS_CONFIG: StreamingProvider[] = [
     defaultLatency: 110,
     status: "Online",
   },
+  {
+    // 2embed.cc — Alternative reliable provider
+    id: "2embed-cc",
+    name: "P4",
+    homepage: "https://www.2embed.cc",
+    moviePattern: "https://www.2embed.cc/embed/movie/{id}",
+    tvPattern: "https://www.2embed.cc/embed/tv/{id}/{season}/{episode}",
+    qualityOptions: ["1080p", "720p", "Auto"],
+    audioOptions: ["Original", "English"],
+    subtitlesOptions: ["Embedded", "English"],
+    defaultLatency: 120,
+    status: "Online",
+  },
+  {
+    // Superembed — Reliable backup provider
+    id: "superembed",
+    name: "P5",
+    homepage: "https://multiembed.mov",
+    moviePattern: "https://multiembed.mov/?video_id={id}&tmdb=1",
+    tvPattern: "https://multiembed.mov/?video_id={id}&tmdb=1&s={season}&e={episode}",
+    qualityOptions: ["1080p", "720p", "Auto"],
+    audioOptions: ["Original", "English"],
+    subtitlesOptions: ["Embedded", "English"],
+    defaultLatency: 130,
+    status: "Online",
+  },
 ];
 
 /** Permissions required for third-party embed players (autoplay, HLS, fullscreen). */
@@ -75,14 +101,14 @@ export const buildEmbedUrl = (
   const pattern = type === "movie" ? provider.moviePattern : provider.tvPattern;
 
   // Log input parameters for debugging
-  console.log(`buildEmbedUrl called with: type=${type}, id=${id} (${typeof id}), season=${season}, episode=${episode}`);
+  console.log(`buildEmbedUrl called with: type=${type}, id=${id} (${typeof id}), season=${season}, episode=${episode}, provider=${provider.id}`);
 
   // Validate and sanitize parameters
   const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
   const validSeason = Math.max(1, season);
   const validEpisode = Math.max(1, episode);
 
-  // Temporarily relax validation to debug 404 issues
+  // Validate ID
   if (isNaN(numericId)) {
     console.error(`Invalid TMDB ID (NaN): ${id} (type: ${typeof id})`);
     return "";
@@ -92,12 +118,25 @@ export const buildEmbedUrl = (
     console.warn(`TMDB ID is <= 0: ${numericId}, but proceeding anyway for debugging`);
   }
 
-  const url = pattern
-    .replace("{id}", numericId.toString())
-    .replace("{season}", validSeason.toString())
-    .replace("{episode}", validEpisode.toString());
+  // Handle different URL patterns for different providers
+  let url = pattern;
+  
+  // Replace placeholders based on provider pattern format
+  if (provider.id === "superembed") {
+    // Superembed uses query parameters
+    url = pattern
+      .replace("{id}", numericId.toString())
+      .replace("{season}", validSeason.toString())
+      .replace("{episode}", validEpisode.toString());
+  } else {
+    // Standard providers use path parameters
+    url = pattern
+      .replace("{id}", numericId.toString())
+      .replace("{season}", validSeason.toString())
+      .replace("{episode}", validEpisode.toString());
+  }
 
-  console.log(`Built embed URL for ${type} ${numericId} S${validSeason}E${validEpisode}: ${url}`);
+  console.log(`Built embed URL for ${type} ${numericId} S${validSeason}E${validEpisode} using ${provider.id}: ${url}`);
   
   return url;
 };
@@ -273,10 +312,12 @@ export const fetchBestProvider = async (
 export class ProviderFailoverSystem {
   private currentProviderIndex: number = 0;
   private providers: StreamingProvider[];
-  private timeoutMs: number = 5000; // 5-second timeout for failover (increased for reliability)
+  private timeoutMs: number = 8000; // Increased to 8 seconds for better reliability
   private iframeRef: HTMLIFrameElement | null = null;
   private onProviderChange?: (provider: StreamingProvider) => void;
   private failoverTimeoutId: number | null = null;
+  private loadStartTime: number = 0;
+  private providerLoadTimes: Map<string, number> = new Map();
 
   constructor(
     providers: StreamingProvider[],
@@ -311,8 +352,11 @@ export class ProviderFailoverSystem {
       window.clearTimeout(this.failoverTimeoutId);
     }
 
-    // Set up timeout detection
+    this.loadStartTime = performance.now();
+
+    // Set up timeout detection with increased delay
     this.failoverTimeoutId = window.setTimeout(() => {
+      console.warn(`Provider ${this.getCurrentProvider().id} failed to load within ${this.timeoutMs}ms`);
       this.handleProviderFailure();
     }, this.timeoutMs);
 
@@ -320,10 +364,14 @@ export class ProviderFailoverSystem {
     this.iframeRef.onload = () => {
       if (this.failoverTimeoutId !== null) {
         window.clearTimeout(this.failoverTimeoutId);
+        const loadTime = performance.now() - this.loadStartTime;
+        this.providerLoadTimes.set(this.getCurrentProvider().id, loadTime);
+        console.log(`Provider ${this.getCurrentProvider().id} loaded successfully in ${loadTime.toFixed(0)}ms`);
       }
     };
 
     this.iframeRef.onerror = () => {
+      console.error(`Provider ${this.getCurrentProvider().id} encountered an error`);
       this.handleProviderFailure();
     };
   }
@@ -351,6 +399,28 @@ export class ProviderFailoverSystem {
    */
   resetToPrimary() {
     this.currentProviderIndex = 0;
+  }
+
+  /**
+   * Get the best performing provider based on historical load times
+   */
+  getBestProvider(): StreamingProvider {
+    if (this.providerLoadTimes.size === 0) {
+      return this.providers[0];
+    }
+    
+    let bestProvider = this.providers[0];
+    let bestTime = this.providerLoadTimes.get(bestProvider.id) || Infinity;
+    
+    for (const provider of this.providers) {
+      const time = this.providerLoadTimes.get(provider.id);
+      if (time && time < bestTime) {
+        bestTime = time;
+        bestProvider = provider;
+      }
+    }
+    
+    return bestProvider;
   }
 
   /**

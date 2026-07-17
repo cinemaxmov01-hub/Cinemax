@@ -1727,3 +1727,155 @@ authRouter.post("/api/chat/dm/:id/like", requireAuth, (req: AuthedRequest, res) 
   res.json({ message: toPublicDirectMessage(message, myId) });
 });
 
+// ---------------------------------------------------------------------------
+// VIDEO STREAMING - Direct stream resolution and proxying
+// ---------------------------------------------------------------------------
+
+/**
+ * Attempts to resolve a direct video source URL from an embed page.
+ * This endpoint tries to extract .m3u8 or .mp4 URLs from streaming providers.
+ */
+authRouter.post("/api/stream/full", async (req, res) => {
+  const { url } = req.body || {};
+  if (!url || typeof url !== "string") {
+    console.warn("[stream] Invalid request: missing or invalid URL");
+    res.status(400).json({ error: "Embed URL is required." });
+    return;
+  }
+
+  console.log(`[stream] Attempting to resolve stream for URL: ${url}`);
+
+  try {
+    // Fetch the embed page to extract video source
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      },
+    });
+
+    clearTimeout(timeoutId);
+
+    console.log(`[stream] Embed page response status: ${response.status}`);
+
+    if (!response.ok) {
+      // Return null to indicate direct extraction failed - frontend will fall back to iframe
+      console.warn(`[stream] Embed page returned ${response.status}, falling back to iframe`);
+      return res.json({ sourceUrl: null });
+    }
+
+    const html = await response.text();
+    console.log(`[stream] Fetched ${html.length} characters from embed page`);
+
+    // Try to extract .m3u8 HLS URLs from the page
+    const m3u8Matches = html.match(/https?:\/\/[^\s"']+\.m3u8[^\s"']*/gi);
+    if (m3u8Matches && m3u8Matches.length > 0) {
+      console.log(`[stream] Found ${m3u8Matches.length} m3u8 URLs, using first one`);
+      // Return the first valid m3u8 URL found
+      return res.json({ sourceUrl: m3u8Matches[0] });
+    }
+
+    // Try to extract .mp4 URLs
+    const mp4Matches = html.match(/https?:\/\/[^\s"']+\.mp4[^\s"']*/gi);
+    if (mp4Matches && mp4Matches.length > 0) {
+      console.log(`[stream] Found ${mp4Matches.length} mp4 URLs, using first one`);
+      return res.json({ sourceUrl: mp4Matches[0] });
+    }
+
+    // If no direct source found, return null - frontend will use iframe embed
+    console.log(`[stream] No direct video source found, falling back to iframe`);
+    res.json({ sourceUrl: null });
+  } catch (error) {
+    console.warn("[stream] Direct extraction failed:", error);
+    // On error, return null to fall back to iframe
+    res.json({ sourceUrl: null });
+  }
+});
+
+/**
+ * Proxy endpoint for video sources to bypass CORS restrictions.
+ * Streams the video content from the source URL to the client.
+ */
+authRouter.get("/api/proxy", async (req, res) => {
+  const { url } = req.query || {};
+  if (!url || typeof url !== "string") {
+    res.status(400).json({ error: "URL parameter is required." });
+    return;
+  }
+
+  try {
+    const decodedUrl = decodeURIComponent(url);
+    
+    // Validate URL to prevent SSRF attacks
+    if (!decodedUrl.startsWith('http://') && !decodedUrl.startsWith('https://')) {
+      res.status(400).json({ error: "Invalid URL protocol." });
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout for video streaming
+
+    const response = await fetch(decodedUrl, {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      },
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      res.status(502).json({ error: `Upstream server returned ${response.status}` });
+      return;
+    }
+
+    // Set appropriate headers for video streaming
+    const contentType = response.headers.get('content-type');
+    if (contentType) {
+      res.setHeader('content-type', contentType);
+    }
+
+    // Enable CORS for video streaming
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type');
+
+    // Support range requests for video seeking
+    const range = req.headers.get('range');
+    if (range) {
+      const parts = range.replace(/bytes=/, "").split("-");
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : response.headers.get('content-length') ? parseInt(response.headers.get('content-length')!, 10) - 1 : undefined;
+
+      if (isNaN(start) || (end !== undefined && isNaN(end))) {
+        // Invalid range, send full content
+        Readable.fromWeb(response.body as any).pipe(res);
+      } else {
+        const contentLength = (end !== undefined ? end - start + 1 : undefined);
+        res.setHeader('Content-Range', `bytes ${start}-${end || '*'}/${response.headers.get('content-length') || '*'}`);
+        res.setHeader('Content-Length', contentLength?.toString() || response.headers.get('content-length') || '0');
+        res.setHeader('Accept-Ranges', 'bytes');
+        res.status(206);
+
+        // Stream the specific range
+        if (response.body) {
+          Readable.fromWeb(response.body as any).pipe(res);
+        }
+      }
+    } else {
+      // No range header, stream full content
+      Readable.fromWeb(response.body as any).pipe(res);
+    }
+  } catch (error: any) {
+    console.error("[proxy] Video proxy failed:", error);
+    if (error.name === 'AbortError') {
+      res.status(504).json({ error: "Video stream timeout" });
+    } else {
+      res.status(502).json({ error: "Failed to proxy video stream" });
+    }
+  }
+});
+
