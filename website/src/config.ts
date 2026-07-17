@@ -14,7 +14,9 @@
  * Otherwise ensures it does not end with a trailing slash.
  */
 export function resolveOptionalServiceUrl(envValue: string | undefined): string {
-  return resolveServiceUrl(envValue, "https://cinemaxmovie-backend-1mol.onrender.com");
+  // InfinityFree doesn't support environment variables, so always use production URL
+  // The active backend is at cinemaxmovie-backend-1mol.onrender.com
+  return "https://cinemaxmovie-backend-1mol.onrender.com";
 }
 
 /**

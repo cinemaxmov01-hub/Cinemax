@@ -9,7 +9,7 @@ import { resolveOptionalServiceUrl } from "../config"; // KOSORA HANO: Simbuza @
  *
  * Import this file ONCE from main.tsx (side-effect import).
  */
-export const API_BASE = resolveOptionalServiceUrl(import.meta.env.VITE_API_BASE_URL);
+export const API_BASE = resolveOptionalServiceUrl((import.meta as any).env?.VITE_API_BASE_URL);
 
 if (typeof window !== "undefined" && API_BASE) {
   const originalFetch = window.fetch.bind(window);
@@ -22,7 +22,18 @@ if (typeof window !== "undefined" && API_BASE) {
     // Only rewrite relative /api/... URLs — leave absolute URLs alone.
     if (url.startsWith("/api/") || url === "/api") {
       const nextUrl = API_BASE + url;
-      const nextInit: RequestInit = { credentials: "include", ...init };
+      const nextInit: RequestInit = { 
+        credentials: "include",
+        mode: "cors",
+        headers: {
+          "Content-Type": "application/json",
+          ...init.headers
+        },
+        ...init 
+      };
+      
+      console.log(`[API] Rewriting ${url} to ${nextUrl}`);
+      
       if (typeof input === "string" || input instanceof URL) {
         return originalFetch(nextUrl, nextInit);
       }
@@ -31,4 +42,6 @@ if (typeof window !== "undefined" && API_BASE) {
     }
     return originalFetch(input as any, init);
   }) as typeof window.fetch;
+  
+  console.log(`[API] Fetch wrapper initialized with API_BASE: ${API_BASE}`);
 }
