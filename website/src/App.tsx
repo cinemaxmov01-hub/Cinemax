@@ -439,10 +439,14 @@ const CinemaxDashboard: React.FC = () => {
     const q = searchQuery.trim();
     const delayDebounce = setTimeout(async () => {
       try {
+        console.log('Starting search for:', q);
         const [tmdbBatch, customMatches] = await Promise.all([
           tmdb.searchEverything(q, { startPage: 1, pageCount: 3 }),
           tmdb.searchCustomContent(q),
         ]);
+        
+        console.log('TMDB search results:', tmdbBatch.results.length, 'Custom matches:', customMatches.length);
+        
         const seen = new Set<string>();
         const combined: Movie[] = [];
         for (const item of [...customMatches, ...tmdbBatch.results]) {
@@ -451,6 +455,8 @@ const CinemaxDashboard: React.FC = () => {
           seen.add(key);
           combined.push(item);
         }
+        
+        console.log('Combined search results:', combined.length);
         setSearchResults(combined);
         setSearchHasMore(tmdbBatch.hasMore);
         setSearchNextPage(4);

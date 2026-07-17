@@ -494,18 +494,25 @@ export const PlayerPage: React.FC = () => {
   useEffect(() => {
     if (!selectedMovie || selectedMovie.isCustom || !isTv) return;
 
+    console.log(`Loading episodes for TV show ${selectedMovie.id}, Season ${currentSeason}`);
+
     // Immediately reset to episode 1 when season changes to prevent 404 errors
     setCurrentEpisode(1);
     setEpisodesList([]);
 
     const loadSeasonEpisodes = async () => {
       try {
+        console.log(`Fetching TMDB season data for show ${selectedMovie.id}, season ${currentSeason}`);
         const episodes = await tmdb.getTVSeason(selectedMovie.id, currentSeason);
+        console.log(`TMDB returned ${episodes.length} episodes for season ${currentSeason}`);
+        
         // Filter out any null/invalid episode numbers and sort
         const nums = episodes
           .map((e) => e.episode_number)
           .filter((n) => n != null && !isNaN(n) && n > 0)
           .sort((a, b) => a - b);
+        
+        console.log(`Valid episode numbers:`, nums);
         
         // Remove duplicates while preserving order
         const uniqueNums = [...new Set(nums)];
@@ -514,7 +521,12 @@ export const PlayerPage: React.FC = () => {
         
         // Set to first available episode once list is loaded
         if (uniqueNums.length > 0) {
+          console.log(`Setting current episode to: ${uniqueNums[0]}`);
           setCurrentEpisode(uniqueNums[0]);
+        } else {
+          console.warn(`No valid episodes found for season ${currentSeason}, defaulting to episode 1`);
+          setEpisodesList([1]);
+          setCurrentEpisode(1);
         }
       } catch (err) {
         console.error("Error loading season episodes", err);
