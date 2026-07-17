@@ -112,7 +112,6 @@ const CinemaxDashboard: React.FC = () => {
     rememberChoice,
     defaultWatchChoice,
     addToWatchlist,
-    user: currentUser,
     unreadCount,
     authLoading,
     requireSignInPrompt,
@@ -275,7 +274,7 @@ const CinemaxDashboard: React.FC = () => {
   // (collected during onboarding) so the homepage can actually show them,
   // not just reserve empty shelves.
   useEffect(() => {
-    const favoriteGenres = currentUser?.onboarding?.favoriteGenres;
+    const favoriteGenres = user?.onboarding?.favoriteGenres;
     if (!favoriteGenres || favoriteGenres.length === 0) {
       setPersonalizedMovies({});
       return;
@@ -303,7 +302,7 @@ const CinemaxDashboard: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [currentUser?.onboarding?.favoriteGenres, siteConfig.hiddenMovieIds]);
+  }, [user?.onboarding?.favoriteGenres, siteConfig.hiddenMovieIds]);
 
   // One-time movie-focused splash screen timer
   useEffect(() => {
@@ -805,7 +804,7 @@ const CinemaxDashboard: React.FC = () => {
     return splashScreen;
   }
 
-  const inMaintenance = siteConfig.maintenanceMode && currentUser?.role !== "admin";
+  const inMaintenance = siteConfig.maintenanceMode && user?.role !== "admin";
   if (inMaintenance) {
     return (
       <MaintenanceScreen
@@ -820,8 +819,8 @@ const CinemaxDashboard: React.FC = () => {
 
   // Personalized sections based on user onboarding preferences — populated
   // with real TMDB results by the effect below (personalizedMovies).
-  const personalizedSections = currentUser?.onboarding?.favoriteGenres
-    ? currentUser.onboarding.favoriteGenres
+  const personalizedSections = user?.onboarding?.favoriteGenres
+    ? user.onboarding.favoriteGenres
         .filter((genre) => ONBOARDING_GENRE_ID_MAP[genre.toLowerCase()])
         .map((genre) => ({
           id: `personalized_${genre}`,
@@ -855,7 +854,7 @@ const CinemaxDashboard: React.FC = () => {
     });
   }
 
-  if (!currentUser) {
+  if (!user) {
     // The footer's Help/About links work even before signing in — they
     // reuse the same currentView state the authenticated app uses, so once
     // someone does sign in, they land right back on the page they were
@@ -1011,10 +1010,6 @@ const CinemaxDashboard: React.FC = () => {
               />
             </div>
 
-            {/* Download App Button - mobile only */}
-            <div className="lg:hidden flex-shrink-0">
-              <InstallAppButton variant="header" label="Download App" />
-            </div>
           </div>
 
           {/* Center Navigation: Movies / TV Shows / Gens / All Categories —
@@ -1127,7 +1122,7 @@ const CinemaxDashboard: React.FC = () => {
               <button
                 id="notification-bell-btn"
                 aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
-                onClick={() => (currentUser && !isGuest ? setNotifOpen((v) => !v) : requireSignInPrompt())}
+                onClick={() => (user && !isGuest ? setNotifOpen((v) => !v) : requireSignInPrompt())}
                 className="p-2 sm:p-2.5 rounded-2xl border border-white/10 hover:border-[#39FF14]/20 bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition-all relative cursor-pointer"
               >
                 {isGuest ? <Lock className="h-4 w-4" /> : <Bell className="h-4 w-4" />}
@@ -1141,14 +1136,14 @@ const CinemaxDashboard: React.FC = () => {
             </div>
 
             {/* Profile circular menu — locked for guests */}
-            {currentUser && !isGuest ? (
+            {user && !isGuest ? (
               <button
                 id="header-profile-menu-avatar"
-                aria-label={`Open account settings for ${currentUser.name}`}
+                aria-label={`Open account settings for ${user.name}`}
                 onClick={() => setCurrentView("profile")}
                 className="rounded-full border border-white/15 overflow-hidden cursor-pointer hover:border-[#39FF14] transition-colors"
               >
-                <AvatarRenderer value={currentUser.avatar} size={36} initials={currentUser.name?.[0]?.toUpperCase() || "C"} />
+                <AvatarRenderer value={user.avatar} size={36} initials={user.name?.[0]?.toUpperCase() || "C"} />
               </button>
             ) : (
               <button

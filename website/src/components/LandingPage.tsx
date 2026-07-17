@@ -134,6 +134,7 @@ export const LandingPage: React.FC = () => {
     if (!result.ok) {
       setSignInError(result.error || "Couldn't sign you in - check your email and password.");
     }
+    // If successful, the main App component will handle the transition
   };
 
   return (
