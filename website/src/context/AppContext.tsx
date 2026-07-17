@@ -35,6 +35,8 @@ interface AppContextType {
   setUser: (user: UserProfile | null) => void;
   authLoading: boolean;
   authError: string | null;
+  theme: "dark" | "light";
+  setTheme: (theme: "dark" | "light") => void;
   signUp: (email: string, password: string, name: string) => Promise<{ ok: boolean; error?: string; autoVerified?: boolean }>;
   requestSignupVerification: (email: string, password: string, name: string) => Promise<{ ok: boolean; error?: string }>;
   verifySignup: (email: string, otp: string) => Promise<{ ok: boolean; error?: string }>;
@@ -108,7 +110,6 @@ interface AppContextType {
   setPipEpisode: (episode: number) => void;
   pipIsPlaying: boolean;
   setPipIsPlaying: (isPlaying: boolean) => void;
-  theme: "dark";
   t: (key: string) => string;
   appLanguage: AppLang;
   setAppLanguage: (lang: AppLang) => void;
@@ -186,8 +187,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [pipEpisode, setPipEpisode] = useState<number>(1);
   const [pipIsPlaying, setPipIsPlaying] = useState<boolean>(false);
 
-  // Theme — locked to dark mode only
-  const theme: "dark" = "dark";
+  // Theme state with dark/light mode support
+  const [theme, setTheme] = useState<"dark" | "light">(() => {
+    if (typeof window === "undefined") return "dark";
+    const saved = localStorage.getItem("cinemax_theme");
+    return (saved === "light" || saved === "dark") ? saved : "dark";
+  });
+
+  // Apply theme to HTML element
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const html = document.documentElement;
+      if (theme === "light") {
+        html.classList.add("light");
+        html.classList.remove("dark");
+      } else {
+        html.classList.remove("light");
+        html.classList.add("dark");
+      }
+      localStorage.setItem("cinemax_theme", theme);
+    }
+  }, [theme]);
   const [guestLanguage, setGuestLanguage] = useState<AppLang>(() => {
     if (typeof window === "undefined") return "English";
     const saved = localStorage.getItem("cinemax_lang");
@@ -1297,6 +1317,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setUser,
         authLoading,
         authError,
+        theme,
+        setTheme,
         signUp,
         requestSignupVerification,
         verifySignup,
@@ -1370,7 +1392,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setPipEpisode,
         pipIsPlaying,
         setPipIsPlaying,
-        theme,
         t,
         appLanguage,
         setAppLanguage,

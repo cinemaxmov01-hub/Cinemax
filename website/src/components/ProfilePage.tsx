@@ -138,6 +138,7 @@ export const ProfilePage: React.FC = () => {
     openForgotPasswordModal,
     t,
     theme,
+    setTheme,
   } = useApp();
 
   const [portalBusy, setPortalBusy] = useState(false);
@@ -553,6 +554,14 @@ export const ProfilePage: React.FC = () => {
               </SettingsSection>
 
               <SettingsSection title="Playback" description={t("preferences")} icon={Zap}>
+                <SettingsRow title={t("theme")} description={theme === "dark" ? t("darkMode") : t("lightMode")}>
+                  <button
+                    onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                    className="p-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
+                  >
+                    {theme === "dark" ? <Sun className="h-5 w-5 text-amber-400" /> : <Moon className="h-5 w-5 text-blue-400" />}
+                  </button>
+                </SettingsRow>
                 <SettingsRow title={t("autoplayNext")} description="Automatically continue to the next episode.">
                   <Toggle checked={prefs.autoplayNext} onChange={(v) => updatePreferences({ autoplayNext: v })} />
                 </SettingsRow>
