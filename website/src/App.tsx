@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { AppProvider, useApp } from "./context/AppContext";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Sidebar } from "./components/Sidebar";
 import { MovieCard } from "./components/MovieCard";
 import { WatchChoiceModal } from "./components/WatchChoiceModal";
@@ -56,7 +57,8 @@ import {
   Lock,
   Tag,
   X as XIcon,
-  Mic
+  Mic,
+  Globe
 } from "lucide-react";
 
 // Pre-configured "Supergirl" Featured Hero Movie matching references
@@ -1668,9 +1670,15 @@ const OnboardingGate: React.FC = () => {
 
 export default function App() {
   return (
-    <AppProvider>
-      <CinemaxDashboard />
-      <OnboardingGate />
-    </AppProvider>
+    <ErrorBoundary label="App">
+      <AppProvider>
+        <ErrorBoundary label="CinemaxDashboard">
+          <CinemaxDashboard />
+        </ErrorBoundary>
+        <ErrorBoundary label="OnboardingGate">
+          <OnboardingGate />
+        </ErrorBoundary>
+      </AppProvider>
+    </ErrorBoundary>
   );
 }
