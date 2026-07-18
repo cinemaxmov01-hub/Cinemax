@@ -51,28 +51,36 @@ const REASONS = [
 
 const FAQS = [
   {
-    q: "What is Cinemax?",
-    a: "Cinemax is a personalized movie and TV discovery platform - track what you love, get AI-curated picks from All Kiki's, and find similar titles with voice search.",
+    q: "What makes Cinemax different from other streaming platforms?",
+    a: "Cinemax isn't just another streaming site—it's your intelligent entertainment companion. Unlike traditional platforms that simply host content, Cinemax uses advanced AI to understand your unique tastes and curate personalized recommendations. Our AI assistant, All Kiki's, learns from your viewing history, preferences, and even your mood to suggest titles you'll genuinely love. Plus, with features like voice search, offline downloads, and a stunning modern interface, Cinemax transforms how you discover and enjoy movies and TV shows.",
   },
   {
-    q: "Is Cinemax free to use?",
-    a: "Yes. Creating an account, building your watchlist, and using the AI Help Desk are all free.",
+    q: "Is Cinemax really free? What's the catch?",
+    a: "Absolutely! Cinemax is 100% free to use with no hidden fees, subscriptions, or premium tiers. You can create an account, build unlimited watchlists, access our AI-powered recommendations, and use all core features without spending a dime. We believe great entertainment should be accessible to everyone. Our platform is supported by minimal, non-intrusive ads that help us keep the lights on while delivering you an exceptional experience. No credit card required, no trial periods—just pure entertainment freedom.",
   },
   {
-    q: "How does the AI assistant work?",
-    a: "All Kiki's is built into the Help Desk. Ask it about movies, get recommendations, or ask it to change an account setting - it will always confirm before making any change.",
+    q: "How does the AI assistant (All Kiki's) enhance my experience?",
+    a: "All Kiki's is like having a personal entertainment concierge available 24/7. This intelligent AI understands natural language, so you can ask questions like 'What are some mind-bending sci-fi movies similar to Inception?' or 'Show me comedies from the 90s' and get instant, accurate recommendations. It can analyze your viewing patterns to suggest hidden gems you might have missed, help you discover new genres, and even adjust your account settings when you request it. The AI always confirms before making changes, ensuring you stay in control while enjoying personalized assistance.",
   },
   {
-    q: "What is Voice Search?",
-    a: "Use voice commands to search for movies, ask for recommendations, and navigate Cinemax hands-free. Just click the microphone and speak naturally.",
+    q: "What is Voice Search and how does it work?",
+    a: "Voice Search revolutionizes how you navigate Cinemax. Instead of typing, simply click the microphone icon and speak naturally—you can search for specific titles, ask for recommendations by genre or mood, find movies featuring your favorite actors, or even request content from a particular year. Our voice recognition understands context and intent, making it feel like you're conversing with a knowledgeable friend. It's perfect for when you're relaxing on the couch, cooking, or just want a hands-free experience. Voice Search works seamlessly on both desktop and mobile devices.",
   },
   {
-    q: "Can I install Cinemax on my device?",
-    a: "Yes. Cinemax supports installing as an app on desktop and mobile straight from your browser, for quick access without opening a tab.",
+    q: "Can I watch content offline or download movies?",
+    a: "Yes! Cinemax supports offline viewing through our download feature. You can save movies and TV shows directly to your device, allowing you to watch them anywhere—even without an internet connection. This is perfect for long flights, road trips, or areas with limited connectivity. Our smart download system optimizes storage while maintaining quality, and you can manage your downloaded library easily. Downloads are saved securely to your device and can be removed anytime to free up space. It's entertainment on your terms, wherever you go.",
   },
   {
-    q: "How do I manage my account?",
-    a: "Head to Settings any time to update your name, password, avatar, and preferences like autoplay and subtitle language.",
+    q: "How do I install Cinemax as an app on my device?",
+    a: "Installing Cinemax as an app is incredibly simple and works on both desktop and mobile. When you visit Cinemax in your browser, you'll see an 'Install App' option—just click it, and Cinemax will be installed directly on your device like any other app. This gives you quick access from your home screen, faster loading times, and a more app-like experience with full-screen viewing. No app store downloads needed—everything happens right in your browser. It's the perfect way to make Cinemax feel like a native part of your device.",
+  },
+  {
+    q: "How secure is my personal data on Cinemax?",
+    a: "Your privacy and security are our top priorities. Cinemax uses industry-standard encryption to protect your personal information, and we never sell your data to third parties. Your viewing history, preferences, and account details are stored securely and used solely to enhance your experience. We implement robust security measures to prevent unauthorized access, and you have full control over your data—you can delete your account and all associated data anytime. We believe in transparency, so our privacy policy clearly explains how we handle your information. Trust is the foundation of our service.",
+  },
+  {
+    q: "What devices and browsers does Cinemax support?",
+    a: "Cinemax is designed to work seamlessly across virtually all modern devices and browsers. Whether you're using a desktop computer (Windows, Mac, Linux), a laptop, a tablet (iPad, Android tablets), or a smartphone (iPhone, Android), Cinemax delivers a consistent, optimized experience. We support all major browsers including Chrome, Firefox, Safari, Edge, and Opera. Our responsive design automatically adapts to your screen size, ensuring you get the best possible viewing experience whether you're on a large monitor or a small phone screen.",
   },
 ];
 
@@ -367,32 +375,80 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* FAQ */}
-      <section className="relative z-10 px-6 sm:px-12 pb-24 max-w-3xl mx-auto">
-        <h2 className="font-sans text-2xl sm:text-3xl font-black mb-8">Frequently Asked Questions</h2>
-        <div className="space-y-2">
+      <section className="relative z-10 px-6 sm:px-12 pb-24 max-w-4xl mx-auto">
+        <div className="text-center mb-12">
+          <h2 className="font-sans text-3xl sm:text-4xl font-black text-white mb-3">
+            Frequently Asked Questions
+          </h2>
+          <p className="text-sm text-neutral-400 max-w-xl mx-auto">
+            Everything you need to know about Cinemax. Can't find what you're looking for? 
+            <span className="text-[#39FF14]"> Ask our AI assistant</span>.
+          </p>
+        </div>
+        
+        <div className="space-y-4">
           {FAQS.map((faq, idx) => {
             const isOpen = openFaq === idx;
             return (
-              <div key={idx} className="rounded-2xl bg-white/5 border border-white/10 overflow-hidden">
+              <div 
+                key={idx} 
+                className={`group rounded-2xl overflow-hidden transition-all duration-300 ${
+                  isOpen 
+                    ? "bg-gradient-to-br from-[#39FF14]/10 to-transparent border-[#39FF14]/30 shadow-[0_0_30px_rgba(57,255,20,0.15)]" 
+                    : "bg-white/5 border-white/10 hover:border-white/20 hover:bg-white/8"
+                } border`}
+              >
                 <button
                   onClick={() => setOpenFaq(isOpen ? null : idx)}
-                  className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left cursor-pointer"
+                  className="w-full flex items-center justify-between gap-4 px-6 py-5 text-left cursor-pointer"
                   aria-expanded={isOpen}
                 >
-                  <span className="font-semibold text-sm text-white">{faq.q}</span>
-                  <ChevronDown className={`h-4 w-4 text-neutral-500 flex-shrink-0 transition-transform duration-300 ${isOpen ? "rotate-180 text-[#39FF14]" : ""}`} />
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 ${
+                      isOpen 
+                        ? "bg-[#39FF14] text-black" 
+                        : "bg-white/10 text-neutral-400 group-hover:bg-white/15"
+                    }`}>
+                      <span className="font-bold text-sm">{idx + 1}</span>
+                    </div>
+                    <span className={`font-semibold text-sm sm:text-base transition-colors ${
+                      isOpen ? "text-[#39FF14]" : "text-white"
+                    }`}>
+                      {faq.q}
+                    </span>
+                  </div>
+                  <ChevronDown 
+                    className={`h-5 w-5 flex-shrink-0 transition-all duration-300 ${
+                      isOpen 
+                        ? "rotate-180 text-[#39FF14]" 
+                        : "text-neutral-500 group-hover:text-neutral-300"
+                    }`} 
+                  />
                 </button>
                 <div
                   className="grid transition-all duration-300 ease-out"
                   style={{ gridTemplateRows: isOpen ? "1fr" : "0fr" }}
                 >
                   <div className="overflow-hidden">
-                    <p className="px-5 pb-4 text-xs text-neutral-400 leading-relaxed">{faq.a}</p>
+                    <div className="px-6 pb-5 pt-2">
+                      <p className="text-sm text-neutral-300 leading-relaxed pl-12">
+                        {faq.a}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
             );
           })}
+        </div>
+
+        <div className="mt-12 text-center">
+          <div className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-gradient-to-r from-[#39FF14]/10 to-transparent border border-[#39FF14]/30">
+            <Shield className="h-5 w-5 text-[#39FF14]" />
+            <span className="text-sm text-neutral-300">
+              Still have questions? <span className="text-[#39FF14] font-semibold">Contact our support team</span>
+            </span>
+          </div>
         </div>
       </section>
 
@@ -449,8 +505,8 @@ export const LandingPage: React.FC = () => {
                     <UserRound className="h-6 w-6" />
                   </div>
                   <div className="border-b border-white/20 pb-3">
-                    <p className="text-xs font-medium uppercase text-neutral-400">Name</p>
-                    <p className="text-2xl font-black text-[#39FF14] sm:text-3xl">shemalucin</p>
+                    <p className="text-xs font-medium uppercase text-neutral-400">CEO</p>
+                    <p className="text-2xl font-black text-[#39FF14] sm:text-3xl">SHEMA lucin</p>
                   </div>
                 </div>
 
@@ -462,16 +518,6 @@ export const LandingPage: React.FC = () => {
                     <p className="text-xs font-medium uppercase text-neutral-400">Location</p>
                     <p className="text-2xl font-black text-[#39FF14] sm:text-3xl">Rwanda</p>
                   </div>
-                </div>
-
-                <div className="grid grid-cols-[3.5rem_1fr] items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-[#39FF14]/70 text-[#39FF14] shadow-[0_0_14px_rgba(57,255,20,0.16)]">
-                    <Globe2 className="h-7 w-7" />
-                  </div>
-                  <p className="text-lg font-semibold text-neutral-300 sm:text-xl">
-                    Website developed by <span className="font-black text-[#39FF14]">shemalucin</span>, Location:{" "}
-                    <span className="font-black text-white">Rwanda</span>
-                  </p>
                 </div>
               </div>
             </div>

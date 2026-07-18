@@ -116,7 +116,7 @@ export const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({ movie, isO
       <div
         id="movie-details-modal"
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto no-scrollbar rounded-2xl sm:rounded-3xl bg-gradient-to-br from-[#1a1a2e] via-[#16162a] to-[#0f0f1a] text-white shadow-2xl shadow-black/60 border border-white/10 animate-slide-up"
+        className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto no-scrollbar rounded-2xl sm:rounded-3xl bg-gradient-to-br from-[#0a0a0a] via-[#1a1a2e] to-[#16213e] text-white shadow-2xl shadow-black/60 border border-[#39FF14]/20 animate-slide-up"
       >
         {/* Cinematic Backdrop with Gradient Overlay */}
         <div className="relative w-full aspect-[21/9] sm:aspect-[21/9] overflow-hidden rounded-t-2xl sm:rounded-t-3xl">
@@ -162,59 +162,59 @@ export const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({ movie, isO
           {/* Stats Row - Modern Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
             {/* Rating Card */}
-            <div className="bg-white/5 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-white/10 hover:border-[#39FF14]/30 transition-all group">
+            <div className="bg-gradient-to-br from-[#39FF14]/10 to-[#39FF14]/5 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-[#39FF14]/30 hover:border-[#39FF14]/60 transition-all group shadow-[0_0_15px_rgba(57,255,20,0.1)] hover:shadow-[0_0_25px_rgba(57,255,20,0.2)]">
               <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
                 <Star className="h-3 w-3 sm:h-4 sm:w-4 text-[#39FF14] fill-[#39FF14]" />
-                <span className="text-[10px] sm:text-xs text-neutral-400 font-medium">Rating</span>
+                <span className="text-[10px] sm:text-xs text-[#39FF14] font-semibold">Rating</span>
               </div>
               <div className="text-xl sm:text-2xl font-black text-white">{d.vote_average?.toFixed(1) || "N/A"}</div>
-              <div className="text-[9px] sm:text-[10px] text-neutral-500 mt-0.5 sm:mt-1">TMDB Score</div>
+              <div className="text-[9px] sm:text-[10px] text-[#39FF14]/70 mt-0.5 sm:mt-1">TMDB Score</div>
             </div>
 
             {/* Runtime Card */}
             {runtimeText && (
-              <div className="bg-white/5 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-white/10 hover:border-blue-400/30 transition-all group">
+              <div className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-blue-400/30 hover:border-blue-400/60 transition-all group shadow-[0_0_15px_rgba(59,130,246,0.1)] hover:shadow-[0_0_25px_rgba(59,130,246,0.2)]">
                 <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
                   <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-blue-400" />
-                  <span className="text-[10px] sm:text-xs text-neutral-400 font-medium">Duration</span>
+                  <span className="text-[10px] sm:text-xs text-blue-400 font-semibold">Duration</span>
                 </div>
                 <div className="text-lg sm:text-xl font-bold text-white">{runtimeText}</div>
-                <div className="text-[9px] sm:text-[10px] text-neutral-500 mt-0.5 sm:mt-1">{isTv ? "Per Episode" : "Total"}</div>
+                <div className="text-[9px] sm:text-[10px] text-blue-400/70 mt-0.5 sm:mt-1">{isTv ? "Per Episode" : "Total"}</div>
               </div>
             )}
 
             {/* Year Card */}
             {yearText && (
-              <div className="bg-white/5 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-white/10 hover:border-purple-400/30 transition-all group">
+              <div className="bg-gradient-to-br from-purple-500/10 to-purple-500/5 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-purple-400/30 hover:border-purple-400/60 transition-all group shadow-[0_0_15px_rgba(168,85,247,0.1)] hover:shadow-[0_0_25px_rgba(168,85,247,0.2)]">
                 <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
                   <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-purple-400" />
-                  <span className="text-[10px] sm:text-xs text-neutral-400 font-medium">Release</span>
+                  <span className="text-[10px] sm:text-xs text-purple-400 font-semibold">Release</span>
                 </div>
                 <div className="text-xl sm:text-2xl font-black text-white">{yearText}</div>
-                <div className="text-[9px] sm:text-[10px] text-neutral-500 mt-0.5 sm:mt-1">{isTv ? "First Aired" : "Released"}</div>
+                <div className="text-[9px] sm:text-[10px] text-purple-400/70 mt-0.5 sm:mt-1">{isTv ? "First Aired" : "Released"}</div>
               </div>
             )}
 
             {/* Age Rating Card */}
-            <div className="bg-white/5 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-white/10 hover:border-orange-400/30 transition-all group">
+            <div className="bg-gradient-to-br from-orange-500/10 to-orange-500/5 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-orange-400/30 hover:border-orange-400/60 transition-all group shadow-[0_0_15px_rgba(249,115,22,0.1)] hover:shadow-[0_0_25px_rgba(249,115,22,0.2)]">
               <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
                 <Award className="h-3 w-3 sm:h-4 sm:w-4 text-orange-400" />
-                <span className="text-[10px] sm:text-xs text-neutral-400 font-medium">Rating</span>
+                <span className="text-[10px] sm:text-xs text-orange-400 font-semibold">Rating</span>
               </div>
               <div className="text-xl sm:text-2xl font-black text-white">{ageRating}</div>
-              <div className="text-[9px] sm:text-[10px] text-neutral-500 mt-0.5 sm:mt-1">Age Guidance</div>
+              <div className="text-[9px] sm:text-[10px] text-orange-400/70 mt-0.5 sm:mt-1">Age Guidance</div>
             </div>
           </div>
 
           {/* Genres - Enhanced Pills */}
           {d.genres && d.genres.length > 0 && (
             <div className="space-y-2 sm:space-y-3">
-              <h3 className="text-xs sm:text-sm font-bold text-neutral-400 uppercase tracking-wider">Genres</h3>
+              <h3 className="text-xs sm:text-sm font-bold text-[#39FF14] uppercase tracking-wider">Genres</h3>
               <div className="flex flex-wrap gap-1.5 sm:gap-2">
                 {d.genres.slice(0, 6).map((g, index) => (
                   <span
                     key={g.id}
-                    className="relative px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-gradient-to-r from-white/10 to-white/5 border border-white/20 text-[10px] sm:text-sm font-semibold text-white hover:border-[#39FF14]/50 hover:from-[#39FF14]/20 hover:to-[#39FF14]/5 transition-all cursor-default"
+                    className="relative px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-gradient-to-r from-[#39FF14]/20 to-[#39FF14]/5 border border-[#39FF14]/40 text-[10px] sm:text-sm font-semibold text-white hover:border-[#39FF14] hover:from-[#39FF14]/30 hover:to-[#39FF14]/10 transition-all cursor-default shadow-[0_0_10px_rgba(57,255,20,0.1)] hover:shadow-[0_0_20px_rgba(57,255,20,0.2)]"
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
                     {g.name}
@@ -226,13 +226,13 @@ export const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({ movie, isO
 
           {/* Overview - Enhanced Typography */}
           <div className="space-y-2 sm:space-y-3">
-            <h3 className="text-xs sm:text-sm font-bold text-neutral-400 uppercase tracking-wider">Synopsis</h3>
-            <div className="relative bg-white/5 rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-white/10">
+            <h3 className="text-xs sm:text-sm font-bold text-[#39FF14] uppercase tracking-wider">Synopsis</h3>
+            <div className="relative bg-gradient-to-br from-white/10 to-white/5 rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-[#39FF14]/20 shadow-[0_0_15px_rgba(57,255,20,0.05)]">
               <p className="text-xs sm:text-sm sm:text-base text-neutral-200 leading-relaxed">
                 {d.overview || "No synopsis available for this title yet."}
               </p>
-              <div className="absolute top-3 right-3 opacity-20">
-                <Info className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+              <div className="absolute top-3 right-3 opacity-30">
+                <Info className="h-5 w-5 sm:h-6 sm:w-6 text-[#39FF14]" />
               </div>
             </div>
           </div>

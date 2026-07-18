@@ -87,7 +87,7 @@ export const OnboardingPreferences: React.FC<OnboardingPreferencesProps> = ({
 
   if (!isOpen) return null;
 
-  const MAX_GENRES = 8;
+  const MAX_GENRES = 2;
 
   const toggleGenre = (genreId: string) => {
     setSelectedGenres((prev) =>

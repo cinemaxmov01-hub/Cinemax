@@ -2,8 +2,8 @@
 
 const DB_NAME = "cinemax_offline_v1";
 const STORE = "downloads";
-const CINEMAX_STORE = "cinemax_downloads";
-const DB_VERSION = 2;
+const MOVIES_STORE = "movies";
+const DB_VERSION = 3;
 
 export interface LocalDownloadRecord {
   movieId: number;
@@ -41,13 +41,13 @@ function openDb(): Promise<IDBDatabase> {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onerror = () => reject(req.error);
     req.onsuccess = () => resolve(req.result);
-    req.onupgradeneeded = () => {
+    req.onupgradeneeded = (event) => {
       const db = req.result;
       if (!db.objectStoreNames.contains(STORE)) {
         db.createObjectStore(STORE, { keyPath: "movieId" });
       }
-      if (!db.objectStoreNames.contains(CINEMAX_STORE)) {
-        db.createObjectStore(CINEMAX_STORE, { keyPath: "movieId" });
+      if (!db.objectStoreNames.contains(MOVIES_STORE)) {
+        db.createObjectStore(MOVIES_STORE, { keyPath: "movieId" });
       }
     };
   });
@@ -103,12 +103,12 @@ export async function clearAllLocalDownloads(): Promise<void> {
   });
 }
 
-// Cinemax Download Functions
+// Cinemax Download Functions (now using 'movies' store)
 export async function saveCinemaxDownload(record: CinemaxDownloadRecord): Promise<void> {
   const db = await openDb();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(CINEMAX_STORE, "readwrite");
-    tx.objectStore(CINEMAX_STORE).put(record);
+    const tx = db.transaction(MOVIES_STORE, "readwrite");
+    tx.objectStore(MOVIES_STORE).put(record);
     tx.oncomplete = () => { db.close(); resolve(); };
     tx.onerror = () => { db.close(); reject(tx.error); };
   });
@@ -117,8 +117,8 @@ export async function saveCinemaxDownload(record: CinemaxDownloadRecord): Promis
 export async function getCinemaxDownload(movieId: number): Promise<CinemaxDownloadRecord | null> {
   const db = await openDb();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(CINEMAX_STORE, "readonly");
-    const req = tx.objectStore(CINEMAX_STORE).get(movieId);
+    const tx = db.transaction(MOVIES_STORE, "readonly");
+    const req = tx.objectStore(MOVIES_STORE).get(movieId);
     req.onsuccess = () => { db.close(); resolve(req.result || null); };
     req.onerror = () => { db.close(); reject(req.error); };
   });
@@ -127,8 +127,8 @@ export async function getCinemaxDownload(movieId: number): Promise<CinemaxDownlo
 export async function getAllCinemaxDownloads(): Promise<CinemaxDownloadRecord[]> {
   const db = await openDb();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(CINEMAX_STORE, "readonly");
-    const req = tx.objectStore(CINEMAX_STORE).getAll();
+    const tx = db.transaction(MOVIES_STORE, "readonly");
+    const req = tx.objectStore(MOVIES_STORE).getAll();
     req.onsuccess = () => { db.close(); resolve(req.result || []); };
     req.onerror = () => { db.close(); reject(req.error); };
   });
@@ -137,8 +137,8 @@ export async function getAllCinemaxDownloads(): Promise<CinemaxDownloadRecord[]>
 export async function removeCinemaxDownload(movieId: number): Promise<void> {
   const db = await openDb();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(CINEMAX_STORE, "readwrite");
-    tx.objectStore(CINEMAX_STORE).delete(movieId);
+    const tx = db.transaction(MOVIES_STORE, "readwrite");
+    tx.objectStore(MOVIES_STORE).delete(movieId);
     tx.oncomplete = () => { db.close(); resolve(); };
     tx.onerror = () => { db.close(); reject(tx.error); };
   });
@@ -147,8 +147,8 @@ export async function removeCinemaxDownload(movieId: number): Promise<void> {
 export async function clearAllCinemaxDownloads(): Promise<void> {
   const db = await openDb();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(CINEMAX_STORE, "readwrite");
-    tx.objectStore(CINEMAX_STORE).clear();
+    const tx = db.transaction(MOVIES_STORE, "readwrite");
+    tx.objectStore(MOVIES_STORE).clear();
     tx.oncomplete = () => { db.close(); resolve(); };
     tx.onerror = () => { db.close(); reject(tx.error); };
   });

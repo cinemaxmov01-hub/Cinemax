@@ -186,6 +186,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       return;
     }
     setSubmitting(true);
+    
+    // Show circular spinner for exactly 2 seconds before actual login
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
     const result = await signIn(email, password);
     setSubmitting(false);
     if (!result.ok) {
@@ -433,7 +437,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       : "Sign In";
 
   return (
-    <div id="auth-modal-backdrop" className="fixed inset-0 z-60 flex items-center justify-center modal-backdrop p-4 animate-fade-in">
+    <div id="auth-modal-backdrop" className="fixed inset-0 z-60 flex items-center justify-center p-4 animate-fade-in">
       <div id="auth-modal" className="relative w-full max-w-md rounded-2xl border surface-panel p-6 md:p-8">
 
         <button

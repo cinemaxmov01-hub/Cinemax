@@ -332,15 +332,15 @@ const CinemaxDashboard: React.FC = () => {
     };
   }, [user?.onboarding?.favoriteGenres, siteConfig.hiddenMovieIds]);
 
-  // One-time movie-focused splash screen timer
+  // One-time movie-focused splash screen timer - logo visible for 4 seconds
   useEffect(() => {
     const fadeTimer = setTimeout(() => {
       setFadeSplash(true);
-    }, 800);
+    }, 3500);
 
     const unmountTimer = setTimeout(() => {
       setShowSplash(false);
-    }, 1200);
+    }, 4000);
 
     return () => {
       clearTimeout(fadeTimer);
@@ -995,8 +995,8 @@ const CinemaxDashboard: React.FC = () => {
             </div>
 
             {/* Instant Search input — permanently visible across all devices */}
-            <div className="relative w-40 sm:w-56 md:w-64 lg:w-80 xl:w-96">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500 pointer-events-none" aria-hidden="true" />
+            <div className="relative w-40 sm:w-56 md:w-64 lg:w-80 xl:w-96 group">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500 pointer-events-none transition-colors group-focus-within:text-[#39FF14]" aria-hidden="true" />
               <input
                 id="header-search-input"
                 type="text"
@@ -1004,15 +1004,15 @@ const CinemaxDashboard: React.FC = () => {
                 placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl pl-11 pr-12 py-2.5 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-[#39FF14]/50 transition-colors"
+                className="w-full bg-white/5 border border-white/10 rounded-2xl pl-11 pr-12 py-2.5 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-[#39FF14]/50 focus:bg-white/10 focus:shadow-[0_0_20px_rgba(57,255,20,0.3)] transition-all duration-300 ease-out transform focus:scale-105"
               />
               {/* Voice Search Button */}
               <button
                 onClick={toggleConversationalAI}
-                className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg transition-colors cursor-pointer ${
+                className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg transition-all duration-300 cursor-pointer ${
                   isConversationalAIActive 
-                    ? 'voice-button-active text-[#39FF14]' 
-                    : 'hover:bg-white/10 text-neutral-400 hover:text-[#39FF14]'
+                    ? 'voice-button-active text-[#39FF14] scale-110 shadow-[0_0_15px_rgba(57,255,20,0.5)]' 
+                    : 'hover:bg-white/10 text-neutral-400 hover:text-[#39FF14] hover:scale-110'
                 }`}
                 title={isConversationalAIActive ? "Listening..." : "Voice Assistant"}
               >

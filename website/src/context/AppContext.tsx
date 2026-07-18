@@ -6,6 +6,9 @@ import {
   saveLocalDownload,
   removeLocalDownload,
   clearAllLocalDownloads,
+  saveCinemaxDownload,
+  removeCinemaxDownload,
+  clearAllCinemaxDownloads,
   fetchPosterBlob,
   triggerBrowserDownload,
   downloadRemoteFile,
@@ -1057,7 +1060,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
       }
 
-      await saveLocalDownload({
+      await saveCinemaxDownload({
         movieId: movie.id,
         title,
         mediaType,
@@ -1070,7 +1073,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         backdropBlob,
         savedAt: packageData.downloadedAt,
         sizeBytes,
-        storageType: "cinemax",
       });
 
       const res = await fetch(`${API_BASE}/api/downloads`, {
@@ -1125,7 +1127,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const removeDownload = async (movieId: number): Promise<{ ok: boolean; error?: string }> => {
     if (!user || isGuest) return { ok: false, error: "Sign in required." };
     try {
-      await removeLocalDownload(movieId);
+      await removeCinemaxDownload(movieId);
       const res = await fetch(`${API_BASE}/api/downloads/${movieId}`, {
         method: "DELETE",
         credentials: "include",
@@ -1167,7 +1169,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
       const data = await parseApiResponse(res);
       if (!res.ok) return { ok: false, error: data.error };
-      await clearAllLocalDownloads();
+      await clearAllCinemaxDownloads();
       setDownloads([]);
       setDownloadStorageUsed(0);
       setUser(mapServerUser(data.user));

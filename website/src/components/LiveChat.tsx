@@ -20,6 +20,8 @@ import {
   ImagePlus,
   Mic,
   Square,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 
 const POPULAR_POLL_MS = 4000;
@@ -109,13 +111,14 @@ export const LiveChat: React.FC<LiveChatProps> = ({ variant = "sidebar" }) => {
   const [collapsed, setCollapsed] = useState(false);
   const [tab, setTab] = useState<"popular" | "inbox">("popular");
   const [unreadTotal, setUnreadTotal] = useState(0);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   return (
     <div
       id="live-chat-panel"
       className={`solid-card rounded-3xl overflow-hidden border border-white/5 live-chat-panel ${
         isHome ? "live-chat-home" : ""
-      } ${collapsed ? "flex-none" : ""}`}
+      } ${collapsed ? "flex-none" : ""} ${isExpanded ? "h-[600px]" : isHome ? "h-[400px]" : "h-[300px]"} transition-all duration-300`}
     >
       {/* Header */}
       <button
@@ -137,6 +140,20 @@ export const LiveChat: React.FC<LiveChatProps> = ({ variant = "sidebar" }) => {
               {unreadTotal > 9 ? "9+" : unreadTotal}
             </span>
           )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsExpanded(!isExpanded);
+            }}
+            className="p-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer text-neutral-400 hover:text-[#39FF14]"
+            title={isExpanded ? "Reduce height" : "Increase height"}
+          >
+            {isExpanded ? (
+              <Minimize2 className="h-3.5 w-3.5" />
+            ) : (
+              <Maximize2 className="h-3.5 w-3.5" />
+            )}
+          </button>
           {collapsed ? (
             <ChevronDown className="h-3.5 w-3.5 text-neutral-500" />
           ) : (

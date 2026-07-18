@@ -5,6 +5,7 @@ import { Movie } from "../types";
 import { MovieCard } from "./MovieCard";
 import { Tv, ChevronRight, Loader2, SlidersHorizontal } from "lucide-react";
 import { useApp } from "../context/AppContext";
+import { SmartTVDisplay } from "./SmartTVDisplay";
 
 interface TVShowsPageProps {
   onShowClick: (show: Movie) => void;
@@ -136,8 +137,11 @@ export const TVShowsPage: React.FC<TVShowsPageProps> = ({ onShowClick }) => {
   const collectionLabel = (collection: Collection) => t(`collection.${collection.id}`);
   const genreLabel = (name: string) => t(`genre.${name}`);
 
+  // Get trending shows for the Smart TV display
+  const trendingShows = rowData["trending"] || [];
+
   return (
-    <div id="tv-shows-page" className="p-4 lg:p-8 space-y-8">
+    <div id="tv-shows-page" className="p-4 lg:p-8">
       <div className="flex items-center gap-2">
         <Tv className="h-5 w-5 text-[#39FF14]" />
         <h1 className="font-sans font-black text-2xl text-white">
@@ -178,65 +182,82 @@ export const TVShowsPage: React.FC<TVShowsPageProps> = ({ onShowClick }) => {
         ))}
       </div>
 
-      {activeId === null ? (
-        <div className="space-y-10">
-          {CURATED.map((c) => (
-            <PreviewRow
-              key={c.id}
-              title={collectionLabel(c)}
-              shows={rowData[c.id] || []}
-              loading={rowLoading}
-              onSeeAll={() => selectCollection(c.id, collectionLabel(c))}
-              onShowClick={onShowClick}
-              seeAllLabel={t("seeAll")}
-            />
-          ))}
+      <div className="flex gap-6 lg:gap-8 mt-8">
+        {/* Main Content */}
+        <div className="flex-1 min-w-0">
+          {activeId === null ? (
+            <div className="space-y-10">
+              {CURATED.map((c) => (
+                <PreviewRow
+                  key={c.id}
+                  title={collectionLabel(c)}
+                  shows={rowData[c.id] || []}
+                  loading={rowLoading}
+                  onSeeAll={() => selectCollection(c.id, collectionLabel(c))}
+                  onShowClick={onShowClick}
+                  seeAllLabel={t("seeAll")}
+                />
+              ))}
 
-          {genres.map((g) => (
-            <GenreRow key={g.id} genreId={g.id} name={genreLabel(g.name)} onSeeAll={() => selectCollection(`genre-${g.id}`, genreLabel(g.name))} onShowClick={onShowClick} seeAllLabel={t("seeAll")} />
-          ))}
-        </div>
-      ) : (
-        <div className="space-y-8">
-          {initialLoading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-              {Array.from({ length: 12 }).map((_, i) => (
-                <SkeletonCard key={i} />
+              {genres.map((g) => (
+                <GenreRow key={g.id} genreId={g.id} name={genreLabel(g.name)} onSeeAll={() => selectCollection(`genre-${g.id}`, genreLabel(g.name))} onShowClick={onShowClick} seeAllLabel={t("seeAll")} />
               ))}
             </div>
-          ) : items.length === 0 ? (
-            <div className="text-center py-24 text-neutral-500">
-              <p>No shows found for this category right now.</p>
-            </div>
           ) : (
-            <>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-                {items.map((show) => (
-                  <MovieCard key={show.id} movie={show} onClick={() => onShowClick(show)} />
-                ))}
-              </div>
-
-              <div ref={sentinelRef} className="flex justify-center py-6">
-                {loading && (
-                  <div className="flex items-center gap-2 text-xs text-neutral-500">
-                    <Loader2 className="h-4 w-4 animate-spin text-[#39FF14]" />
-                    Loading more titles...
+            <div className="space-y-8">
+              {initialLoading ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+                  {Array.from({ length: 12 }).map((_, i) => (
+                    <SkeletonCard key={i} />
+                  ))}
+                </div>
+              ) : items.length === 0 ? (
+                <div className="text-center py-24 text-neutral-500">
+                  <p>No shows found for this category right now.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+                    {items.map((show) => (
+                      <MovieCard key={show.id} movie={show} onClick={() => onShowClick(show)} />
+                    ))}
                   </div>
-                )}
-                {!hasMore && !loading && (
-                  <p className="text-xs text-neutral-600">You've reached the end of this collection.</p>
-                )}
-                {hasMore && !loading && (
-                  <button
-                    onClick={loadMore}
-                    className="text-xs font-bold px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-neutral-300 hover:text-white transition-colors cursor-pointer"
-                  >
-                    Load More
-                  </button>
-                )}
-              </div>
-            </>
+
+                  <div ref={sentinelRef} className="flex justify-center py-6">
+                    {loading && (
+                      <div className="flex items-center gap-2 text-xs text-neutral-500">
+                        <Loader2 className="h-4 w-4 animate-spin text-[#39FF14]" />
+                        Loading more titles...
+                      </div>
+                    )}
+                    {!hasMore && !loading && (
+                      <p className="text-xs text-neutral-600">You've reached the end of this collection.</p>
+                    )}
+                    {hasMore && !loading && (
+                      <button
+                        onClick={loadMore}
+                        className="text-xs font-bold px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+                      >
+                        Load More
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
           )}
+        </div>
+
+        {/* Smart TV Display - Desktop only, hidden on mobile */}
+        <div className="hidden lg:block flex-none w-80">
+          <SmartTVDisplay shows={trendingShows} />
+        </div>
+      </div>
+
+      {/* Mobile Smart TV - Fixed position handled by CSS */}
+      {trendingShows.length > 0 && (
+        <div className="lg:hidden">
+          <SmartTVDisplay shows={trendingShows} />
         </div>
       )}
     </div>

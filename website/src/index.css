@@ -848,4 +848,321 @@ html.compact-layout #curated-shelves { gap: 1.5rem; }
   40% { transform: scale(1.1); opacity: 1; }
   100% { transform: scale(1); opacity: 0; }
 }
+
+/* Smart TV Display Styles */
+.smart-tv-container {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.smart-tv-frame {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  aspect-ratio: 16/10;
+  background: linear-gradient(145deg, #1a1a1a 0%, #0d0d0d 100%);
+  border: 4px solid #1a1a1a;
+  border-radius: 12px;
+  box-shadow: 
+    0 10px 25px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.smart-tv-screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 8px;
+}
+
+.tv-screen-content {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.tv-background {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  animation: tvFadeIn 0.5s ease-in-out;
+}
+
+@keyframes tvFadeIn {
+  from { opacity: 0; transform: scale(1.05); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.tv-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.9) 0%,
+    rgba(0, 0, 0, 0.3) 50%,
+    transparent 100%
+  );
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 12px;
+}
+
+.tv-show-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tv-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #39FF14;
+  background: rgba(57, 255, 20, 0.15);
+  border: 1px solid rgba(57, 255, 20, 0.3);
+  padding: 2px 6px;
+  border-radius: 4px;
+  width: fit-content;
+}
+
+.tv-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.2;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tv-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.tv-year {
+  font-weight: 500;
+}
+
+.tv-rating {
+  font-weight: 600;
+  color: #fbbf24;
+}
+
+.tv-play-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: rgba(57, 255, 20, 0.9);
+  border-radius: 50%;
+  color: #000;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(57, 255, 20, 0.4);
+}
+
+.tv-play-btn:hover {
+  transform: translate(-50%, -50%) scale(1.1);
+  box-shadow: 0 6px 16px rgba(57, 255, 20, 0.5);
+}
+
+.tv-mute-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  border-radius: 6px;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tv-mute-btn:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.tv-progress {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tv-progress-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
+}
+
+.tv-progress-dot.active {
+  background: #39FF14;
+  box-shadow: 0 0 6px rgba(57, 255, 20, 0.6);
+}
+
+.tv-stand {
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 20px;
+  background: linear-gradient(180deg, #1a1a1a 0%, #0d0d0d 100%);
+  border-radius: 0 0 8px 8px;
+}
+
+.tv-stand::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 8px;
+  background: linear-gradient(180deg, #0d0d0d 0%, #080808 100%);
+  border-radius: 4px;
+}
+
+.tv-stand-base {
+  position: absolute;
+  bottom: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
+  height: 6px;
+  background: linear-gradient(180deg, #080808 0%, #050505 100%);
+  border-radius: 3px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Mobile Responsive - Tiny TV on left side */
+@media (max-width: 768px) {
+  .smart-tv-container {
+    position: fixed;
+    left: 12px;
+    bottom: 80px;
+    z-index: 50;
+  }
+
+  .smart-tv-frame {
+    width: 80px;
+    height: 50px;
+    border-width: 2px;
+    border-radius: 6px;
+    box-shadow: 
+      0 4px 12px rgba(0, 0, 0, 0.4),
+      0 0 0 1px rgba(255, 255, 255, 0.05);
+  }
+
+  .smart-tv-screen {
+    margin: 4px;
+    border-radius: 4px;
+  }
+
+  .tv-badge {
+    font-size: 6px;
+    padding: 1px 4px;
+  }
+
+  .tv-title {
+    font-size: 8px;
+    max-width: 50px;
+  }
+
+  .tv-meta {
+    font-size: 7px;
+    gap: 4px;
+  }
+
+  .tv-play-btn {
+    width: 20px;
+    height: 20px;
+  }
+
+  .tv-play-btn svg {
+    width: 8px;
+    height: 8px;
+  }
+
+  .tv-mute-btn {
+    width: 16px;
+    height: 16px;
+    top: 4px;
+    right: 4px;
+  }
+
+  .tv-mute-btn svg {
+    width: 8px;
+    height: 8px;
+  }
+
+  .tv-progress {
+    bottom: 4px;
+    gap: 2px;
+  }
+
+  .tv-progress-dot {
+    width: 3px;
+    height: 3px;
+  }
+
+  .tv-stand {
+    width: 30px;
+    height: 10px;
+    bottom: -10px;
+  }
+
+  .tv-stand::after {
+    width: 40px;
+    height: 4px;
+    bottom: -4px;
+  }
+
+  .tv-stand-base {
+    width: 50px;
+    height: 4px;
+    bottom: -6px;
+  }
+}
+
+/* Desktop - Positioned on right side */
+@media (min-width: 769px) {
+  .smart-tv-container {
+    position: sticky;
+    top: 100px;
+    align-self: flex-start;
+  }
+}
 .animate-ping-once { animation: ping-once 0.8s ease-out forwards; }

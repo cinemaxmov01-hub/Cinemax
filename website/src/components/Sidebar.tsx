@@ -73,7 +73,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
     { id: "watchlist", labelKey: "watchlist", icon: Bookmark },
     { id: "history", labelKey: "history", icon: History },
     { id: "favorites", labelKey: "favorites", icon: Heart },
-    { id: "downloads", labelKey: "downloads", icon: Download },
     { id: "gens", label: "Gens", icon: Sparkles, badge: "18+" },
     { id: "download-app", label: "Download App", icon: Download, isAction: true },
   ];

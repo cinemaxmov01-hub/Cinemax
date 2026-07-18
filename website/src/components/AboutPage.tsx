@@ -104,7 +104,7 @@ export const AboutPage: React.FC = () => {
               <span className="text-2xl font-black text-[#39FF14]">S</span>
             </div>
             <div className="flex-1">
-              <h3 className="font-sans text-lg font-bold text-white mb-1">SHEMAlucin</h3>
+              <h3 className="font-sans text-lg font-bold text-white mb-1">SHEMA lucin</h3>
               <p className="text-xs font-semibold text-[#39FF14] mb-3">CEO & Founder</p>
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm text-neutral-400">
