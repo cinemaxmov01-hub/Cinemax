@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Movie, CastMember, Review } from "../types";
 import { useApp } from "../context/AppContext";
 import { 
@@ -26,7 +26,21 @@ import { getImageUrl, tmdb, isTvShow } from "../utils/tmdb";
 import { AdBanner } from "./AdBanner";
 import { fetchPublicAds, PublicAd } from "../utils/siteConfig";
 import { MovieCard } from "./MovieCard";
-import { PROVIDERS_CONFIG, buildEmbedUrl, embedUrlWithAutoplay, EMBED_IFRAME_ALLOW, ProviderFailoverSystem, fetchBestProvider, IFRAME_SANDBOX_ATTRIBUTES } from "../utils/streamingConfig";
+import { 
+  PROVIDERS_CONFIG, 
+  buildEmbedUrl, 
+  embedUrlWithAutoplay, 
+  EMBED_IFRAME_ALLOW,
+  selectBestProvider,
+  detectConnectionSpeed,
+  estimateUserRegion,
+  buildOptimizedEmbedUrl,
+  getOptimizedHlsConfig,
+  initializeHlsPlayer,
+  getOptimizedIframeConfig,
+  PredictivePreloader,
+  IframePerformanceMonitor
+} from "../utils/streamingConfig";
 import { LiveChat } from "./LiveChat";
 import { WatchChoiceModal } from "./WatchChoiceModal";
 import { DownloadChoiceModal } from "./DownloadChoiceModal";
@@ -52,7 +66,7 @@ const UpNextQueue: React.FC<{ movies: Movie[]; onSelect: (m: Movie) => void }> =
 
   return (
     <div id="up-next-queue" className="glass-card rounded-3xl overflow-hidden border border-white/5">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-white/5 bg-black/20">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-white/5 bg-[#0a0a0a]/20">
         <div className="flex items-center gap-2">
           <Clock className="h-4 w-4 text-[#39FF14]" />
           <span className="font-sans font-bold text-sm text-white tracking-tight">Up Next</span>
@@ -114,14 +128,14 @@ const UpNextQueue: React.FC<{ movies: Movie[]; onSelect: (m: Movie) => void }> =
           <>
             <button
               onClick={(e) => { e.stopPropagation(); goTo(index - 1); }}
-              className="absolute left-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-black/50 backdrop-blur border border-white/10 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:bg-black/70"
+              className="absolute left-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-[#0a0a0a]/50 backdrop-blur border border-white/10 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:bg-[#0a0a0a]/70"
               title="Previous"
             >
               <ChevronRight className="h-3.5 w-3.5 rotate-180" />
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); goTo(index + 1); }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-black/50 backdrop-blur border border-white/10 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:bg-black/70"
+              className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-[#0a0a0a]/50 backdrop-blur border border-white/10 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:bg-[#0a0a0a]/70"
               title="Next"
             >
               <ChevronRight className="h-3.5 w-3.5" />
@@ -185,7 +199,7 @@ const UpNextActions: React.FC<{
   if (movies.length === 0) return null;
   const featured = movies[0];
   return (
-    <div className="mt-4 rounded-2xl border border-white/10 bg-black p-4 space-y-3">
+    <div className="mt-4 rounded-2xl border border-white/10 bg-[#0a0a0a] p-4 space-y-3">
       <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Quick Actions</p>
       <button
         onClick={() => onSelect(featured)}
@@ -200,14 +214,14 @@ const UpNextActions: React.FC<{
       <div className="grid grid-cols-2 gap-2">
         <button
           onClick={onShuffle}
-          className="rounded-xl border border-white/10 bg-black px-3 py-2.5 text-[11px] font-bold text-neutral-300 hover:border-[#22c55e]/30 hover:text-white transition-colors cursor-pointer"
+          className="rounded-xl border border-white/10 bg-[#0a0a0a] px-3 py-2.5 text-[11px] font-bold text-neutral-300 hover:border-[#22c55e]/30 hover:text-white transition-colors cursor-pointer"
         >
           Shuffle Up Next
         </button>
         {isTv && onBinge && (
           <button
             onClick={onBinge}
-            className="rounded-xl border border-white/10 bg-black px-3 py-2.5 text-[11px] font-bold text-neutral-300 hover:border-[#22c55e]/30 hover:text-white transition-colors cursor-pointer"
+            className="rounded-xl border border-white/10 bg-[#0a0a0a] px-3 py-2.5 text-[11px] font-bold text-neutral-300 hover:border-[#22c55e]/30 hover:text-white transition-colors cursor-pointer"
           >
             Next Episode
           </button>
@@ -340,77 +354,114 @@ export const PlayerPage: React.FC = () => {
   const [seasonsList, setSeasonsList] = useState<number[]>([]);
   const [episodesList, setEpisodesList] = useState<number[]>([]);
   const [activeServerId, setActiveServerId] = useState<string>(PROVIDERS_CONFIG[0].id);
-  const [isLoadingVideo, setIsLoadingVideo] = useState(true);
+  const [isLoadingVideo, setIsLoadingVideo] = useState(false);
   const [streamSource, setStreamSource] = useState<string | null>(null);
   const [streamType, setStreamType] = useState<'embed' | 'mp4' | 'hls'>('embed');
+  const [embedUrl, setEmbedUrl] = useState<string>("");
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
   const [trailerKey, setTrailerKey] = useState<string | null>(null);
   const [cast, setCast] = useState<CastMember[]>([]);
-  
-  // Automated failover system
-  const [failoverSystem] = useState(() => new ProviderFailoverSystem(
-    PROVIDERS_CONFIG,
-    (provider) => {
-      setActiveServerId(provider.id);
-      setIsLoadingVideo(true);
-    }
-  ));
   const [reviews, setReviews] = useState<Review[]>([]);
   const [recommendations, setRecommendations] = useState<Movie[]>([]);
   const [similarMovies, setSimilarMovies] = useState<Movie[]>([]);
   const [showLiveChat, setShowLiveChat] = useState(false);
   const [choiceMovie, setChoiceMovie] = useState<Movie | null>(null);
   const [downloadChoiceOpen, setDownloadChoiceOpen] = useState(false);
+  const [downloadClickPosition, setDownloadClickPosition] = useState<{ x: number; y: number } | null>(null);
+  const [providerError, setProviderError] = useState(false);
+  const [failedProviders, setFailedProviders] = useState<Set<string>>(new Set());
+
+  // Enhanced streaming optimization
+  const [connectionSpeed, setConnectionSpeed] = useState<'slow' | 'medium' | 'fast'>('medium');
+  const [userRegion, setUserRegion] = useState<string>('global');
+  const predictivePreloaderRef = useRef<PredictivePreloader | null>(null);
+  const performanceMonitorRef = useRef<IframePerformanceMonitor | null>(null);
 
   const isTv = selectedMovie ? isTvShow(selectedMovie) : false;
+  console.log(`📺 TV Show Detection: isTv=${isTv}, media_type=${selectedMovie?.media_type}, title=${selectedMovie?.title}, name=${selectedMovie?.name}`);
   const isFavorited = user && selectedMovie ? user.favorites.includes(selectedMovie.id) : false;
   const isWatchlisted = user && selectedMovie ? (user.myList || user.watchlist || []).includes(selectedMovie.id) : false;
 
-  // Reset episode/season when switching titles (search → play must start at S1E1)
+  // Initialize connection detection and optimization systems
+  useEffect(() => {
+    setConnectionSpeed(detectConnectionSpeed());
+    setUserRegion(estimateUserRegion());
+    predictivePreloaderRef.current = new PredictivePreloader(detectConnectionSpeed());
+    performanceMonitorRef.current = new IframePerformanceMonitor();
+
+    // Monitor connection changes
+    const connection = (navigator as any).connection;
+    if (connection) {
+      const handleConnectionChange = () => {
+        const newSpeed = detectConnectionSpeed();
+        setConnectionSpeed(newSpeed);
+        if (predictivePreloaderRef.current) {
+          predictivePreloaderRef.current.updateStrategy(newSpeed);
+        }
+      };
+      connection.addEventListener('change', handleConnectionChange);
+      return () => connection.removeEventListener('change', handleConnectionChange);
+    }
+  }, []);
+
+  // Reset episode/season when switching titles with intelligent provider selection
   useEffect(() => {
     if (!selectedMovie) return;
     setCurrentSeason(1);
     setCurrentEpisode(1);
     setTrailerKey(null);
-    setIsLoadingVideo(true);
-    failoverSystem.resetToPrimary();
+    setIsLoadingVideo(false);
+    setProviderError(false);
+    setFailedProviders(new Set()); // Reset failed providers for new content
     
-    // Use parallel fetching to select best provider
-    const selectBestProvider = async () => {
-      const type = isTvShow(selectedMovie) ? "tv" : "movie";
-      console.log(`Selecting best provider for ${type} with ID ${selectedMovie.id}`);
-      try {
-        const bestProvider = await fetchBestProvider(
-          PROVIDERS_CONFIG,
-          type,
-          selectedMovie.id,
-          1,
-          1
-        );
-        setActiveServerId(bestProvider.provider.id);
-        console.log(`Selected provider: ${bestProvider.provider.name} (${bestProvider.provider.id})`);
-      } catch (err) {
-        console.error('Failed to select best provider, using default:', err);
-        // Keep the default provider if selection fails
-      }
-    };
-    
-    selectBestProvider();
-  }, [selectedMovie?.id, selectedMovie?.media_type, failoverSystem]);
+    // Use intelligent provider selection instead of hardcoded default
+    const bestProvider = selectBestProvider(PROVIDERS_CONFIG, connectionSpeed, userRegion);
+    setActiveServerId(bestProvider.id);
+    console.log(`🎯 Selected optimal provider: ${bestProvider.name} (Priority: ${bestProvider.priority}, Reliability: ${bestProvider.reliabilityScore}%)`);
+  }, [selectedMovie?.id, selectedMovie?.media_type, connectionSpeed, userRegion]);
 
-  // Start failover monitoring when iframe loads
-  useEffect(() => {
-    if (iframeRef.current && streamType === 'embed') {
-      failoverSystem.setIframeRef(iframeRef.current);
-      failoverSystem.startMonitoring();
-      
-      return () => {
-        failoverSystem.destroy();
-      };
+  // Automatic fallback logic for provider errors with enhanced multi-provider support
+  const handleProviderError = () => {
+    setProviderError(true);
+    
+    // Mark current provider as failed
+    setFailedProviders(prev => new Set(prev).add(activeServerId));
+    
+    // Find next available provider that hasn't failed
+    const availableProviders = PROVIDERS_CONFIG.filter(p => !failedProviders.has(p.id) && p.id !== activeServerId);
+    
+    if (availableProviders.length > 0) {
+      const nextProvider = availableProviders[0]; // Get first available provider
+      console.log(`🔄 Provider ${activeServerId} failed, automatically switching to ${nextProvider.id} (${nextProvider.name})`);
+      console.log(`📺 Maintaining current state: Season ${currentSeason}, Episode ${currentEpisode}`);
+      setActiveServerId(nextProvider.id);
+    } else {
+      console.error(`❌ All providers failed for this content. User may need to try different content.`);
+      // Reset failed providers to allow retry
+      setFailedProviders(new Set());
     }
-  }, [iframeRef, activeServerId, streamType, failoverSystem]);
+  };
+
+  // Manual provider switch handler - maintains season/episode state
+  const handleProviderSwitch = (providerId: string) => {
+    console.log(`🎛️ User manually switched to provider: ${providerId}`);
+    console.log(`📺 Maintaining current state: Season ${currentSeason}, Episode ${currentEpisode}`);
+    setActiveServerId(providerId);
+    setProviderError(false);
+    setFailedProviders(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(providerId); // Remove from failed set on manual switch
+      return newSet;
+    });
+    setIsLoadingVideo(true);
+  };
+
+  // Reset error state when provider changes
+  useEffect(() => {
+    setProviderError(false);
+  }, [activeServerId]);
 
   // Load deep details
   useEffect(() => {
@@ -549,12 +600,23 @@ export const PlayerPage: React.FC = () => {
     loadSeasonEpisodes();
   }, [selectedMovie, currentSeason, isTv]);
 
-  // Loader effect: show Cinemax loader for 0.5 seconds on mount or video change (No motion animations)
+  // Generate embed URL when parameters change
+  useEffect(() => {
+    const generateUrl = async () => {
+      if (!selectedMovie) return;
+      const url = await getStreamUrl();
+      setEmbedUrl(url);
+    };
+    generateUrl();
+  }, [selectedMovie, currentSeason, currentEpisode, playerMode, activeServerId]);
+
+  // Loader effect: show Cinemax loader for 1.5 seconds on mount or video change (No motion animations)
+  // Increased time to ensure iframe properly loads new episode content
   useEffect(() => {
     setIsLoadingVideo(true);
     const progressTimer = setTimeout(() => {
       setIsLoadingVideo(false);
-    }, 500);
+    }, 1500);
 
     return () => clearTimeout(progressTimer);
   }, [selectedMovie, currentSeason, currentEpisode, playerMode, activeServerId]);
@@ -579,22 +641,35 @@ export const PlayerPage: React.FC = () => {
   };
 
   const activeServer = PROVIDERS_CONFIG.find(p => p.id === activeServerId) || PROVIDERS_CONFIG[0];
+  
+  // Debug logging for TV playback
+  console.log(`Active server: ${activeServer.id} (${activeServer.name}), isTv: ${isTv}, currentSeason: ${currentSeason}, currentEpisode: ${currentEpisode}`);
 
   const API_BASE =
     (typeof import.meta === "object" && (import.meta as any).env?.VITE_API_BASE_URL)
       ? String((import.meta as any).env.VITE_API_BASE_URL).replace(/\/+$/, "")
       : "";
 
-  // Determine stream source based on playerMode
-  const getStreamUrl = () => {
+  // Determine stream source based on playerMode with optimized URL building
+  const getStreamUrl = async () => {
     if (!selectedMovie) return "";
 
-    // Admin-authored "custom content" (negative id) has no TMDB-backed
-    // provider stream — it only ever plays its own trailer.
-    if (selectedMovie.isCustom) {
+    console.log(`🎬 getStreamUrl called: isTv=${isTv}, media_type=${selectedMovie.media_type}, title=${selectedMovie.title}, name=${selectedMovie.name}`);
+
+    // For custom content imported from TMDB, use the TMDB ID for streaming
+    const effectiveId = selectedMovie.isCustom && selectedMovie.tmdb_id ? selectedMovie.tmdb_id : selectedMovie.id;
+    
+    // Admin-authored "custom content" without TMDB ID only plays its trailer
+    if (selectedMovie.isCustom && !selectedMovie.tmdb_id) {
       return selectedMovie.trailerYoutubeKey
         ? `https://www.youtube.com/embed/${selectedMovie.trailerYoutubeKey}?autoplay=1&rel=0`
         : "";
+    }
+
+    // Validate ID before building URL
+    if (!effectiveId || effectiveId <= 0) {
+      console.error(`❌ Invalid ID: ${effectiveId}`);
+      return "";
     }
 
     const mode = playerMode || "full";
@@ -602,24 +677,29 @@ export const PlayerPage: React.FC = () => {
     if (mode === "trailer") {
       return trailerKey
         ? `https://www.youtube.com/embed/${trailerKey}?autoplay=1&rel=0`
-        : embedUrlWithAutoplay(buildEmbedUrl(activeServer, isTv ? "tv" : "movie", selectedMovie.id, currentSeason, currentEpisode));
+        : await buildOptimizedEmbedUrl(activeServer, isTv ? "tv" : "movie", effectiveId, currentSeason, currentEpisode);
     }
 
-    const embedUrl = buildEmbedUrl(
+    // Use optimized embed URL (only adds autoplay parameter)
+    const mediaType = isTv ? "tv" : "movie";
+    console.log(`🎯 Building URL for ${mediaType} with ID=${effectiveId}, Season=${currentSeason}, Episode=${currentEpisode}`);
+    
+    const optimizedUrl = await buildOptimizedEmbedUrl(
       activeServer,
-      isTv ? "tv" : "movie",
-      selectedMovie.id,
+      mediaType,
+      effectiveId,
       currentSeason,
       currentEpisode
     );
 
-    console.log(`Final stream URL: ${embedUrl}`);
-    console.log(`Active server: ${activeServer.name} (${activeServer.id})`);
-    console.log(`Media type: ${isTv ? "tv" : "movie"}`);
-    console.log(`TMDB ID: ${selectedMovie.id}`);
-    console.log(`Season: ${currentSeason}, Episode: ${currentEpisode}`);
+    console.log(`🚀 Optimized stream URL: ${optimizedUrl}`);
+    console.log(`📡 Active server: ${activeServer.name} (${activeServer.id}) - Priority: ${activeServer.priority}, Reliability: ${activeServer.reliabilityScore}%`);
+    console.log(`🌐 Connection: ${connectionSpeed}, Region: ${userRegion}`);
+    console.log(`🎬 Media type: ${mediaType}`);
+    console.log(`🆔 Effective ID: ${effectiveId} (original: ${selectedMovie.id})`);
+    console.log(`📺 Season: ${currentSeason}, Episode: ${currentEpisode}`);
 
-    return embedUrlWithAutoplay(embedUrl);
+    return optimizedUrl;
   };
 
   // Try to resolve a direct media source (mp4 or m3u8) using the backend resolver.
@@ -632,7 +712,7 @@ export const PlayerPage: React.FC = () => {
     const providersToTry = [activeServer, ...PROVIDERS_CONFIG.filter((p) => p.id !== activeServer.id)];
 
     const tryResolveProvider = async (provider: typeof activeServer) => {
-      const embed = buildEmbedUrl(provider, isTv ? 'tv' : 'movie', selectedMovie.id, currentSeason, currentEpisode);
+      const embed = await buildEmbedUrl(provider, isTv ? 'tv' : 'movie', selectedMovie.id, currentSeason, currentEpisode);
       
       try {
         const res = await fetch(`${API_BASE}/api/stream/full`, {
@@ -696,21 +776,26 @@ export const PlayerPage: React.FC = () => {
     return () => { mounted = false; };
   }, [selectedMovie?.id, activeServerId, currentSeason, currentEpisode]);
 
-  // Attach HLS if needed
+  // Attach HLS with optimized configuration
   useEffect(() => {
     if (!streamSource || streamType !== 'hls' || !videoRef.current) return;
-    let hlsInstance: any = (window as any).Hls;
+    let hlsInstance: any = null;
     let createdScript = false;
 
     const attach = () => {
       try {
         if ((window as any).Hls) {
-          const Hls = (window as any).Hls;
-          const hls = new Hls();
-          hls.loadSource(streamSource!);
-          hls.attachMedia(videoRef.current!);
-          (videoRef.current as any).play().catch(() => {});
-          return hls;
+          // Use optimized HLS configuration based on connection speed
+          const hlsConfig = getOptimizedHlsConfig(connectionSpeed);
+          console.log(`🎬 Using optimized HLS config for ${connectionSpeed} connection:`, hlsConfig);
+          
+          hlsInstance = initializeHlsPlayer(videoRef.current!, streamSource!, hlsConfig);
+          
+          if (hlsInstance) {
+            (videoRef.current as any).play().catch(() => {});
+            console.log('✅ HLS player initialized successfully');
+          }
+          return hlsInstance;
         }
       } catch (e) {
         console.error('HLS attach error', e);
@@ -722,7 +807,7 @@ export const PlayerPage: React.FC = () => {
       return new Promise<void>((resolve, reject) => {
         if ((window as any).Hls) return resolve();
         const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.4.0/dist/hls.min.js';
+        s.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js'; // Updated to latest stable
         s.async = true;
         s.onload = () => resolve();
         s.onerror = () => reject(new Error('Failed to load hls.js'));
@@ -731,11 +816,10 @@ export const PlayerPage: React.FC = () => {
       });
     };
 
-    let hlsObj: any = null;
     (async () => {
       try {
         await tryLoadScript();
-        hlsObj = attach();
+        hlsInstance = attach();
       } catch (e) {
         console.error('Unable to initialize HLS playback', e);
       }
@@ -743,7 +827,10 @@ export const PlayerPage: React.FC = () => {
 
     return () => {
       try {
-        if (hlsObj && typeof hlsObj.destroy === 'function') hlsObj.destroy();
+        if (hlsInstance && typeof hlsInstance.destroy === 'function') {
+          hlsInstance.destroy();
+          console.log('🧹 HLS instance cleaned up');
+        }
         if (createdScript) {
           const scripts = Array.from(document.querySelectorAll('script'));
           const s = scripts.find((el) => (el as HTMLScriptElement).src.includes('hls.js'));
@@ -751,7 +838,7 @@ export const PlayerPage: React.FC = () => {
         }
       } catch {}
     };
-  }, [streamSource, streamType]);
+  }, [streamSource, streamType, connectionSpeed]);
 
   if (!selectedMovie) {
     return (
@@ -799,64 +886,60 @@ export const PlayerPage: React.FC = () => {
         )}
         <div 
           id="video-player-container" 
-          className="relative w-full aspect-video rounded-3xl overflow-hidden border border-white/5 bg-black max-w-5xl"
+          className="relative w-full aspect-video rounded-3xl overflow-hidden border border-white/5 bg-[#0a0a0a] max-w-5xl"
         >
-          {/* If we resolved a proxied direct source, use a native video element (with HLS fallback).
-              Otherwise fall back to the embed iframe. */}
-          {streamSource && (streamType === 'mp4' || streamType === 'hls') ? (
-            <video
-              ref={videoRef}
-              key={`video-${streamSource}`}
-              className="w-full h-full bg-black"
-              controls
-              playsInline
-              autoPlay
-              src={streamType === 'mp4' ? streamSource : undefined}
-              style={{
-                '--webkit-media-controls-tint-color': '#39FF14',
-                '--media-controls-background-color': '#050505',
-                '--media-controls-play-button-color': '#39FF14',
-                '--media-controls-progress-bar-color': '#39FF14',
-                '--media-controls-volume-slider-color': '#39FF14',
-              } as React.CSSProperties}
-            >
-              {/* For HLS we attach via hls.js; for mp4, src is sufficient */}
-              Your browser does not support HTML5 video.
-            </video>
-          ) : (
-            <iframe
-              key={`${activeServerId}-${selectedMovie.id}-${currentSeason}-${currentEpisode}-${playerMode}`}
-              id="vidsrc-stream-iframe"
-              ref={iframeRef}
-              src={getStreamUrl()}
-              className="w-full h-full border-0"
-              allow={EMBED_IFRAME_ALLOW}
-              allowFullScreen
-              referrerPolicy="origin"
-              scrolling="no"
-            />
-          )}
+          <iframe
+            key={`${activeServerId}-${selectedMovie.id}-${currentSeason}-${currentEpisode}`}
+            id="vidsrc-stream-iframe"
+            ref={iframeRef}
+            src={embedUrl}
+            className="w-full h-full border-0"
+            allow={EMBED_IFRAME_ALLOW}
+            allowFullScreen
+            referrerPolicy="origin"
+            scrolling="no"
+            loading={getOptimizedIframeConfig(connectionSpeed, true).loading}
+            onError={handleProviderError}
+            onLoad={() => {
+              if (performanceMonitorRef.current) {
+                const loadTime = performance.now() - (window as any).playerLoadStart;
+                performanceMonitorRef.current.recordLoad(activeServerId, loadTime);
+                console.log(`⏱️ Iframe loaded in ${loadTime.toFixed(0)}ms`);
+              }
+            }}
+          />
+        </div>
 
-          {/* Loader Overlay (Static styling, no animations) */}
-          {isLoadingVideo && (
-            <div className="absolute inset-0 bg-[#050505] flex flex-col items-center justify-center text-center z-30">
-              <div className="flex flex-col items-center gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl logo-mark font-black text-2xl">
-                  C
-                </div>
-                <span className="text-xl font-black tracking-tighter flex items-center select-none">
-                  <span className="text-white">CINEMA</span><span className="text-[#39FF14]">X</span>
-                </span>
-                <p className="text-[10px] text-neutral-500 font-mono tracking-widest uppercase">
-                  Initializing Stream...
-                </p>
-              </div>
+        {/* Provider Switch Buttons - P1, P2, P3, P4 */}
+        <div className="max-w-5xl mt-4">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xs font-semibold text-neutral-500">Server:</span>
+          </div>
+          <div className="grid grid-cols-4 gap-2">
+            {PROVIDERS_CONFIG.map((provider) => (
+              <button
+                key={provider.id}
+                onClick={() => {
+                  setActiveServerId(provider.id);
+                }}
+                className={`px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  activeServerId === provider.id
+                    ? "bg-[#39FF14] text-black shadow-[0_0_10px_rgba(57,255,20,0.3)]"
+                    : "bg-[#0a0a0a]/40 border border-white/10 text-neutral-400 hover:text-white hover:border-[#39FF14]/25"
+                }`}
+              >
+                {provider.name}
+              </button>
+            ))}
+          </div>
+          {/* Hint for TV series */}
+          {isTv && (
+            <div className="mt-2 text-[10px] text-neutral-400 flex items-center gap-2">
+              <span>💡</span>
+              <span>Try different servers if episode fails to load.</span>
             </div>
           )}
         </div>
-
-        {/* Server Toggle Row — Hidden UI for automated failover system */}
-        {/* Server switching is now handled automatically by the failover system and is invisible to users */}
 
         {/* TV Episode Selector Grid (IF TV SHOW) */}
         {isTv && tvDetails && playerMode !== "trailer" && (
@@ -873,10 +956,13 @@ export const PlayerPage: React.FC = () => {
                 <select 
                   value={currentSeason}
                   onChange={(e) => {
-                    setCurrentSeason(Number(e.target.value));
+                    const newSeason = Number(e.target.value);
+                    console.log(`🔄 Season changed to: ${newSeason}, resetting episode to 1`);
+                    setIsLoadingVideo(true);
+                    setCurrentSeason(newSeason);
                     setCurrentEpisode(1);
                   }}
-                  className="bg-[#050505]/60 border border-white/10 rounded-xl px-3 py-1.5 text-sm font-semibold text-white focus:border-[#39FF14]/50 transition-colors cursor-pointer focus:outline-none"
+                  className="bg-[#0a0a0a]/60 border border-white/10 rounded-xl px-3 py-1.5 text-sm font-semibold text-white focus:border-[#39FF14]/50 transition-colors cursor-pointer focus:outline-none"
                 >
                   {seasonsList.map(s => (
                     <option key={s} value={s}>Season {s}</option>
@@ -893,11 +979,17 @@ export const PlayerPage: React.FC = () => {
                   <button
                     key={ep}
                     id={`episode-chip-${ep}`}
-                    onClick={() => setCurrentEpisode(ep)}
+                    onClick={() => {
+                      console.log(`🎬 Episode clicked: ${ep} (Season ${currentSeason})`);
+                      console.log(`📋 Episodes list: ${episodesList.join(', ')}`);
+                      console.log(`🔍 Is ${ep} in episodesList? ${episodesList.includes(ep)}`);
+                      setIsLoadingVideo(true);
+                      setCurrentEpisode(ep);
+                    }}
                     className={`h-10 w-12 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
                       isActive 
                         ? "accent-active" 
-                        : "bg-black/40 border border-white/10 hover:border-[#22c55e]/30 text-neutral-400 hover:text-white"
+                        : "bg-[#0a0a0a]/40 border border-white/10 hover:border-[#22c55e]/30 text-neutral-400 hover:text-white"
                     }`}
                   >
                     EP {ep}
@@ -918,7 +1010,7 @@ export const PlayerPage: React.FC = () => {
               className={`flex items-center gap-2 px-5 py-3 rounded-2xl border text-xs font-bold transition-all cursor-pointer ${
                 isWatchlisted 
                   ? "bg-[#39FF14]/10 border-[#39FF14] text-[#39FF14]" 
-                  : "bg-black/40 border-white/10 text-neutral-400 hover:text-white hover:border-[#39FF14]/25"
+                  : "bg-[#0a0a0a]/40 border-white/10 text-neutral-400 hover:text-white hover:border-[#39FF14]/25"
               }`}
             >
               {isWatchlisted ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
@@ -932,7 +1024,7 @@ export const PlayerPage: React.FC = () => {
               className={`flex items-center gap-2 px-5 py-3 rounded-2xl border text-xs font-bold transition-all cursor-pointer ${
                 isFavorited 
                   ? "bg-rose-500/10 border-rose-500 text-rose-400" 
-                  : "bg-black/40 border-white/10 text-neutral-400 hover:text-rose-400 hover:border-white/20"
+                  : "bg-[#0a0a0a]/40 border-white/10 text-neutral-400 hover:text-rose-400 hover:border-white/20"
               }`}
             >
               <Heart className={`h-4 w-4 ${isFavorited ? "fill-rose-400" : ""}`} />
@@ -966,7 +1058,7 @@ export const PlayerPage: React.FC = () => {
             <button
               id="player-action-share"
               onClick={() => setShareOpen(true)}
-              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-black/40 border border-white/10 text-neutral-400 hover:text-white hover:border-[#39FF14]/25 transition-all cursor-pointer text-xs font-bold"
+              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-[#0a0a0a]/40 border border-white/10 text-neutral-400 hover:text-white hover:border-[#39FF14]/25 transition-all cursor-pointer text-xs font-bold"
             >
               <Share2 className="h-4 w-4" />
               <span>Share</span>
@@ -974,7 +1066,11 @@ export const PlayerPage: React.FC = () => {
 
             <button
               id="player-action-download"
-              onClick={() => setFullDownloadModalOpen(true)}
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                setDownloadClickPosition({ x: rect.left + rect.width / 2, y: rect.bottom + 10 });
+                setFullDownloadModalOpen(true);
+              }}
               disabled={downloadBusy}
               className="flex items-center gap-2 px-5 py-3 rounded-2xl btn-secondary text-xs font-bold cursor-pointer disabled:opacity-50"
               title="Download Full Movie"
@@ -1051,7 +1147,7 @@ export const PlayerPage: React.FC = () => {
         <div className="max-w-5xl mt-8">
           <button
             onClick={() => setShowLiveChat((prev) => !prev)}
-            className="w-full max-w-2xl mx-auto flex items-center gap-3 rounded-3xl border border-white/10 bg-[#050505]/70 px-4 py-4 text-left transition hover:bg-white/5"
+            className="w-full max-w-2xl mx-auto flex items-center gap-3 rounded-3xl border border-white/10 bg-[#0a0a0a]/70 px-4 py-4 text-left transition hover:bg-white/5"
           >
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#39FF14]/15 text-[#39FF14]">
               <MessageSquare className="h-5 w-5" />
@@ -1128,7 +1224,7 @@ export const PlayerPage: React.FC = () => {
       {/* Right Sidebar Column — Up Next queue only; Live Chat has moved below cast. */}
       <div 
         id="player-sidebar" 
-        className="w-full lg:w-96 flex flex-col gap-6 border-t lg:border-t-0 lg:border-l border-white/5 bg-[#050505]/40 lg:p-6 p-4 flex-none lg:h-screen lg:sticky lg:top-0 lg:overflow-y-auto min-h-0"
+        className="w-full lg:w-96 flex flex-col gap-6 border-t lg:border-t-0 lg:border-l border-white/5 bg-[#0a0a0a]/40 lg:p-6 p-4 flex-none lg:h-screen lg:sticky lg:top-0 lg:overflow-y-auto min-h-0"
       >
         {(recommendations.length > 0 || similarMovies.length > 0) && (
           <>
@@ -1158,6 +1254,8 @@ export const PlayerPage: React.FC = () => {
                 if (episodesList.length > 0) {
                   const idx = episodesList.indexOf(currentEpisode);
                   const next = idx >= 0 && idx < episodesList.length - 1 ? episodesList[idx + 1] : episodesList[0];
+                  console.log(`🎬 Binge watch: Next episode ${next} (Season ${currentSeason})`);
+                  setIsLoadingVideo(true);
                   setCurrentEpisode(next);
                 }
               }}
@@ -1168,8 +1266,8 @@ export const PlayerPage: React.FC = () => {
 
       {/* Share Dialog Popup Modal */}
       {shareOpen && (
-        <div id="share-dialog-backdrop" className="fixed inset-0 z-60 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div id="share-dialog" className="glass-card p-6 rounded-3xl w-full max-w-sm text-center relative border border-white/10 bg-[#050505]/95">
+        <div id="share-dialog-backdrop" className="fixed inset-0 z-60 flex items-center justify-center bg-[#0a0a0a]/70 backdrop-blur-sm p-4">
+          <div id="share-dialog" className="glass-card p-6 rounded-3xl w-full max-w-sm text-center relative border border-white/10 bg-[#0a0a0a]/95">
             <button 
               id="close-share-btn"
               onClick={() => setShareOpen(false)}
@@ -1181,7 +1279,7 @@ export const PlayerPage: React.FC = () => {
             <h3 className="font-sans font-black text-lg text-white mb-2">Share This Stream</h3>
             <p className="text-xs text-neutral-400 mb-6">Let your friends join the premium Cinemax watch discussion group in real-time!</p>
             
-            <div className="flex gap-2 bg-[#050505]/80 p-2.5 rounded-2xl border border-white/5 items-center justify-between mb-4">
+            <div className="flex gap-2 bg-[#0a0a0a]/80 p-2.5 rounded-2xl border border-white/5 items-center justify-between mb-4">
               <span className="text-[10px] text-neutral-400 font-mono truncate select-all">{window.location.href}</span>
               <button 
                 onClick={() => {
@@ -1212,10 +1310,12 @@ export const PlayerPage: React.FC = () => {
         onClose={() => {
           setFullDownloadModalOpen(false);
           setFullDownloadResult(null);
+          setDownloadClickPosition(null);
         }}
         onDownload={handleFullMovieDownload}
         isDownloading={downloadBusy}
         downloadResult={fullDownloadResult}
+        clickPosition={downloadClickPosition}
       />
 
     </div>

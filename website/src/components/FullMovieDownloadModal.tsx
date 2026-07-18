@@ -12,6 +12,7 @@ interface FullMovieDownloadModalProps {
   downloadResult: { ok: boolean; error?: string } | null;
   storageType?: "device" | "cinemax";
   onDelete?: () => void;
+  clickPosition?: { x: number; y: number } | null;
 }
 
 export const FullMovieDownloadModal: React.FC<FullMovieDownloadModalProps> = ({
@@ -23,6 +24,7 @@ export const FullMovieDownloadModal: React.FC<FullMovieDownloadModalProps> = ({
   downloadResult,
   storageType = "device",
   onDelete,
+  clickPosition,
 }) => {
   if (!isOpen || !movie) return null;
 
@@ -39,9 +41,19 @@ export const FullMovieDownloadModal: React.FC<FullMovieDownloadModalProps> = ({
   const title = movie.title || movie.name || "Untitled";
   const posterUrl = getImageUrl(movie.poster_path, "w500");
 
+  // Calculate position - if clickPosition is provided, use it, otherwise center
+  const positionStyle = clickPosition
+    ? {
+        position: 'fixed' as const,
+        left: `${clickPosition.x}px`,
+        top: `${clickPosition.y}px`,
+        transform: 'translateX(-50%)',
+      }
+    : {};
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
-      <div className="relative w-full max-w-sm mx-4 pointer-events-auto">
+      <div className="relative w-full max-w-sm mx-4 pointer-events-auto" style={positionStyle}>
         {/* Clean popup card - no backdrop darkening */}
         <div className="relative bg-[#0c0c0c] border border-neutral-800 rounded-2xl overflow-hidden shadow-2xl">
           

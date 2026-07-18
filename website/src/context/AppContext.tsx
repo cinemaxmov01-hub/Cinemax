@@ -124,14 +124,12 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-// InfinityFree (static hosting) doesn't support env var injection at build
-// time, so VITE_API_BASE_URL is never actually set there. Always fall back to
-// the real live backend — never a stale/dead onrender.com service name, or
-// every absolute-URL fetch in this file 404s/fails with a CORS or network
-// error while every OTHER fetch (routed through utils/apiBase.ts) works fine.
+// Backend is provided by Render through VITE_API_BASE_URL. If Render doesn't
+// inject it, fall back to the hosted backend service instead of localhost or
+// same-origin static hosting, which causes browser "Failed to fetch" errors.
 const API_BASE = (typeof import.meta === "object" && (import.meta as any).env?.VITE_API_BASE_URL)
   ? String((import.meta as any).env.VITE_API_BASE_URL).replace(/\/+$/, "")
-  : "https://cinemaxmovie-backend-1mol.onrender.com";
+  : "https://cinemax-backend.onrender.com";
 
 
 

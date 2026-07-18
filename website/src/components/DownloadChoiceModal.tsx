@@ -65,7 +65,7 @@ export const DownloadChoiceModal: React.FC<DownloadChoiceModalProps> = ({
             </p>
 
             {/* Storage Usage Display */}
-            <div className="bg-black/40 rounded-xl p-4 mb-6 border border-white/5">
+            <div className="bg-[#0a0a0a]/40 rounded-xl p-4 mb-6 border border-white/5">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-semibold text-neutral-400">Storage Usage</span>
                 <span className="text-xs font-bold text-[#39FF14]">{formatBytes(storageUsage.total)} used</span>

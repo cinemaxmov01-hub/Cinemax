@@ -1,6 +1,6 @@
 import React from "react";
 import { useApp } from "../context/AppContext";
-import { Bot, Mic, Bookmark, ShieldCheck, Sparkles, Users, Rocket, Heart } from "lucide-react";
+import { Bot, Mic, Bookmark, ShieldCheck, Sparkles, Users, Rocket, Heart, Building2, Globe, Link } from "lucide-react";
 
 const FEATURES = [
   {
@@ -79,10 +79,9 @@ export const AboutPage: React.FC = () => {
       </div>
 
       {/* Stats strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-16">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-16">
         {[
           { value: "1M+", label: "Titles Indexed" },
-          { value: "5", label: "Streaming Servers" },
           { value: "24/7", label: "AI Help Desk" },
           { value: "99.9%", label: "Uptime Target" },
         ].map((stat) => (
@@ -91,6 +90,35 @@ export const AboutPage: React.FC = () => {
             <p className="text-[10px] sm:text-xs text-neutral-500 font-semibold uppercase tracking-wider mt-1">{stat.label}</p>
           </div>
         ))}
+      </div>
+
+      {/* CEO Card */}
+      <div className="glass-card rounded-3xl p-8 sm:p-10 mb-16">
+        <div className="flex items-center gap-2 mb-6">
+          <Building2 className="h-6 w-6 text-[#39FF14]" />
+          <h2 className="font-sans text-xl font-bold">Leadership</h2>
+        </div>
+        <div className="rounded-2xl bg-white/5 border border-white/10 p-6">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 h-16 w-16 rounded-2xl bg-gradient-to-br from-[#39FF14]/20 to-[#39FF14]/5 border border-[#39FF14]/30 flex items-center justify-center">
+              <span className="text-2xl font-black text-[#39FF14]">S</span>
+            </div>
+            <div className="flex-1">
+              <h3 className="font-sans text-lg font-bold text-white mb-1">SHEMAlucin</h3>
+              <p className="text-xs font-semibold text-[#39FF14] mb-3">CEO & Founder</p>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm text-neutral-400">
+                  <Globe className="h-4 w-4" />
+                  <span>Rwanda</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-neutral-400">
+                  <Link className="h-4 w-4" />
+                  <span>cinemaxmov</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Features */}
@@ -130,20 +158,6 @@ export const AboutPage: React.FC = () => {
               </div>
             );
           })}
-        </div>
-      </div>
-
-      {/* Streaming reliability note */}
-      <div className="glass-card rounded-3xl p-6 sm:p-8 mb-16 flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left">
-        <div className="flex-shrink-0 h-14 w-14 rounded-2xl bg-[#39FF14]/10 border border-[#39FF14]/20 flex items-center justify-center text-[#39FF14]">
-          <ShieldCheck className="h-7 w-7" />
-        </div>
-        <div>
-          <h3 className="font-sans font-bold text-base text-white mb-1.5">Ad-Blocked, Multi-Server Playback</h3>
-          <p className="text-xs text-neutral-400 leading-relaxed max-w-2xl">
-            Every full movie plays through a sandboxed player backed by 5 reliable streaming sources — switch servers
-            instantly if one is slow, with pop-ups and forced redirects blocked automatically.
-          </p>
         </div>
       </div>
 

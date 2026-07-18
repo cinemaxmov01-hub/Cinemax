@@ -16,7 +16,7 @@ export const AdBanner: React.FC<AdBannerProps> = ({ ad, className = "", variant 
       href={ad.targetUrl}
       target="_blank"
       rel="noopener noreferrer sponsored"
-      className={`block rounded-2xl overflow-hidden border border-white/10 bg-black/40 group ${heightClass} ${className}`}
+      className={`block rounded-2xl overflow-hidden border border-white/10 bg-[#0a0a0a]/40 group ${heightClass} ${className}`}
       aria-label={`Advertisement: ${ad.title}`}
     >
       <img

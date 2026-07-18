@@ -59,7 +59,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, rank, onClick, isPr
         />
 
         {isPreparing && (
-          <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-2 bg-black/70 backdrop-blur-[2px]">
+          <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-2 bg-[#0a0a0a]/70 backdrop-blur-[2px]">
             <Loader2 className="h-5 w-5 sm:h-7 sm:w-7 text-[#39FF14] animate-spin" />
             <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-[#39FF14]">Loading…</span>
           </div>

@@ -14,7 +14,7 @@ export const MaintenanceScreen: React.FC<MaintenanceScreenProps> = ({
   isAdmin,
   onAdminPanel,
 }) => (
-  <div className="min-h-screen flex items-center justify-center p-6" style={{ background: "var(--bg, #050505)" }}>
+  <div className="min-h-screen flex items-center justify-center p-6" style={{ background: "var(--bg, #0a0a0a)" }}>
     <div className="max-w-md text-center space-y-6">
       <div className="flex h-16 w-16 items-center justify-center rounded-2xl logo-mark font-black text-2xl mx-auto">
         C

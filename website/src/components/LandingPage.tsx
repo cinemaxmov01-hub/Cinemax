@@ -138,11 +138,11 @@ export const LandingPage: React.FC = () => {
   };
 
   return (
-    <div id="landing-page" className="min-h-screen bg-[#050505] text-white overflow-x-hidden on-dark-bg">
+    <div id="landing-page" className="min-h-screen bg-[#0a0a0a] text-white overflow-x-hidden on-dark-bg">
       {/* HERO */}
       <section className="relative min-h-screen flex flex-col">
         {/* Sliding image-only carousel. No trailer or movie autoplay on the first page. */}
-        <div className="absolute inset-0 overflow-hidden bg-black">
+        <div className="absolute inset-0 overflow-hidden bg-[#0a0a0a]">
           {heroMovies.map((movie: Movie, idx: number) => (
             <div
               key={movie.id}
@@ -476,7 +476,7 @@ export const LandingPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="relative mx-auto aspect-[3/4] w-full max-w-[72px] overflow-hidden rounded-lg border border-[#39FF14] bg-black shadow-[0_0_18px_rgba(57,255,20,0.22)] sm:max-w-[88px]">
+            <div className="relative mx-auto aspect-[3/4] w-full max-w-[72px] overflow-hidden rounded-lg border border-[#39FF14] bg-[#0a0a0a] shadow-[0_0_18px_rgba(57,255,20,0.22)] sm:max-w-[88px]">
               <img
                 src="/branding/developer-profile.jpg"
                 alt="shemalucin"

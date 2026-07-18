@@ -148,7 +148,7 @@ export const LiveChat: React.FC<LiveChatProps> = ({ variant = "sidebar" }) => {
       {!collapsed && (
         <>
           {/* Tabs */}
-          <div className="flex-none flex border-b border-white/5 bg-black/20">
+          <div className="flex-none flex border-b border-white/5 bg-[#0a0a0a]/20">
             <button
               id="live-chat-tab-popular"
               onClick={() => setTab("popular")}
@@ -414,7 +414,7 @@ const PopularTab: React.FC<{ isSignedIn: boolean; myId?: string; onSignInRequire
         </div>
       )}
 
-      <div className="flex-none p-3 border-t border-white/5 bg-black/40 live-chat-composer">
+      <div className="flex-none p-3 border-t border-white/5 bg-[#0a0a0a]/40 live-chat-composer">
         {isSignedIn ? (
           <>
             <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelected} className="hidden" />
@@ -800,7 +800,7 @@ const InboxTab: React.FC<{
 
       {error && <div className="px-4 pb-1 text-[10px] text-rose-400 font-semibold">{error}</div>}
 
-      <div className="flex-none p-3 border-t border-white/5 bg-black/40">
+      <div className="flex-none p-3 border-t border-white/5 bg-[#0a0a0a]/40">
         <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelected} className="hidden" />
         {pendingImage && <PendingImageStrip url={pendingImage} onClear={() => setPendingImage(null)} />}
 

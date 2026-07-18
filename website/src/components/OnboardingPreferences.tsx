@@ -112,7 +112,7 @@ export const OnboardingPreferences: React.FC<OnboardingPreferencesProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0a0a0a]/80 backdrop-blur-sm p-4 animate-fade-in">
       <div className="relative w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-3xl border border-white/10 bg-[#0a0a0a] animate-slide-up scrollbar-thin scrollbar-thumb-neutral-800 scrollbar-track-transparent">
         {/* Close button */}
         <button
@@ -192,11 +192,11 @@ export const OnboardingPreferences: React.FC<OnboardingPreferencesProps> = ({
                         : "bg-white/5 text-neutral-300 hover:bg-white/10 border border-white/5"
                     } ${!isSelected && selectedGenres.length >= MAX_GENRES ? "opacity-50 cursor-not-allowed" : ""}`}
                   >
-                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                      <div className={`flex-shrink-0 rounded-lg p-2 ${isSelected ? "bg-white/20" : "bg-white/10"}`}>
+                    <div className="flex items-center gap-3">
+                      <div className={`rounded-lg p-2 ${isSelected ? "bg-white/20" : "bg-white/10"}`}>
                         <Icon className="h-5 w-5" />
                       </div>
-                      <span className="font-semibold text-xs sm:text-sm leading-tight break-words min-w-0">{genre.name}</span>
+                      <span className="font-semibold text-xs sm:text-sm leading-tight break-words">{genre.name}</span>
                     </div>
                     {isSelected && (
                       <div className="absolute top-2 right-2">

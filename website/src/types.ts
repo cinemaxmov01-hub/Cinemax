@@ -18,6 +18,7 @@ export interface Movie {
   // have a negative id and play their trailer directly rather than through
   // the multi-provider streaming embed used for real TMDB titles.
   isCustom?: boolean;
+  tmdb_id?: number; // TMDB ID if imported from TMDB (for custom content)
   trailerYoutubeKey?: string;
   media_type?: "movie" | "tv";
   /** Optional direct download URL for fullmovie files (if available). */
@@ -25,6 +26,15 @@ export interface Movie {
   featured?: boolean;
   vote_count?: number;
   popularity?: number;
+  // TV Show specific fields for custom content
+  seasons?: any[];
+  episodes?: any[];
+  status?: string;
+  cast?: any[];
+  crew?: any[];
+  original_language?: string;
+  original_title?: string;
+  video?: boolean;
 }
 
 export interface CastMember {

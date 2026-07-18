@@ -182,7 +182,7 @@ export const GensPage: React.FC<GensPageProps> = ({ onMovieClick }) => {
 
   if (accessDenied) {
     return (
-      <div className="min-h-screen bg-[#050505] text-white p-4 sm:p-8">
+      <div className="min-h-screen bg-[#0a0a0a] text-white p-4 sm:p-8">
         <div className="max-w-2xl mx-auto">
           <div className="bg-red-500/10 border border-red-500/30 rounded-3xl p-6 sm:p-8 text-center">
             <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -190,7 +190,7 @@ export const GensPage: React.FC<GensPageProps> = ({ onMovieClick }) => {
             </div>
             <h2 className="text-2xl sm:text-3xl font-bold mb-4">Access Denied</h2>
             <p className="text-neutral-300 mb-6">{accessReason}</p>
-            <div className="bg-black/30 rounded-xl p-4 text-left text-sm text-neutral-400">
+            <div className="bg-[#0a0a0a]/30 rounded-xl p-4 text-left text-sm text-neutral-400">
               <p className="font-semibold text-white mb-2">Access Policy</p>
               <ul className="space-y-2">
                 <li className="flex items-start gap-2">
@@ -220,7 +220,7 @@ export const GensPage: React.FC<GensPageProps> = ({ onMovieClick }) => {
 
   if (checkingAccess) {
     return (
-      <div className="min-h-screen bg-[#050505] text-white p-4 sm:p-8">
+      <div className="min-h-screen bg-[#0a0a0a] text-white p-4 sm:p-8">
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="w-12 h-12 border-4 border-[#39FF14]/30 border-t-[#39FF14] rounded-full animate-spin mx-auto mb-4" />
@@ -232,7 +232,7 @@ export const GensPage: React.FC<GensPageProps> = ({ onMovieClick }) => {
   }
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen bg-[#0a0a0a] text-white p-4 sm:p-6 lg:p-8">
       {/* Header */}
       <div className="max-w-7xl mx-auto mb-6 sm:mb-8">
         <div className="flex items-center gap-3 sm:gap-4 mb-4">

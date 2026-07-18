@@ -20,7 +20,7 @@ import {
   Sun,
   Moon,
   Globe,
-  
+  Tag,
   Sparkles,
 } from "lucide-react";
 import { AvatarRenderer } from "./AnimatedAvatar";
@@ -75,6 +75,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
     { id: "favorites", labelKey: "favorites", icon: Heart },
     { id: "downloads", labelKey: "downloads", icon: Download },
     { id: "gens", label: "Gens", icon: Sparkles, badge: "18+" },
+    { id: "download-app", label: "Download App", icon: Download, isAction: true },
   ];
 
   const visiblePrimaryNav = primaryNavigation.filter((item) => {
@@ -137,7 +138,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
       {isOpen && (
         <div 
           id="mobile-backdrop"
-          className="fixed inset-0 z-40 bg-black lg:hidden"
+          className="fixed inset-0 z-40 bg-[#0a0a0a] lg:hidden"
           onClick={() => setIsOpen(false)}
         />
       )}
@@ -174,8 +175,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
             {visiblePrimaryNav.map((item) => {
               const Icon = item.icon;
               const isActive = currentView === item.id && activeGenre === null;
-              const navLabel = pageConfig[item.id]?.label || t(item.labelKey);
+              const navLabel = pageConfig[item.id]?.label || (item.labelKey ? t(item.labelKey) : item.label);
               const isGens = item.id === "gens";
+              const isDownloadApp = (item as any).isAction;
+              
+              if (isDownloadApp) {
+                return (
+                  <div key={item.id} className="px-4">
+                    <InstallAppButton variant="sidebar" label="Download App" />
+                  </div>
+                );
+              }
+              
               return (
                 <button
                   key={item.id}
@@ -219,6 +230,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
               <span>{t("categories")}</span>
               <ChevronDown className="h-3 w-3" />
             </div>
+            <button
+              id="sidebar-all-categories-btn"
+              onClick={() => {
+                setActiveGenre(null);
+                setActiveGenreName(null);
+                setCurrentView("movies");
+                setIsOpen(false);
+              }}
+              className="flex w-full items-center px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-150 bg-gradient-to-r from-[#39FF14]/10 to-transparent text-[#39FF14] border border-[#39FF14]/20 hover:border-[#39FF14]/40"
+            >
+              <Tag className="h-4 w-4 mr-3" />
+              {t("allCategories")}
+            </button>
             <div className="space-y-1 max-h-64 overflow-y-auto custom-scrollbar pr-1">
               {genres.map((g) => {
                 const isActive = activeGenre === g.id;
@@ -315,7 +339,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
         {user && (
           <div
             id="user-sidebar-footer"
-            className="border-t border-white/5 bg-black/40 p-4 flex items-center gap-3"
+            className="border-t border-white/5 bg-[#0a0a0a]/40 p-4 flex items-center gap-3"
           >
             <button
               onClick={() => handleNavClick("profile")}

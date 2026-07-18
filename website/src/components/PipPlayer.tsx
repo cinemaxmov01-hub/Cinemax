@@ -1,6 +1,15 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useApp } from "../context/AppContext";
-import { PROVIDERS_CONFIG, buildEmbedUrl, EMBED_IFRAME_ALLOW } from "../utils/streamingConfig";
+import { 
+  PROVIDERS_CONFIG, 
+  buildEmbedUrl, 
+  buildOptimizedEmbedUrl, 
+  EMBED_IFRAME_ALLOW,
+  selectBestProvider,
+  detectConnectionSpeed,
+  estimateUserRegion,
+  getOptimizedIframeConfig
+} from "../utils/streamingConfig";
 import { X, Maximize2, Play, Pause, Volume2, VolumeX, Move, Film } from "lucide-react";
 
 export const PipPlayer: React.FC = () => {
@@ -24,6 +33,22 @@ export const PipPlayer: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const dragStart = useRef({ x: 0, y: 0 });
   const [isMuted, setIsMuted] = useState(true); // iframe standard autoplay requires muting initially
+  const [connectionSpeed, setConnectionSpeed] = useState<'slow' | 'medium' | 'fast'>('medium');
+  const [embedUrl, setEmbedUrl] = useState<string>("");
+
+  // Detect connection speed for PIP optimization
+  useEffect(() => {
+    setConnectionSpeed(detectConnectionSpeed());
+    
+    const connection = (navigator as any).connection;
+    if (connection) {
+      const handleConnectionChange = () => {
+        setConnectionSpeed(detectConnectionSpeed());
+      };
+      connection.addEventListener('change', handleConnectionChange);
+      return () => connection.removeEventListener('change', handleConnectionChange);
+    }
+  }, []);
 
   // Save progress periodically if playing
   useEffect(() => {
@@ -43,20 +68,34 @@ export const PipPlayer: React.FC = () => {
     }
   }, [pipProgress, pipMovie?.id, updateHistoryProgress]);
 
+  // Generate embed URL when parameters change
+  useEffect(() => {
+    const generateUrl = async () => {
+      if (!pipMovie) return;
+      const userRegion = estimateUserRegion();
+      const activeProvider = PROVIDERS_CONFIG.find(p => p.id === pipProviderId) || 
+                            selectBestProvider(PROVIDERS_CONFIG, connectionSpeed, userRegion);
+      const type = !pipMovie.title ? "tv" : "movie";
+      const url = await buildOptimizedEmbedUrl(
+        activeProvider,
+        type,
+        pipMovie.id,
+        pipSeason,
+        pipEpisode
+      );
+      setEmbedUrl(url);
+    };
+    generateUrl();
+  }, [pipMovie, pipSeason, pipEpisode, pipProviderId, connectionSpeed]);
+
   if (!pipMovie) return null;
 
-  const activeProvider = PROVIDERS_CONFIG.find(p => p.id === pipProviderId) || PROVIDERS_CONFIG[0];
+  // Use intelligent provider selection for PIP
+  const userRegion = estimateUserRegion();
+  const activeProvider = PROVIDERS_CONFIG.find(p => p.id === pipProviderId) || 
+                        selectBestProvider(PROVIDERS_CONFIG, connectionSpeed, userRegion);
+  
   const type = !pipMovie.title ? "tv" : "movie";
-  const embedUrl = buildEmbedUrl(
-    activeProvider,
-    type,
-    pipMovie.id,
-    pipSeason,
-    pipEpisode,
-    "English",
-    "Auto (1080p)",
-    "English (5.1)"
-  );
 
   // Dragging logic
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -118,7 +157,7 @@ export const PipPlayer: React.FC = () => {
       <div
         id="pip-header"
         onMouseDown={handleMouseDown}
-        className="flex items-center justify-between px-3 py-1.5 bg-black/60 cursor-grab active:cursor-grabbing select-none border-b border-white/5 text-[10px] text-neutral-400 font-sans"
+        className="flex items-center justify-between px-3 py-1.5 bg-[#0a0a0a]/60 cursor-grab active:cursor-grabbing select-none border-b border-white/5 text-[10px] text-neutral-400 font-sans"
       >
         <div className="flex items-center gap-1.5 font-semibold truncate max-w-[70%]">
           <Move className="h-3 w-3 text-[#39FF14] shrink-0" />
@@ -147,19 +186,20 @@ export const PipPlayer: React.FC = () => {
       </div>
 
       {/* Frame content */}
-      <div id="pip-media-wrapper" className="flex-1 bg-black relative">
+      <div id="pip-media-wrapper" className="flex-1 bg-[#0a0a0a] relative">
         <iframe
           src={embedUrl}
           className="w-full h-full border-0 pointer-events-none"
           allow={EMBED_IFRAME_ALLOW}
           allowFullScreen={false}
           referrerPolicy="origin"
+          loading={getOptimizedIframeConfig(connectionSpeed, true).loading}
           scrolling="no"
         />
 
         {/* Floating controls in PIP overlay */}
-        <div id="pip-controls-overlay" className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-between opacity-0 hover:opacity-100 transition-opacity p-2.5">
-          <div className="self-end bg-black/50 px-1.5 py-0.5 rounded text-[8px] font-mono font-bold text-[#39FF14] border border-[#39FF14]/20 uppercase">
+        <div id="pip-controls-overlay" className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/80 via-transparent to-transparent flex flex-col justify-between opacity-0 hover:opacity-100 transition-opacity p-2.5">
+          <div className="self-end bg-[#0a0a0a]/50 px-1.5 py-0.5 rounded text-[8px] font-mono font-bold text-[#39FF14] border border-[#39FF14]/20 uppercase">
             {activeProvider.name}
           </div>
 

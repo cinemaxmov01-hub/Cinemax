@@ -148,15 +148,33 @@ export const HomeAIAssistant: React.FC<HomeAIAssistantProps> = ({ onSelectMovie,
         };
 
         recognition.onresult = (event: any) => {
-          const transcript = Array.from(event.results)
-            .map((result: any) => result[0])
-            .map((result: any) => result.transcript)
-            .join('');
-          setInput(transcript);
-          
-          // Detect language from the recognition
-          if (event.results[0] && event.results[0][0].lang) {
-            setDetectedLanguage(event.results[0][0].lang);
+          let finalTranscript = '';
+          let interimTranscript = '';
+
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              finalTranscript += transcript;
+            } else {
+              interimTranscript += transcript;
+            }
+          }
+
+          // Update input with final transcript
+          if (finalTranscript) {
+            setInput(finalTranscript);
+            
+            // Detect language from the recognition
+            if (event.results[0] && event.results[0][0].lang) {
+              setDetectedLanguage(event.results[0][0].lang);
+            }
+            
+            // Auto-submit after a short delay for better UX
+            setTimeout(() => {
+              if (finalTranscript.trim()) {
+                handleSend(finalTranscript);
+              }
+            }, 500);
           }
         };
 
@@ -189,9 +207,15 @@ export const HomeAIAssistant: React.FC<HomeAIAssistantProps> = ({ onSelectMovie,
 
     if (isListening) {
       recognitionRef.current.stop();
+      setIsListening(false);
     } else {
       recognitionRef.current.lang = detectedLanguage;
-      recognitionRef.current.start();
+      try {
+        recognitionRef.current.start();
+      } catch (error) {
+        console.error('Failed to start speech recognition:', error);
+        setIsListening(false);
+      }
     }
   };
 
@@ -399,7 +423,7 @@ export const HomeAIAssistant: React.FC<HomeAIAssistantProps> = ({ onSelectMovie,
           )}
 
 
-          <div className="p-3 border-t border-white/10 flex items-center gap-2 bg-black/40">
+          <div className="p-3 border-t border-white/10 flex items-center gap-2 bg-[#0a0a0a]/40">
             <button 
               onClick={toggleListening} 
               disabled={loading}

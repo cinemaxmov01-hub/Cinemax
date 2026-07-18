@@ -126,25 +126,26 @@ export const ShortsPage: React.FC<ShortsPageProps> = ({ onWatch }) => {
   }
 
   return (
-    <div className="relative h-[calc(100dvh-4rem)] lg:h-[calc(100dvh-0px)] flex items-center justify-center bg-black lg:rounded-3xl overflow-hidden">
+    <div className="relative h-[calc(100dvh-4rem)] lg:h-[calc(100dvh-0px)] flex items-center justify-center bg-gradient-to-br from-[#0a0a0a] to-[#1a1a2e] lg:rounded-3xl overflow-hidden">
       {/* Ambient blurred backdrop fills the letterboxed space beside the narrow rail on wider screens */}
       {clips[activeIndex] && (
         <img
           src={getImageUrl(clips[activeIndex].movie.backdrop_path, "original")}
           alt=""
           aria-hidden="true"
-          className="hidden sm:block absolute inset-0 w-full h-full object-cover opacity-25 blur-2xl scale-110"
+          className="hidden sm:block absolute inset-0 w-full h-full object-cover opacity-30 blur-3xl scale-125 transition-all duration-700"
           referrerPolicy="no-referrer"
+          loading="lazy"
         />
       )}
-      <div className="hidden sm:block absolute inset-0 bg-black/50" />
+      <div className="hidden sm:block absolute inset-0 bg-gradient-to-b from-[#0a0a0a]/70 via-[#0a0a0a]/50 to-[#1a1a2e]/80" />
 
       {/* Slim vertical rail — mirrors YouTube Shorts' narrow player width on anything wider than a phone */}
       <div
         id="shorts-page"
         ref={containerRef}
         onScroll={handleScroll}
-        className="relative z-10 h-full w-full sm:w-[420px] sm:max-w-[420px] sm:my-4 sm:rounded-3xl overflow-y-scroll snap-y snap-mandatory scroll-smooth bg-black no-scrollbar sm:border sm:border-white/10"
+        className="relative z-10 h-full w-full sm:w-[400px] sm:max-w-[400px] sm:my-4 sm:rounded-3xl overflow-y-scroll snap-y snap-mandatory scroll-smooth bg-[#0a0a0a] no-scrollbar sm:border sm:border-white/10 sm:shadow-2xl"
         style={{ scrollbarWidth: "none" }}
       >
         {clips.map((clip, idx) => (
@@ -164,8 +165,8 @@ export const ShortsPage: React.FC<ShortsPageProps> = ({ onWatch }) => {
         ))}
 
         {/* End-of-feed loader */}
-        <div className="h-24 flex items-center justify-center text-neutral-600 text-xs snap-end">
-          <Loader2 className="h-4 w-4 animate-spin mr-2" /> Loading more shorts...
+        <div className="h-32 flex items-center justify-center text-neutral-600 text-xs snap-end">
+          <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading more shorts...
         </div>
       </div>
     </div>
@@ -196,14 +197,15 @@ const ShortSlide = React.forwardRef<HTMLDivElement, ShortSlideProps>(
       <div
         ref={ref}
         data-index={index}
-        className="relative h-full w-full snap-start snap-always flex items-center justify-center overflow-hidden"
+        className="relative h-full w-full snap-start snap-always flex items-center justify-center overflow-hidden bg-[#0a0a0a]"
       >
         {/* Poster fallback / background while the player mounts */}
         <img
           src={getImageUrl(movie.backdrop_path, "original")}
           alt={title}
-          className="absolute inset-0 w-full h-full object-cover opacity-40 scale-105 blur-sm"
+          className="absolute inset-0 w-full h-full object-cover opacity-50 scale-105 transition-all duration-700"
           referrerPolicy="no-referrer"
+          loading="lazy"
         />
 
         {isNeighbor && videoKey && (
@@ -213,9 +215,10 @@ const ShortSlide = React.forwardRef<HTMLDivElement, ShortSlideProps>(
               key={`${videoKey}-${isActive}`}
               src={isActive ? embedSrc : undefined}
               title={title}
-              allow="autoplay; encrypted-media"
+              allow="autoplay; encrypted-media; fullscreen"
               className="pointer-events-none w-[300%] h-full"
               style={{ border: 0 }}
+              loading="lazy"
             />
           </div>
         )}
@@ -234,37 +237,37 @@ const ShortSlide = React.forwardRef<HTMLDivElement, ShortSlideProps>(
 
         {showTapHint && (
           <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-            <div className="bg-black/60 rounded-full p-4 animate-ping-once">
+            <div className="bg-[#0a0a0a]/70 backdrop-blur-sm rounded-full p-4 animate-ping-once border border-white/20">
               {muted ? <VolumeX className="h-8 w-8 text-white" /> : <Volume2 className="h-8 w-8 text-white" />}
             </div>
           </div>
         )}
 
         {/* Gradient overlays for legibility */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/10 to-black/40 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-black/40 pointer-events-none" />
 
         {/* Sound indicator, top right */}
         <div className="absolute top-4 right-4 z-20 flex items-center gap-2 pointer-events-none">
-          <div className="bg-black/50 backdrop-blur-md rounded-full p-2 border border-white/10">
+          <div className="bg-[#0a0a0a]/60 backdrop-blur-md rounded-full p-2.5 border border-white/10 shadow-lg">
             {muted ? <VolumeX className="h-4 w-4 text-white" /> : <Volume2 className="h-4 w-4 text-white" />}
           </div>
         </div>
 
         {/* Right-side action rail */}
-        <div className="absolute right-3 bottom-28 lg:bottom-16 z-20 flex flex-col items-center gap-5">
+        <div className="absolute right-3 bottom-28 lg:bottom-20 z-20 flex flex-col items-center gap-4">
           <button
             id={`shorts-like-${index}`}
             onClick={(e) => {
               e.stopPropagation();
               onToggleFavorite();
             }}
-            className="flex flex-col items-center gap-1 cursor-pointer group"
+            className="flex flex-col items-center gap-1.5 cursor-pointer group"
           >
             <div
-              className={`h-12 w-12 rounded-full flex items-center justify-center border transition-all ${
+              className={`h-11 w-11 rounded-full flex items-center justify-center border transition-all shadow-lg ${
                 isFavorite
-                  ? "bg-[#39FF14] border-[#39FF14] text-black scale-105"
-                  : "bg-black/50 backdrop-blur-md border-white/15 text-white group-hover:scale-110"
+                  ? "bg-[#39FF14] border-[#39FF14] text-black scale-105 shadow-[0_0_15px_rgba(57,255,20,0.4)]"
+                  : "bg-[#0a0a0a]/60 backdrop-blur-md border-white/15 text-white group-hover:scale-110 group-hover:bg-white/10"
               }`}
             >
               <Heart className={`h-5 w-5 ${isFavorite ? "fill-black" : ""}`} />
@@ -278,17 +281,17 @@ const ShortSlide = React.forwardRef<HTMLDivElement, ShortSlideProps>(
               e.stopPropagation();
               onWatch();
             }}
-            className="flex flex-col items-center gap-1 cursor-pointer group"
+            className="flex flex-col items-center gap-1.5 cursor-pointer group"
           >
-            <div className="h-12 w-12 rounded-full flex items-center justify-center bg-[#39FF14] text-black border border-[#39FF14] group-hover:scale-110 transition-all">
-              <Play className="h-5 w-5 fill-black" />
+            <div className="h-11 w-11 rounded-full flex items-center justify-center bg-[#39FF14] text-black border border-[#39FF14] group-hover:scale-110 transition-all shadow-lg shadow-[0_0_15px_rgba(57,255,20,0.3)]">
+              <Play className="h-5 w-5 fill-black ml-0.5" />
             </div>
             <span className="text-[10px] font-bold text-white drop-shadow">Watch</span>
           </button>
         </div>
 
         {/* Bottom title/info bar */}
-        <div className="absolute bottom-6 left-4 right-20 z-20 space-y-2 pointer-events-none">
+        <div className="absolute bottom-6 left-4 right-20 z-20 space-y-2.5 pointer-events-none">
           <div className="flex items-center gap-2 pointer-events-auto">
             <Clapperboard className="h-4 w-4 text-[#39FF14]" />
             <span className="text-[10px] font-black uppercase tracking-widest text-[#39FF14]">Shorts</span>
@@ -308,8 +311,8 @@ const ShortSlide = React.forwardRef<HTMLDivElement, ShortSlideProps>(
 
         {/* Scroll hint on the very first slide */}
         {index === 0 && (
-          <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1 text-white/70 animate-bounce pointer-events-none">
-            <ChevronUp className="h-4 w-4 rotate-180" />
+          <div className="absolute top-8 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1.5 text-white/70 animate-bounce pointer-events-none">
+            <ChevronUp className="h-5 w-5 rotate-180" />
             <span className="text-[9px] font-bold uppercase tracking-widest">Swipe up</span>
           </div>
         )}

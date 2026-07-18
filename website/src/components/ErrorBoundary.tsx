@@ -45,7 +45,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
           style={{
             minHeight: "100vh",
             width: "100%",
-            background: "#050505",
+            background: "#0a0a0a",
             color: "#e5e5e5",
             display: "flex",
             alignItems: "center",

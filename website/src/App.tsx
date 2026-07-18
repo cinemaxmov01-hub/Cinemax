@@ -199,42 +199,68 @@ const CinemaxDashboard: React.FC = () => {
         const trendingOverride = siteConfig.trendingOverrideIds || [];
         const featuredIds = siteConfig.featuredMovieIds || [];
 
+        // Load custom content first to merge into TMDB lists
+        let customMovies: Movie[] = [];
+        try {
+          const customRes = await fetch("/api/content/custom");
+          if (customRes.ok) {
+            const { movies } = await customRes.json();
+            customMovies = movies || [];
+            setCustomContent(customMovies);
+          }
+        } catch {
+          /* optional */
+        }
+
+        // Helper to merge custom content into TMDB lists
+        const mergeCustomContent = (tmdbList: Movie[], mediaType?: 'movie' | 'tv') => {
+          const filteredCustom = mediaType 
+            ? customMovies.filter(m => m.media_type === mediaType)
+            : customMovies;
+          
+          // Merge by removing duplicates and maintaining order
+          const seen = new Set(tmdbList.map(m => m.id));
+          const uniqueCustom = filteredCustom.filter(m => !seen.has(m.id));
+          
+          return [...tmdbList, ...uniqueCustom];
+        };
+
+        // Load multiple pages from each endpoint to get more content
+        const loadMultiplePages = async (fetchFn: (page: number) => Promise<Movie[]>, pages: number = 3) => {
+          const results = await Promise.all(
+            Array.from({ length: pages }, (_, i) => fetchFn(i + 1))
+          );
+          return results.flat();
+        };
+
         const [trendingM, trendingT, popular, top, up, now] = await Promise.all([
-          tmdb.getTrendingMovies(),
-          tmdb.getTrendingTVShows(),
-          tmdb.getPopularMovies(),
-          tmdb.getTopRatedMovies(),
-          tmdb.getUpcomingMovies(),
-          tmdb.getNowPlayingMovies(),
+          loadMultiplePages((page) => tmdb.getTrendingMovies(page), 3),
+          loadMultiplePages((page) => tmdb.getTrendingTVShows(page), 3),
+          loadMultiplePages((page) => tmdb.getPopularMovies(page), 3),
+          loadMultiplePages((page) => tmdb.getTopRatedMovies(page), 2),
+          loadMultiplePages((page) => tmdb.getUpcomingMovies(page), 2),
+          loadMultiplePages((page) => tmdb.getNowPlayingMovies(page), 2),
         ]);
 
         const applyHidden = (list: Movie[]) => filterHiddenMovies(list, hiddenIds);
-        let curatedTrending = applyHidden(trendingM);
+        
+        // Merge custom content into TMDB lists
+        let curatedTrending = applyHidden(mergeCustomContent(trendingM, 'movie'));
         if (trendingOverride.length) {
           curatedTrending = await applyTrendingOverride(curatedTrending, trendingOverride);
         }
 
         setTrendingMovies(curatedTrending);
-        setTrendingTV(applyHidden(trendingT));
-        setPopularMovies(applyHidden(popular));
-        setTopRated(applyHidden(top));
+        setTrendingTV(applyHidden(mergeCustomContent(trendingT, 'tv')));
+        setPopularMovies(applyHidden(mergeCustomContent(popular, 'movie')));
+        setTopRated(applyHidden(mergeCustomContent(top)));
         setUpcoming(applyHidden(up));
-        setNowPlaying(applyHidden(now));
+        setNowPlaying(applyHidden(mergeCustomContent(now, 'movie')));
 
         if (featuredIds.length) {
           setFeaturedHeroMovies(await loadFeaturedMovies(featuredIds));
         } else {
           setFeaturedHeroMovies([]);
-        }
-
-        try {
-          const customRes = await fetch("/api/content/custom");
-          if (customRes.ok) {
-            const { movies } = await customRes.json();
-            setCustomContent(movies || []);
-          }
-        } catch {
-          /* optional */
         }
 
         try {
@@ -688,21 +714,6 @@ const CinemaxDashboard: React.FC = () => {
       </div>
       <h3 className="font-sans font-bold text-lg text-neutral-300">Sign in to view {label}</h3>
       <p className="text-xs max-w-sm mx-auto">You're browsing as a guest. Create a free account or sign in to unlock this.</p>
-      <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-        <button
-          onClick={() => requireSignInPrompt()}
-          className="neon-btn inline-flex items-center gap-2 font-bold px-6 py-2.5 rounded-xl text-xs uppercase tracking-wide transition-all cursor-pointer"
-        >
-          Sign In
-        </button>
-        <button
-          type="button"
-          onClick={() => openForgotPasswordModal()}
-          className="btn-forgot inline-flex items-center gap-2 font-bold px-6 py-2.5 rounded-xl text-xs uppercase tracking-wide cursor-pointer"
-        >
-          Forgot Password
-        </button>
-      </div>
     </div>
   );
 
@@ -710,11 +721,11 @@ const CinemaxDashboard: React.FC = () => {
   const renderRowShelf = (title: string, movies: Movie[], hasRank = false, seeAllTarget?: { view: "movies" | "tv"; genre?: string | number | null; genreLabel?: string }) => {
     if (movies.length === 0) return null;
     return (
-      <div className="space-y-4 pt-4">
-        <div className="flex items-center justify-between">
+      <div className="space-y-3 sm:space-y-4 pt-3 sm:pt-4">
+        <div className="flex items-center justify-between px-4 lg:px-0">
           <div className="flex items-center gap-2">
             <span className="h-5 w-1 bg-[#22c55e] rounded-full" />
-            <h3 className="font-sans font-extrabold text-lg tracking-tight text-white">
+            <h3 className="font-sans font-extrabold text-base sm:text-lg tracking-tight text-white">
               {title}
             </h3>
           </div>
@@ -735,9 +746,9 @@ const CinemaxDashboard: React.FC = () => {
           </button>
         </div>
 
-        <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-neutral-900 scrollbar-track-transparent">
+        <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-3 sm:pb-4 scrollbar-thin scrollbar-thumb-neutral-900 scrollbar-track-transparent px-4 lg:px-0">
           {movies.map((movie, index) => (
-            <div key={movie.id} className="flex-none w-[130px] sm:w-[150px]">
+            <div key={movie.id} className="flex-none w-[110px] sm:w-[130px] md:w-[150px]">
               <MovieCard
                 movie={movie}
                 rank={hasRank ? index + 1 : undefined}
@@ -753,7 +764,7 @@ const CinemaxDashboard: React.FC = () => {
   const splashScreen = (
     <div
       id="splash-loader-screen"
-      className={`fixed inset-0 z-[10000] bg-[#050505] on-dark-bg flex flex-col items-center justify-center transition-opacity duration-500 ease-out ${fadeSplash ? "opacity-0 pointer-events-none" : "opacity-100"}`}
+      className={`fixed inset-0 z-[10000] bg-[#0a0a0a] on-dark-bg flex flex-col items-center justify-center transition-opacity duration-500 ease-out ${fadeSplash ? "opacity-0 pointer-events-none" : "opacity-100"}`}
     >
       <div className="flex flex-col items-center gap-6 max-w-sm px-6 text-center">
         <div className="h-20 w-20 rounded-3xl logo-mark flex items-center justify-center">
@@ -867,7 +878,7 @@ const CinemaxDashboard: React.FC = () => {
     // reading instead of being reset to the dashboard.
     if (currentView === "help") {
       return (
-        <div id="public-help-page" className="min-h-screen bg-[#050505] text-white">
+        <div id="public-help-page" className="min-h-screen bg-[#0a0a0a] text-white">
           {publicPageHeader}
           <HelpDeskPage />
           <Footer />
@@ -877,7 +888,7 @@ const CinemaxDashboard: React.FC = () => {
     }
     if (currentView === "about") {
       return (
-        <div id="public-about-page" className="min-h-screen bg-[#050505] text-white">
+        <div id="public-about-page" className="min-h-screen bg-[#0a0a0a] text-white">
           {publicPageHeader}
           <AboutPage />
           <Footer />
@@ -906,10 +917,10 @@ const CinemaxDashboard: React.FC = () => {
       <div id="main-content-panel" className="lg:pl-64 flex flex-col min-h-screen">
         
         {/* Top Header Navbar with frosted blur */}
-        <header id="top-navbar" className="h-20 glass-navbar sticky top-0 z-40 px-4 lg:px-8 flex items-center justify-between gap-2 sm:gap-4">
+        <header id="top-navbar" className="h-16 sm:h-20 glass-navbar sticky top-0 z-40 px-3 sm:px-4 lg:px-8 flex items-center justify-between gap-2 sm:gap-4">
           
           {/* Left Section: Mobile menu, Search, Voice Agent, Download App */}
-          <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 sm:gap-4 flex-shrink-0">
             <button
               id="mobile-menu-trigger"
               aria-label="Open navigation menu"
@@ -984,7 +995,7 @@ const CinemaxDashboard: React.FC = () => {
             </div>
 
             {/* Instant Search input — permanently visible across all devices */}
-            <div className="relative w-64 sm:w-80 lg:w-96">
+            <div className="relative w-40 sm:w-56 md:w-64 lg:w-80 xl:w-96">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500 pointer-events-none" aria-hidden="true" />
               <input
                 id="header-search-input"
@@ -1044,12 +1055,29 @@ const CinemaxDashboard: React.FC = () => {
                     handleMovieClick(movie);
                   }
                 }}
+                onDeleteLastAction={() => {
+                  // Clear search query as the delete action
+                  setSearchQuery('');
+                  setSearchResults([]);
+                }}
+                onOpenCategories={() => {
+                  // Open categories by setting categories open state
+                  setCategoriesOpen(true);
+                }}
+                onOpenSettings={() => {
+                  // Navigate to profile (settings are in profile page)
+                  setCurrentView('profile');
+                }}
+                onOpenHelp={() => {
+                  // Navigate to help page
+                  setCurrentView('help');
+                }}
               />
             </div>
 
           </div>
 
-          {/* Center Navigation: Movies / TV Shows / Gens / All Categories —
+          {/* Center Navigation: Movies / TV Shows / Genres —
              hidden on mobile (the hamburger drawer already covers every one
              of these links); shown from sm up once there's room for it. */}
           <nav className="hidden sm:flex items-center gap-1 flex-shrink-0 overflow-x-auto scrollbar-thin scrollbar-thumb-neutral-800 scrollbar-track-transparent">
@@ -1078,78 +1106,8 @@ const CinemaxDashboard: React.FC = () => {
                 currentView === "gens" ? "bg-[#39FF14]/10 text-[#39FF14]" : "text-neutral-400 hover:text-white hover:bg-white/5"
               }`}
             >
-              gens
+              Gens
             </button>
-            <div className="relative">
-              <button
-                id="nav-categories-btn"
-                onClick={() => setCategoriesOpen((v) => !v)}
-                className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  categoriesOpen ? "bg-[#39FF14]/10 text-[#39FF14]" : "text-neutral-400 hover:text-white hover:bg-white/5"
-                }`}
-              >
-                <Tag className="h-3.5 w-3.5" />
-                {t("allCategories")}
-                <ChevronRight className={`h-3.5 w-3.5 transition-transform duration-300 ${categoriesOpen ? "rotate-90" : ""}`} />
-              </button>
-              {categoriesOpen && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setCategoriesOpen(false)} />
-
-                  {/* Notification-style premium dropdown panel */}
-                  <div
-                    id="all-categories-dropdown"
-                    className="absolute left-0 top-full mt-3 z-50 w-80 animate-dropdown-pop transition-all duration-300 ease-out"
-                  >
-                    {/* Little caret connecting the panel to the trigger button */}
-                    <div className="absolute -top-1.5 left-6 h-3 w-3 rotate-45 bg-[#0c0c0c] border-l border-t border-[#39FF14]/20" />
-
-                    <div className="relative rounded-2xl border border-neutral-800 surface-panel overflow-hidden">
-                      {/* Header row */}
-                      <div className="flex items-center justify-between px-4 py-3.5 border-b border-white/10 bg-gradient-to-r from-[#39FF14]/10 to-transparent">
-                        <div className="flex items-center gap-2">
-                          <div className="h-7 w-7 rounded-lg bg-[#39FF14]/15 border border-[#39FF14]/30 flex items-center justify-center text-[#39FF14]">
-                            <Tag className="h-3.5 w-3.5" />
-                          </div>
-                          <span className="text-xs font-black text-white uppercase tracking-wider">{t("browseCategories")}</span>
-                        </div>
-                        <span className="text-[10px] font-bold text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/20 px-2 py-0.5 rounded-full">
-                          {allGenres.length}
-                        </span>
-                      </div>
-
-                      {/* Genre grid */}
-                      <div className="max-h-80 overflow-y-auto p-2 grid grid-cols-2 gap-1.5 scrollbar-thin scrollbar-thumb-neutral-800 scrollbar-track-transparent">
-                        {allGenres.map((g) => {
-                          const isActive = activeGenre === g.id;
-                          return (
-                            <button
-                              key={g.id}
-                              onClick={() => {
-                                setActiveGenre(g.id);
-                                setActiveGenreName(t(`genre.${g.name}`));
-                                setCurrentView("movies");
-                                setCategoriesOpen(false);
-                              }}
-                              className={`group relative flex items-center gap-2 text-left px-3 py-2.5 rounded-xl text-[11px] font-semibold transition-all duration-200 cursor-pointer overflow-hidden ${
-                                isActive
-                                  ? "accent-chip"
-                                  : "text-neutral-300 hover:bg-neutral-800 hover:text-white"
-                              }`}
-                            >
-                              <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 transition-all duration-200 ${
-                                isActive ? "bg-[#39FF14]" : "bg-neutral-700 group-hover:bg-neutral-600"
-                              }`} />
-                              <span className="truncate">{t(`genre.${g.name}`)}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
           </nav>
 
           {/* Right Header Navigation widgets */}
@@ -1187,7 +1145,7 @@ const CinemaxDashboard: React.FC = () => {
                 id="header-login-btn"
                 onClick={() => requireSignInPrompt()}
                 title="Sign in to access your profile"
-                className="neon-btn text-[10px] sm:text-xs px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
+                className="text-[10px] sm:text-xs px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 bg-[#39FF14] hover:bg-[#31dd11] text-black font-bold border border-[#39FF14]/30"
               >
                 <Lock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 <span className="hidden sm:inline">Sign In</span>
@@ -1235,7 +1193,7 @@ const CinemaxDashboard: React.FC = () => {
                 </div>
               ) : searchResults.length > 0 ? (
                 <>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 md:gap-6">
                     {searchResults.map((movie, index) => {
                       const cardKey = `${movie.media_type || (isTvShow(movie) ? "tv" : "movie")}:${movie.id}`;
                       const isPreparing = preparingPlayKey === cardKey;
@@ -1291,7 +1249,7 @@ const CinemaxDashboard: React.FC = () => {
                       featured titles every 3 seconds. */}
                   <div 
                     id="hero-banner" 
-                    className="relative w-full h-[480px] flex items-end p-6 lg:p-12 overflow-hidden bg-black"
+                    className="relative w-full h-[350px] sm:h-[400px] md:h-[480px] flex items-end p-4 sm:p-6 lg:p-12 overflow-hidden bg-[#0a0a0a]"
                   >
                     {/* Backdrop */}
                     <img 
@@ -1339,21 +1297,21 @@ const CinemaxDashboard: React.FC = () => {
                         </span>
                       </div>
 
-                      <h1 className="font-sans text-4xl lg:text-5xl font-black text-white tracking-tight uppercase line-clamp-2">
+                      <h1 className="font-sans text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-white tracking-tight uppercase line-clamp-2">
                         {heroMovie.title || heroMovie.name}
                       </h1>
 
-                      <p className="text-sm text-neutral-300 leading-relaxed line-clamp-3">
+                      <p className="text-xs sm:text-sm text-neutral-300 leading-relaxed line-clamp-3">
                         {heroMovie.overview}
                       </p>
 
-                      <div className="flex items-center gap-4 pt-2">
+                      <div className="flex items-center gap-3 sm:gap-4 pt-2">
                         <button
                           id="hero-play-btn"
                           onClick={() => handleMovieClick(heroMovie)}
-                          className="flex items-center gap-2 neon-btn font-extrabold px-6 py-3 rounded-2xl transition-all cursor-pointer"
+                          className="flex items-center gap-2 neon-btn font-extrabold px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl transition-all cursor-pointer text-xs sm:text-sm"
                         >
-                          <Play className="h-5 w-5 fill-black" />
+                          <Play className="h-4 w-4 sm:h-5 sm:w-5 fill-black" />
                           <span>Play Now</span>
                         </button>
                         <button
@@ -1362,9 +1320,9 @@ const CinemaxDashboard: React.FC = () => {
                             setDetailsModalMovie(heroMovie);
                             setDetailsModalOpen(true);
                           }}
-                          className="flex items-center gap-2 btn-secondary font-semibold px-6 py-3 rounded-2xl transition-all cursor-pointer"
+                          className="flex items-center gap-2 btn-secondary font-semibold px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl transition-all cursor-pointer text-xs sm:text-sm"
                         >
-                          <Info className="h-5 w-5" />
+                          <Info className="h-4 w-4 sm:h-5 sm:w-5" />
                           <span>More Info</span>
                         </button>
                       </div>
@@ -1376,7 +1334,7 @@ const CinemaxDashboard: React.FC = () => {
                       so a user's favorites are the most prominent thing on
                       their homepage. */}
                   {personalizedSections.length > 0 && (
-                    <div id="personalized-shelves" className="px-4 lg:px-8 space-y-10">
+                    <div id="personalized-shelves" className="px-4 lg:px-8 space-y-6 sm:space-y-8 lg:space-y-10">
                       {personalizedSections.map((section) => {
                         const data = homepageSectionData[section.id];
                         if (!data || data.movies.length === 0) return null;
@@ -1390,8 +1348,7 @@ const CinemaxDashboard: React.FC = () => {
                   )}
 
                   {/* Curated Row shelves — visibility controlled from Admin Panel */}
-                  <div id="curated-shelves" className="px-4 lg:px-8 space-y-10">
-                    {customContent.length > 0 && renderRowShelf("Cinemax Originals", customContent, false)}
+                  <div id="curated-shelves" className="px-4 lg:px-8 space-y-6 sm:space-y-8 lg:space-y-10">
                     {(siteConfig.homepageSections || [])
                       .filter((s) => s.visible)
                       .map((section, idx) => {
@@ -1677,6 +1634,16 @@ const CinemaxDashboard: React.FC = () => {
         onPlay={(m) => {
           setDetailsModalOpen(false);
           handleMovieClick(m);
+        }}
+        onWatchTrailer={(m) => {
+          setDetailsModalOpen(false);
+          handleMovieClick(m);
+          setSelectedMovie(m);
+          setPlayerMode("trailer");
+          setCurrentView("player");
+        }}
+        onAddToWatchlist={(m) => {
+          addToWatchlist(m.id);
         }}
       />
 

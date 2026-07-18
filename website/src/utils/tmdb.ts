@@ -1,7 +1,7 @@
 import { Movie, CastMember, Review } from "../types";
 
 const BASE_URL = "https://api.themoviedb.org/3";
-const FALLBACK_API_KEY = "8e887749d8a5b7a31b807aadd903d25a";
+const FALLBACK_API_KEY = "422828f653928ec5244f1a63a8b8641f";
 
 /** True when a catalog item should play as a TV series (season/episode embed). */
 export function isTvShow(item: Pick<Movie, "title" | "name" | "media_type">): boolean {
@@ -11,6 +11,12 @@ export function isTvShow(item: Pick<Movie, "title" | "name" | "media_type">): bo
 }
 
 function normalizeSearchItem(raw: Movie & { media_type?: string }, fallbackType: "movie" | "tv"): Movie | null {
+  // Validate ID exists and is valid
+  if (!raw.id || raw.id <= 0) {
+    console.warn(`⚠️ Invalid TMDB ID in search result: ${raw.id}`);
+    return null;
+  }
+  
   if (!raw.poster_path || (!raw.title && !raw.name)) return null;
   const mt = raw.media_type as string | undefined;
   if (mt === "person") return null;
@@ -52,6 +58,23 @@ function scoreSearchResult(item: Movie, query: string): number {
   let score = (item.vote_average || 0) * 2;
   score += Math.log10((item.vote_count || 50) + 1) * 8;
   score += (item.popularity || 0) * 0.05;
+  
+  // Strongly prioritize content with high vote counts (more likely to be available on streaming)
+  if ((item.vote_count || 0) < 50) score -= 100;
+  if ((item.vote_count || 0) < 20) score -= 200;
+  
+  // Penalize very old content that might not be on streaming
+  const releaseDate = item.release_date || item.first_air_date;
+  if (releaseDate) {
+    const year = parseInt(releaseDate.split('-')[0]);
+    if (year && year < 1950) score -= 50;
+    if (year && year < 2000) score -= 20;
+  }
+  
+  // Boost score for very popular content (more likely to be on streaming providers)
+  if ((item.popularity || 0) > 100) score += 30;
+  if ((item.popularity || 0) > 500) score += 50;
+  
   if (title === q) score += 200;
   else if (title.startsWith(q)) score += 80;
   else if (title.includes(q)) score += 40;
@@ -68,11 +91,43 @@ export interface SearchBatchResult {
 
 /** Fetches full TMDB details and resolves the correct movie vs TV type for streaming embeds. */
 export async function prepareForPlayback(item: Movie): Promise<Movie> {
-  console.log(`prepareForPlayback called with: id=${item.id}, media_type=${item.media_type}, title=${item.title || item.name}`);
+  console.log(`prepareForPlayback called with: id=${item.id}, media_type=${item.media_type}, title=${item.title || item.name}, isCustom=${item.isCustom}`);
+  
+  // For custom content with TMDB ID, use the TMDB ID for playback
+  if (item.isCustom && item.tmdb_id) {
+    console.log(`Custom content with TMDB ID: ${item.tmdb_id}, using that for playback`);
+    const itemWithTmdbId = { ...item, id: item.tmdb_id };
+    return prepareForPlayback(itemWithTmdbId);
+  }
   
   if (item.isCustom || item.id <= 0) {
     console.log(`Item is custom or invalid ID, returning as-is`);
     return { ...item, media_type: item.media_type ?? "movie" };
+  }
+
+  // If media_type is already set and valid, use it directly
+  if (item.media_type === "movie" || item.media_type === "tv") {
+    console.log(`Using provided media_type: ${item.media_type}`);
+    try {
+      const endpoint = item.media_type === "tv" ? `/tv/${item.id}` : `/movie/${item.id}`;
+      console.log(`Fetching from TMDB endpoint: ${endpoint}`);
+      const details = await fetchFromTMDB<Movie>(endpoint);
+      console.log(`TMDB response for ${item.media_type}: id=${details.id}, title=${details.title || details.name}`);
+      
+      const result = {
+        ...item,
+        ...details,
+        media_type: item.media_type,
+        poster_path: details.poster_path || item.poster_path,
+        backdrop_path: details.backdrop_path || item.backdrop_path,
+      };
+      
+      console.log(`Prepared for playback: id=${result.id}, media_type=${result.media_type}`);
+      return result;
+    } catch (err) {
+      console.log(`Failed to fetch ${item.media_type} details for id ${item.id}:`, err);
+      // Fall through to try other media types
+    }
   }
 
   const preferTv = isTvShow(item);
@@ -114,9 +169,16 @@ export async function prepareForPlayback(item: Movie): Promise<Movie> {
     const matchedItem = multiData.results.find((r) => r.id === item.id);
     if (matchedItem && matchedItem.media_type) {
       console.log(`Found correct media_type from multi-search: ${matchedItem.media_type}`);
+      // Fetch full details with the correct media_type
+      const endpoint = matchedItem.media_type === "tv" ? `/tv/${item.id}` : `/movie/${item.id}`;
+      const details = await fetchFromTMDB<Movie>(endpoint);
+      
       return {
         ...item,
+        ...details,
         media_type: matchedItem.media_type,
+        poster_path: details.poster_path || item.poster_path,
+        backdrop_path: details.backdrop_path || item.backdrop_path,
       };
     }
   } catch (err) {
@@ -178,27 +240,210 @@ async function fetchFromTMDB<T>(endpoint: string, params: Record<string, string>
   }
 }
 
+/**
+ * Check if an ID is in IMDb format (tt followed by numbers)
+ */
+export function isImdbId(id: string | number): boolean {
+  if (typeof id === 'number') return false;
+  return /^tt\d{7,8}$/.test(id);
+}
+
+/**
+ * Auto-clean protocol: Extract pure IMDb ID from messy URLs
+ * Handles various IMDb URL formats:
+ * - https://imdb.com/title/tt0944947
+ * - https://www.imdb.com/title/tt0944947/
+ * - https://imdb.com/title/tt0944947/ref=...
+ * - tt0944947 (already clean)
+ */
+export function extractImdbId(input: string): string | null {
+  if (!input || typeof input !== 'string') return null;
+  
+  // If already in clean format, return as-is
+  if (/^tt\d{7,8}$/.test(input.trim())) {
+    return input.trim();
+  }
+  
+  // Try to extract from URL patterns
+  const patterns = [
+    /imdb\.com\/title\/(tt\d{7,8})/i,
+    /imdb\.com\/name\/(tt\d{7,8})/i,
+    /(tt\d{7,8})/,
+  ];
+  
+  for (const pattern of patterns) {
+    const match = input.match(pattern);
+    if (match && match[1]) {
+      console.log(`🧹 Auto-cleaned IMDb ID: ${input} -> ${match[1]}`);
+      return match[1];
+    }
+  }
+  
+  console.warn(`⚠️ Could not extract valid IMDb ID from: ${input}`);
+  return null;
+}
+
+/**
+ * Convert IMDb ID to TMDB ID using TMDB's /find endpoint
+ * Returns the TMDB ID and media type (movie or tv)
+ */
+export async function convertImdbToTmdb(imdbId: string): Promise<{ tmdbId: number; mediaType: "movie" | "tv"; title: string } | null> {
+  try {
+    console.log(`🔄 Converting IMDb ID ${imdbId} to TMDB ID using /find endpoint`);
+    
+    const data = await fetchFromTMDB<{
+      movie_results: Array<{ id: number; title: string; release_date?: string }>;
+      tv_results: Array<{ id: number; name: string; first_air_date?: string }>;
+    }>(`/find/${imdbId}`, { external_source: "imdb_id" });
+    
+    // Check for TV results first (since user mentioned TV shows specifically)
+    if (data.tv_results && data.tv_results.length > 0) {
+      const tvResult = data.tv_results[0];
+      console.log(`✅ Found TV show: ${tvResult.name} (TMDB ID: ${tvResult.id})`);
+      return { tmdbId: tvResult.id, mediaType: "tv", title: tvResult.name };
+    }
+    
+    // Check for movie results
+    if (data.movie_results && data.movie_results.length > 0) {
+      const movieResult = data.movie_results[0];
+      console.log(`✅ Found movie: ${movieResult.title} (TMDB ID: ${movieResult.id})`);
+      return { tmdbId: movieResult.id, mediaType: "movie", title: movieResult.title };
+    }
+    
+    console.warn(`⚠️ No results found for IMDb ID: ${imdbId}`);
+    return null;
+  } catch (error) {
+    console.error(`❌ Error converting IMDb ID ${imdbId}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Double ID Verification: Verify TMDB ID is real and get title
+ * This ensures the ID exists before serving to provider engine
+ */
+export async function verifyTmdbId(tmdbId: number, mediaType: "movie" | "tv"): Promise<{ valid: boolean; title?: string } | null> {
+  try {
+    console.log(`🔍 Verifying TMDB ID ${tmdbId} (${mediaType})`);
+    
+    const endpoint = mediaType === "tv" ? `/tv/${tmdbId}` : `/movie/${tmdbId}`;
+    const data = await fetchFromTMDB<{ id: number; title?: string; name?: string }>(endpoint);
+    
+    if (data && data.id === tmdbId) {
+      const title = data.title || data.name;
+      console.log(`✅ Verified TMDB ID ${tmdbId}: ${title}`);
+      return { valid: true, title };
+    }
+    
+    console.warn(`⚠️ TMDB ID ${tmdbId} verification failed`);
+    return { valid: false };
+  } catch (error) {
+    console.error(`❌ Error verifying TMDB ID ${tmdbId}:`, error);
+    return { valid: false };
+  }
+}
+
 export const tmdb = {
-  // Movies
+  // Movies - Focused on brand new content only with high availability
   getTrendingMovies: async (page = 1) => {
     const data = await fetchFromTMDB<{ results: Movie[]; total_pages: number }>("/trending/movie/week", { page: String(page) });
-    return data.results;
+    // Filter to only include recent releases (last 6 months) with high engagement
+    const sixMonthsAgo = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    return data.results.filter((m) => 
+      m.poster_path && 
+      m.release_date && 
+      m.release_date >= sixMonthsAgo &&
+      (m.vote_count || 0) >= 50 && // Minimum votes for availability
+      (m.popularity || 0) >= 10 // Minimum popularity
+    );
   },
   getPopularMovies: async (page = 1) => {
-    const data = await fetchFromTMDB<{ results: Movie[]; total_pages: number }>("/movie/popular", { page: String(page) });
-    return data.results;
+    const data = await fetchFromTMDB<{ results: Movie[]; total_pages: number }>("/discover/movie", {
+      page: String(page),
+      "release_date.lte": new Date().toISOString().split('T')[0],
+      "release_date.gte": new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      sort_by: "popularity.desc",
+      "vote_count.gte": "100" // Increased threshold for better availability
+    });
+    return data.results.filter((m) => 
+      m.poster_path && 
+      (m.vote_count || 0) >= 50 &&
+      (m.popularity || 0) >= 20
+    );
   },
   getTopRatedMovies: async (page = 1) => {
-    const data = await fetchFromTMDB<{ results: Movie[]; total_pages: number }>("/movie/top_rated", { page: String(page) });
-    return data.results;
+    const data = await fetchFromTMDB<{ results: Movie[]; total_pages: number }>("/discover/movie", {
+      page: String(page),
+      "release_date.lte": new Date().toISOString().split('T')[0],
+      "release_date.gte": new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      sort_by: "vote_average.desc",
+      "vote_count.gte": "100", // Increased threshold
+      "vote_average.gte": "7.0"
+    });
+    return data.results.filter((m) => 
+      m.poster_path && 
+      (m.vote_count || 0) >= 50 &&
+      (m.popularity || 0) >= 15
+    );
   },
   getUpcomingMovies: async (page = 1) => {
     const data = await fetchFromTMDB<{ results: Movie[]; total_pages: number }>("/movie/upcoming", { page: String(page) });
-    return data.results;
+    return data.results.filter((m) => m.poster_path);
   },
   getNowPlayingMovies: async (page = 1) => {
     const data = await fetchFromTMDB<{ results: Movie[]; total_pages: number }>("/movie/now_playing", { page: String(page) });
-    return data.results;
+    return data.results.filter((m) => m.poster_path);
+  },
+  // Get latest releases (most recent movies - last 90 days)
+  getLatestMovies: async (page = 1) => {
+    const data = await fetchFromTMDB<{ results: Movie[]; total_pages: number }>("/discover/movie", {
+      page: String(page),
+      "release_date.lte": new Date().toISOString().split('T')[0],
+      "release_date.gte": new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      sort_by: "release_date.desc",
+      "vote_count.gte": "10"
+    });
+    return data.results.filter((m) => m.poster_path);
+  },
+  // Get movies by specific year (current year and recent years)
+  getMoviesByYear: async (year: number, page = 1) => {
+    const currentYear = new Date().getFullYear();
+    // Only allow current year and recent years (last 3 years)
+    if (year < currentYear - 3) {
+      console.warn(`Year ${year} is too old, returning empty results for brand new content focus`);
+      return [];
+    }
+    const data = await fetchFromTMDB<{ results: Movie[]; total_pages: number }>("/discover/movie", {
+      page: String(page),
+      "primary_release_year": String(year),
+      sort_by: "popularity.desc",
+      "vote_count.gte": "10"
+    });
+    return data.results.filter((m) => m.poster_path);
+  },
+  // Get latest TV series (airing in current year)
+  getLatestTVSeries: async (page = 1) => {
+    const currentYear = new Date().getFullYear();
+    const data = await fetchFromTMDB<{ results: Movie[]; total_pages: number }>("/discover/tv", {
+      page: String(page),
+      "first_air_date.lte": new Date().toISOString().split('T')[0],
+      "first_air_date.gte": `${currentYear}-01-01`,
+      sort_by: "popularity.desc",
+      "vote_count.gte": "10"
+    });
+    return data.results.filter((m) => m.poster_path);
+  },
+  // Get highly rated new releases (last 6 months)
+  getTopRatedNewReleases: async (page = 1) => {
+    const data = await fetchFromTMDB<{ results: Movie[]; total_pages: number }>("/discover/movie", {
+      page: String(page),
+      "release_date.lte": new Date().toISOString().split('T')[0],
+      "release_date.gte": new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      sort_by: "vote_average.desc",
+      "vote_count.gte": "50",
+      "vote_average.gte": "7.0"
+    });
+    return data.results.filter((m) => m.poster_path);
   },
   getMovieDetails: async (id: number) => {
     return await fetchFromTMDB<Movie>(`/movie/${id}`);
@@ -227,12 +472,14 @@ export const tmdb = {
     return data.results.slice(0, 10);
   },
 
-  // Generic paginated discover — powers infinite scroll for a single genre.
+  // Generic paginated discover — powers infinite scroll for a single genre (brand new content only)
   discoverMoviesByGenre: async (genreId: number, page = 1, sortBy: string = "popularity.desc") => {
     const data = await fetchFromTMDB<{ results: Movie[]; total_pages: number }>("/discover/movie", {
       with_genres: String(genreId),
       sort_by: sortBy,
       page: String(page),
+      "release_date.lte": new Date().toISOString().split('T')[0],
+      "release_date.gte": new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       "vote_count.gte": "20",
     });
     return { results: data.results.filter((m) => m.poster_path), totalPages: data.total_pages };
@@ -245,40 +492,76 @@ export const tmdb = {
       with_genres: genreIds.join(","),
       sort_by: sortBy,
       page: String(page),
+      "release_date.lte": new Date().toISOString().split('T')[0],
+      "release_date.gte": new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       "vote_count.gte": "20",
     });
     return { results: data.results.filter((m) => m.poster_path), totalPages: data.total_pages };
   },
   discoverTVByGenre: async (genreId: number, page = 1, sortBy: string = "popularity.desc") => {
+    const currentYear = new Date().getFullYear();
     const data = await fetchFromTMDB<{ results: Movie[]; total_pages: number }>("/discover/tv", {
       with_genres: String(genreId),
       sort_by: sortBy,
       page: String(page),
+      "first_air_date.lte": new Date().toISOString().split('T')[0],
+      "first_air_date.gte": `${currentYear}-01-01`,
       "vote_count.gte": "20",
     });
     return { results: data.results.filter((m) => m.poster_path), totalPages: data.total_pages };
   },
 
-  // TV Shows
+  // TV Shows - Focused on brand new content only with high availability
   getTrendingTVShows: async (page = 1) => {
     const data = await fetchFromTMDB<{ results: Movie[]; total_pages: number }>("/trending/tv/week", { page: String(page) });
-    return data.results;
+    // Filter to only include recent TV shows (last 6 months) with high engagement
+    const sixMonthsAgo = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    return data.results.filter((m) => 
+      m.poster_path && 
+      m.first_air_date && 
+      m.first_air_date >= sixMonthsAgo &&
+      (m.vote_count || 0) >= 50 && // Minimum votes for availability
+      (m.popularity || 0) >= 10 // Minimum popularity
+    );
   },
   getPopularTVShows: async (page = 1) => {
-    const data = await fetchFromTMDB<{ results: Movie[]; total_pages: number }>("/tv/popular", { page: String(page) });
-    return data.results;
+    const currentYear = new Date().getFullYear();
+    const data = await fetchFromTMDB<{ results: Movie[]; total_pages: number }>("/discover/tv", {
+      page: String(page),
+      "first_air_date.lte": new Date().toISOString().split('T')[0],
+      "first_air_date.gte": `${currentYear}-01-01`,
+      sort_by: "popularity.desc",
+      "vote_count.gte": "100" // Increased threshold for better availability
+    });
+    return data.results.filter((m) => 
+      m.poster_path && 
+      (m.vote_count || 0) >= 50 &&
+      (m.popularity || 0) >= 20
+    );
   },
   getTopRatedTVShows: async (page = 1) => {
-    const data = await fetchFromTMDB<{ results: Movie[]; total_pages: number }>("/tv/top_rated", { page: String(page) });
-    return data.results;
+    const currentYear = new Date().getFullYear();
+    const data = await fetchFromTMDB<{ results: Movie[]; total_pages: number }>("/discover/tv", {
+      page: String(page),
+      "first_air_date.lte": new Date().toISOString().split('T')[0],
+      "first_air_date.gte": `${currentYear}-01-01`,
+      sort_by: "vote_average.desc",
+      "vote_count.gte": "100", // Increased threshold
+      "vote_average.gte": "7.0"
+    });
+    return data.results.filter((m) => 
+      m.poster_path && 
+      (m.vote_count || 0) >= 50 &&
+      (m.popularity || 0) >= 15
+    );
   },
   getAiringTodayTVShows: async (page = 1) => {
     const data = await fetchFromTMDB<{ results: Movie[]; total_pages: number }>("/tv/airing_today", { page: String(page) });
-    return data.results;
+    return data.results.filter((m) => m.poster_path);
   },
   getOnTheAirTVShows: async (page = 1) => {
     const data = await fetchFromTMDB<{ results: Movie[]; total_pages: number }>("/tv/on_the_air", { page: String(page) });
-    return data.results;
+    return data.results.filter((m) => m.poster_path);
   },
   getTVDetails: async (id: number) => {
     return await fetchFromTMDB<Movie>(`/tv/${id}`);
