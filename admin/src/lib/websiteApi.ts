@@ -18,7 +18,7 @@ function apiConnectionError(): Error {
 // which only that site's origin can read/send.
 // ---------------------------------------------------------------------------
 
-const API_BASE = resolveServiceUrl((import.meta as any).env?.VITE_WEBSITE_API_URL, "https://cinemaxmovie-backend-1mol.onrender.com");
+const API_BASE = resolveServiceUrl((import.meta as any).env?.VITE_WEBSITE_API_URL, "https://cinemax-backend.onrender.com");
 const TOKEN_KEY = 'cinemax_admin_token';
 
 export function getToken(): string | null {

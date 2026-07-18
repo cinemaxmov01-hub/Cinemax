@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { websiteApi } from '../lib/websiteApi';
-import { Check, Loader2, Settings as SettingsIcon, Bot, Eye, EyeOff, GripVertical, Plus, Trash2, Share2 } from 'lucide-react';
+import { Check, Loader2, Settings as SettingsIcon, Bot, Eye, EyeOff, GripVertical, Plus, Trash2, Share2, Key } from 'lucide-react';
 
 export default function Settings() {
   const [settings, setSettings] = useState<any>(null);
@@ -64,6 +64,28 @@ export default function Settings() {
         </Field>
         <Field label="APK Download URL">
           <input className="input-base" placeholder="https://.../cinemax.apk" value={settings.apkUrl || ''} onChange={(e) => setSettings({ ...settings, apkUrl: e.target.value })} />
+        </Field>
+        <Field label="TMDB API Key">
+          <div className="flex items-center gap-2 mb-2">
+            <Key className="w-4 h-4" style={{ color: 'var(--accent-text)' }} />
+            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>TMDB API Key</span>
+          </div>
+          <input 
+            className="input-base font-mono" 
+            type="password"
+            placeholder="Your TMDB v3 API key" 
+            value={settings.apiKeys?.tmdb || ''} 
+            onChange={(e) => setSettings({ 
+              ...settings, 
+              apiKeys: { 
+                ...settings.apiKeys, 
+                tmdb: e.target.value 
+              } 
+            })} 
+          />
+          <p className="text-[10px] mt-1" style={{ color: 'var(--text-faint)' }}>
+            Required for TMDB search in Add Movie/TV Show. Get your key at <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-text)' }}>themoviedb.org</a>
+          </p>
         </Field>
         <ToggleRow
           label="Maintenance Mode"
