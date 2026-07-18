@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { websiteApi } from '../lib/websiteApi';
-import { Check, Loader2, Settings as SettingsIcon, Bot, Eye, EyeOff, GripVertical } from 'lucide-react';
+import { Check, Loader2, Settings as SettingsIcon, Bot, Eye, EyeOff, GripVertical, Plus, Trash2, Share2 } from 'lucide-react';
 
 export default function Settings() {
   const [settings, setSettings] = useState<any>(null);
@@ -103,6 +103,91 @@ export default function Settings() {
         <Field label="Extra System Prompt Instructions">
           <textarea rows={4} className="input-base resize-none" placeholder="Any additional instructions appended to the assistant's system prompt..." value={settings.aiSystemPromptExtra} onChange={(e) => setSettings({ ...settings, aiSystemPromptExtra: e.target.value })} />
         </Field>
+      </Section>
+
+      <Section title="Social Media Links" icon={Share2}>
+        <p className="text-xs -mt-1" style={{ color: 'var(--text-faint)' }}>Manage social media platforms for sharing content. Admin can add custom platforms and URLs.</p>
+        <div className="space-y-3">
+          {(settings.socialMediaLinks || []).map((link: any, index: number) => (
+            <div key={link.id || index} className="rounded-xl p-3 space-y-2" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)' }}>
+              <div className="flex items-center justify-between">
+                <Field label="Platform Name">
+                  <input 
+                    className="input-base" 
+                    value={link.name} 
+                    onChange={(e) => {
+                      const updated = [...settings.socialMediaLinks];
+                      updated[index] = { ...updated[index], name: e.target.value };
+                      setSettings({ ...settings, socialMediaLinks: updated });
+                    }}
+                  />
+                </Field>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      const updated = [...settings.socialMediaLinks];
+                      updated[index] = { ...updated[index], enabled: !updated[index].enabled };
+                      setSettings({ ...settings, socialMediaLinks: updated });
+                    }}
+                    className="cursor-pointer"
+                  >
+                    {link.enabled ? <Eye className="w-4 h-4" style={{ color: 'var(--accent-text)' }} /> : <EyeOff className="w-4 h-4" style={{ color: 'var(--text-faint)' }} />}
+                  </button>
+                  <button
+                    onClick={() => {
+                      const updated = settings.socialMediaLinks.filter((_: any, i: number) => i !== index);
+                      setSettings({ ...settings, socialMediaLinks: updated });
+                    }}
+                    className="cursor-pointer"
+                  >
+                    <Trash2 className="w-4 h-4" style={{ color: '#ef4444' }} />
+                  </button>
+                </div>
+              </div>
+              <Field label="Share URL">
+                <input 
+                  className="input-base font-mono" 
+                  placeholder="https://..."
+                  value={link.url} 
+                  onChange={(e) => {
+                    const updated = [...settings.socialMediaLinks];
+                    updated[index] = { ...updated[index], url: e.target.value };
+                    setSettings({ ...settings, socialMediaLinks: updated });
+                  }}
+                />
+              </Field>
+              <Field label="Icon Name (lucide-react)">
+                <input 
+                  className="input-base font-mono" 
+                  placeholder="instagram, facebook, message-circle"
+                  value={link.icon} 
+                  onChange={(e) => {
+                    const updated = [...settings.socialMediaLinks];
+                    updated[index] = { ...updated[index], icon: e.target.value };
+                    setSettings({ ...settings, socialMediaLinks: updated });
+                  }}
+                />
+              </Field>
+            </div>
+          ))}
+          <button
+            onClick={() => {
+              const newLink = {
+                id: `custom-${Date.now()}`,
+                platform: 'custom',
+                name: 'New Platform',
+                url: '',
+                icon: 'share-2',
+                enabled: true,
+              };
+              setSettings({ ...settings, socialMediaLinks: [...(settings.socialMediaLinks || []), newLink] });
+            }}
+            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-xs font-bold cursor-pointer"
+            style={{ background: 'var(--accent-dim)', color: 'var(--accent-text)' }}
+          >
+            <Plus className="w-4 h-4" /> Add Platform
+          </button>
+        </div>
       </Section>
 
       <button onClick={save} disabled={saving} className="neon-btn flex items-center gap-2 font-bold px-6 py-3 rounded-xl text-xs uppercase tracking-wide cursor-pointer disabled:opacity-60">

@@ -144,13 +144,40 @@ export const websiteApi = {
     trailerYoutubeKey?: string;
     mediaType?: 'movie' | 'tv';
     genreNames?: string[];
+    genreIds?: number[];
     releaseDate?: string;
     rating?: number;
     featured?: boolean;
+    // TMDB import fields
+    tmdbId?: number;
+    seasons?: any[];
+    episodes?: any[];
+    cast?: any[];
+    crew?: any[];
+    firstAirDate?: string;
+    lastAirDate?: string;
+    status?: string;
+    numberOfSeasons?: number;
+    numberOfEpisodes?: number;
+    originalLanguage?: string;
+    originalTitle?: string;
+    popularity?: number;
+    voteCount?: number;
+    video?: boolean;
   }) => request('/api/admin/content', { method: 'POST', body: JSON.stringify(body) }),
   updateContent: (id: string, body: Record<string, any>) =>
     request(`/api/admin/content/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   deleteContent: (id: string) => request(`/api/admin/content/${id}`, { method: 'DELETE' }),
+
+  // TMDB Search and Import
+  searchTMDB: (query: string, type?: 'movie' | 'tv' | 'multi') => {
+    const qs = new URLSearchParams();
+    qs.set('query', query);
+    if (type) qs.set('type', type);
+    return request<{ results: any[] }>(`/api/admin/tmdb/search?${qs.toString()}`);
+  },
+  getTMDBDetails: (type: 'movie' | 'tv', id: number) =>
+    request<{ details: any; cast: any[]; crew: any[]; seasons: any[]; episodes: any[] }>(`/api/admin/tmdb/details/${type}/${id}`),
 
   // Categories (TMDB genre overrides — rename or hide a category site-wide)
   getCategoryOverrides: () => request('/api/admin/categories'),

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import type { ReactNode, ChangeEvent } from 'react';
 import { websiteApi } from '../lib/websiteApi';
-import { Plus, Pencil, Trash2, X, Film, Star, Sparkles, Upload } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Film, Star, Sparkles, Upload, Search, Loader2, Check } from 'lucide-react';
 
 type MediaType = 'movie' | 'tv';
 
@@ -32,6 +32,15 @@ export default function Movies({ typeFilter, search }: MoviesProps) {
   const [form, setForm] = useState({ ...emptyForm });
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  
+  // TMDB Search State
+  const [tmdbSearchOpen, setTmdbSearchOpen] = useState(false);
+  const [tmdbQuery, setTmdbQuery] = useState('');
+  const [tmdbSearching, setTmdbSearching] = useState(false);
+  const [tmdbResults, setTmdbResults] = useState<any[]>([]);
+  const [tmdbError, setTmdbError] = useState<string | null>(null);
+  const [selectedTMDB, setSelectedTMDB] = useState<any | null>(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -53,7 +62,133 @@ export default function Movies({ typeFilter, search }: MoviesProps) {
 
   useEffect(() => { load(); }, [load]);
 
-  const openNew = () => { setEditing(null); setForm({ ...emptyForm }); setSaveError(null); setModalOpen(true); };
+  const openNew = () => { 
+    setEditing(null); 
+    setForm({ ...emptyForm }); 
+    setSaveError(null); 
+    setTmdbSearchOpen(true); // Open TMDB search instead of manual form
+  };
+  
+  // TMDB Search Functions
+  const handleTMDBSearch = async () => {
+    if (!tmdbQuery.trim() || tmdbQuery.trim().length < 2) {
+      setTmdbError('Please enter at least 2 characters');
+      return;
+    }
+    
+    setTmdbSearching(true);
+    setTmdbError(null);
+    setTmdbResults([]);
+    
+    try {
+      const data = await websiteApi.searchTMDB(tmdbQuery, mediaType);
+      setTmdbResults(data.results || []);
+    } catch (err: any) {
+      setTmdbError(err.message || 'Failed to search TMDB');
+    } finally {
+      setTmdbSearching(false);
+    }
+  };
+  
+  const selectTMDBItem = async (item: any) => {
+    setSelectedTMDB(item);
+    setLoadingDetails(true);
+    
+    try {
+      const itemType = item.media_type === 'tv' ? 'tv' : 'movie';
+      const data = await websiteApi.getTMDBDetails(itemType, item.id);
+      
+      // Pre-fill form with TMDB data
+      const posterUrl = data.details.poster_path 
+        ? `https://image.tmdb.org/t/p/w500${data.details.poster_path}` 
+        : '';
+      const backdropUrl = data.details.backdrop_path 
+        ? `https://image.tmdb.org/t/p/original${data.details.backdrop_path}` 
+        : posterUrl;
+      
+      setForm({
+ ...emptyForm,
+        title: data.details.title,
+        overview: data.details.overview,
+        posterUrl,
+        backdropUrl,
+        trailerYoutubeKey: data.details.trailer_youtube_key || '',
+        genreNames: data.details.genre_names.join(', '),
+        releaseDate: data.details.release_date || '',
+        rating: data.details.vote_average || 7,
+      });
+      
+      // Store TMDB data for submission
+      setSelectedTMDB({
+        ...data.details,
+        cast: data.cast,
+        crew: data.crew,
+        seasons: data.seasons,
+        episodes: data.episodes,
+      });
+      
+      setTmdbSearchOpen(false);
+      setModalOpen(true);
+    } catch (err: any) {
+      setTmdbError(err.message || 'Failed to load TMDB details');
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
+  
+  const save = async () => {
+    if (!form.title.trim() || !form.posterUrl.trim()) {
+      setSaveError('Title and a poster image URL are both required.');
+      return;
+    }
+    setSaving(true);
+    setSaveError(null);
+    
+    const payload: any = {
+      title: form.title.trim(),
+      overview: form.overview.trim(),
+      posterUrl: form.posterUrl.trim(),
+      backdropUrl: form.backdropUrl.trim() || form.posterUrl.trim(),
+      trailerYoutubeKey: form.trailerYoutubeKey.trim(),
+      mediaType,
+      genreNames: form.genreNames.split(',').map((g: string) => g.trim()).filter(Boolean).slice(0, 6),
+      releaseDate: form.releaseDate || undefined,
+      rating: Number(form.rating) || 0,
+      featured: form.featured,
+    };
+    
+    // Add TMDB data if imported
+    if (selectedTMDB) {
+      payload.tmdbId = selectedTMDB.tmdb_id;
+      payload.genreIds = selectedTMDB.genre_ids;
+      payload.seasons = selectedTMDB.seasons;
+      payload.episodes = selectedTMDB.episodes;
+      payload.cast = selectedTMDB.cast;
+      payload.crew = selectedTMDB.crew;
+      payload.firstAirDate = selectedTMDB.first_air_date;
+      payload.lastAirDate = selectedTMDB.last_air_date;
+      payload.status = selectedTMDB.status;
+      payload.numberOfSeasons = selectedTMDB.number_of_seasons;
+      payload.numberOfEpisodes = selectedTMDB.number_of_episodes;
+      payload.originalLanguage = selectedTMDB.original_language;
+      payload.originalTitle = selectedTMDB.original_title;
+      payload.popularity = selectedTMDB.popularity;
+      payload.voteCount = selectedTMDB.vote_count;
+      payload.video = selectedTMDB.video;
+    }
+    
+    try {
+      if (editing) await websiteApi.updateContent(editing.id, payload);
+      else await websiteApi.createContent(payload);
+      setModalOpen(false);
+      setSelectedTMDB(null);
+      load();
+    } catch (e: any) {
+      setSaveError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
   const openEdit = (m: any) => {
     setEditing(m);
     setForm({
@@ -69,37 +204,6 @@ export default function Movies({ typeFilter, search }: MoviesProps) {
     });
     setSaveError(null);
     setModalOpen(true);
-  };
-
-  const save = async () => {
-    if (!form.title.trim() || !form.posterUrl.trim()) {
-      setSaveError('Title and a poster image URL are both required.');
-      return;
-    }
-    setSaving(true);
-    setSaveError(null);
-    const payload = {
-      title: form.title.trim(),
-      overview: form.overview.trim(),
-      posterUrl: form.posterUrl.trim(),
-      backdropUrl: form.backdropUrl.trim() || form.posterUrl.trim(),
-      trailerYoutubeKey: form.trailerYoutubeKey.trim(),
-      mediaType,
-      genreNames: form.genreNames.split(',').map((g) => g.trim()).filter(Boolean).slice(0, 6),
-      releaseDate: form.releaseDate || undefined,
-      rating: Number(form.rating) || 0,
-      featured: form.featured,
-    };
-    try {
-      if (editing) await websiteApi.updateContent(editing.id, payload);
-      else await websiteApi.createContent(payload);
-      setModalOpen(false);
-      load();
-    } catch (e: any) {
-      setSaveError(e.message);
-    } finally {
-      setSaving(false);
-    }
   };
 
   const remove = async (m: any) => {
@@ -172,6 +276,87 @@ export default function Movies({ typeFilter, search }: MoviesProps) {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* TMDB Search Modal */}
+      {tmdbSearchOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)' }} onClick={() => setTmdbSearchOpen(false)}>
+          <div className="w-full max-w-2xl rounded-2xl p-6 space-y-4 max-h-[85vh] overflow-y-auto" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-white">Search TMDB</h2>
+              <button onClick={() => setTmdbSearchOpen(false)} className="cursor-pointer"><X className="w-5 h-5" style={{ color: 'var(--text-muted)' }} /></button>
+            </div>
+
+            <div className="flex gap-2">
+              <input
+                className="input-base flex-1"
+                placeholder={`Search for ${mediaType === 'tv' ? 'TV shows' : 'movies'}...`}
+                value={tmdbQuery}
+                onChange={(e) => setTmdbQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleTMDBSearch()}
+              />
+              <button
+                onClick={handleTMDBSearch}
+                disabled={tmdbSearching}
+                className="neon-btn px-4 py-2 rounded-xl font-semibold cursor-pointer disabled:opacity-60 flex items-center gap-2"
+              >
+                {tmdbSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                {tmdbSearching ? 'Searching...' : 'Search'}
+              </button>
+            </div>
+
+            {tmdbError && (
+              <div className="rounded-xl p-3 text-xs" style={{ background: 'rgba(239,68,68,0.08)', color: '#f87171' }}>{tmdbError}</div>
+            )}
+
+            {tmdbResults.length > 0 && (
+              <div className="space-y-3">
+                <p className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>Results ({tmdbResults.length})</p>
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {tmdbResults.map((item) => (
+                    <div
+                      key={item.id}
+                      onClick={() => selectTMDBItem(item)}
+                      className="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all hover:opacity-80"
+                      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)' }}
+                    >
+                      {item.poster_path ? (
+                        <img
+                          src={`https://image.tmdb.org/t/p/w92${item.poster_path}`}
+                          alt={item.title || item.name}
+                          className="w-12 h-16 object-cover rounded-md"
+                        />
+                      ) : (
+                        <div className="w-12 h-16 rounded-md flex items-center justify-center" style={{ background: 'var(--surface-3)' }}>
+                          <Film className="w-5 h-5" style={{ color: 'var(--text-faint)' }} />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-white truncate">{item.title || item.name}</p>
+                        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                          {(item.release_date || item.first_air_date || '').slice(0, 4)} • {item.media_type === 'tv' ? 'TV Show' : 'Movie'}
+                        </p>
+                        {item.vote_average && (
+                          <div className="flex items-center gap-1 mt-1">
+                            <Star className="w-3 h-3 text-amber-500 fill-current" />
+                            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{item.vote_average.toFixed(1)}</span>
+                          </div>
+                        )}
+                      </div>
+                      <Check className="w-5 h-5" style={{ color: 'var(--accent)' }} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {tmdbQuery && !tmdbSearching && tmdbResults.length === 0 && !tmdbError && (
+              <div className="text-center py-8">
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No results found. Try a different search term.</p>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
