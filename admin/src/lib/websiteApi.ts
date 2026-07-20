@@ -67,6 +67,33 @@ async function request<T = any>(path: string, options: RequestInit = {}): Promis
   return data as T;
 }
 
+// Multipart upload — deliberately does NOT set Content-Type so the browser
+// can add the correct multipart boundary itself.
+export async function uploadVideoFile(
+  file: File,
+  onProgress?: (pct: number) => void
+): Promise<{ url: string; size: number; originalName: string }> {
+  const token = getToken();
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${API_BASE}/api/admin/uploads/video`);
+    if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    xhr.upload.onprogress = (e) => {
+      if (onProgress && e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onload = () => {
+      let data: any = {};
+      try { data = JSON.parse(xhr.responseText); } catch { /* noop */ }
+      if (xhr.status >= 200 && xhr.status < 300) resolve(data);
+      else reject(new Error(data?.error || `Upload failed (${xhr.status})`));
+    };
+    xhr.onerror = () => reject(apiConnectionError());
+    const formData = new FormData();
+    formData.append('file', file);
+    xhr.send(formData);
+  });
+}
+
 // ---------------------------------------------------------------------------
 // AUTH — the admin account signs in exclusively via an emailed one-time
 // code, matching the website's own admin sign-in flow exactly.
@@ -142,6 +169,7 @@ export const websiteApi = {
     posterUrl: string;
     backdropUrl?: string;
     trailerYoutubeKey?: string;
+    localVideoUrl?: string | null;
     mediaType?: 'movie' | 'tv';
     genreNames?: string[];
     genreIds?: number[];

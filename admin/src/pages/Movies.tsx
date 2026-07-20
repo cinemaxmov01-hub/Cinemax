@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import type { ReactNode, ChangeEvent } from 'react';
-import { websiteApi } from '../lib/websiteApi';
+import { websiteApi, uploadVideoFile } from '../lib/websiteApi';
 import { Plus, Pencil, Trash2, X, Film, Star, Sparkles, Upload, Search, Loader2, Check } from 'lucide-react';
 
 type MediaType = 'movie' | 'tv';
@@ -16,6 +16,7 @@ const emptyForm = {
   posterUrl: '',
   backdropUrl: '',
   trailerYoutubeKey: '',
+  localVideoUrl: '' as string,
   genreNames: '' as string, // comma-separated in the form, split on save
   releaseDate: '',
   rating: 7,
@@ -150,6 +151,7 @@ export default function Movies({ typeFilter, search }: MoviesProps) {
       posterUrl: form.posterUrl.trim(),
       backdropUrl: form.backdropUrl.trim() || form.posterUrl.trim(),
       trailerYoutubeKey: form.trailerYoutubeKey.trim(),
+      localVideoUrl: form.localVideoUrl.trim() || null,
       mediaType,
       genreNames: form.genreNames.split(',').map((g: string) => g.trim()).filter(Boolean).slice(0, 6),
       releaseDate: form.releaseDate || undefined,
@@ -197,6 +199,7 @@ export default function Movies({ typeFilter, search }: MoviesProps) {
       posterUrl: m.posterUrl || '',
       backdropUrl: m.backdropUrl || '',
       trailerYoutubeKey: m.trailerYoutubeKey || '',
+      localVideoUrl: m.localVideoUrl || '',
       genreNames: (m.genreNames || []).join(', '),
       releaseDate: m.releaseDate || '',
       rating: m.rating ?? 7,
@@ -387,6 +390,13 @@ export default function Movies({ typeFilter, search }: MoviesProps) {
               </Field>
             </div>
             <Field label="YouTube Trailer Key (e.g. dQw4w9WgXcQ)"><input className="input-base" value={form.trailerYoutubeKey} onChange={(e) => setForm({ ...form, trailerYoutubeKey: e.target.value })} /></Field>
+            <Field label="Local Video File (upload from this device)">
+              <VideoInput
+                value={form.localVideoUrl}
+                onChange={(v) => setForm({ ...form, localVideoUrl: v })}
+                onError={setSaveError}
+              />
+            </Field>
             <Field label="Genres (comma-separated)"><input className="input-base" placeholder="Action, Sci-Fi" value={form.genreNames} onChange={(e) => setForm({ ...form, genreNames: e.target.value })} /></Field>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Release Date"><input type="date" className="input-base" value={form.releaseDate || ''} onChange={(e) => setForm({ ...form, releaseDate: e.target.value })} /></Field>
@@ -415,6 +425,91 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
       <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>{label}</span>
       {children}
     </label>
+  );
+}
+
+/**
+ * Local video file upload — streams the file to the backend via multipart
+ * form data (POST /api/admin/uploads/video) and stores the returned
+ * /uploads/videos/... URL. Unlike ImageInput this does NOT base64-encode
+ * the file into the JSON payload, since video files are far too large for
+ * that; it's a real upload with progress feedback.
+ */
+function VideoInput({
+  value,
+  onChange,
+  onError,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onError: (msg: string | null) => void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [fileName, setFileName] = useState('');
+
+  const pick = () => fileRef.current?.click();
+
+  const onFile = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('video/')) {
+      onError('Please choose a video file (MP4, WebM, MOV, or MKV).');
+      return;
+    }
+    if (file.size > 4 * 1024 * 1024 * 1024) {
+      onError('Video is over 4GB. Please choose a smaller file.');
+      return;
+    }
+    setUploading(true);
+    setProgress(0);
+    setFileName(file.name);
+    onError(null);
+    try {
+      const { url } = await uploadVideoFile(file, setProgress);
+      onChange(url);
+    } catch (err: any) {
+      onError(err?.message || 'Could not upload that file.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-2">
+        <input
+          className="input-base flex-1"
+          placeholder="No file uploaded yet"
+          value={value ? value.split('/').pop() || value : ''}
+          readOnly
+        />
+        <button
+          type="button"
+          onClick={pick}
+          disabled={uploading}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer disabled:opacity-60"
+          style={{ background: 'rgba(57,255,20,0.1)', color: '#39FF14', border: '1px solid rgba(57,255,20,0.25)' }}
+          title="Upload from your device"
+        >
+          <Upload className="w-3.5 h-3.5" />
+          {uploading ? `${progress}%` : 'Upload'}
+        </button>
+        <input ref={fileRef} type="file" accept="video/*" hidden onChange={onFile} />
+      </div>
+      {uploading && (
+        <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--surface-3)' }}>
+          <div className="h-full rounded-full transition-all" style={{ width: `${progress}%`, background: '#39FF14' }} />
+        </div>
+      )}
+      {!uploading && value && (
+        <span className="text-[10px] font-semibold block" style={{ color: 'var(--text-muted)' }}>
+          Uploaded{fileName ? `: ${fileName}` : ''} — will play from this file instead of a trailer.
+        </span>
+      )}
+    </div>
   );
 }
 
